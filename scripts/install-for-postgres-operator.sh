@@ -6,6 +6,6 @@ sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinu
 sudo yum -y install terraform
 
 echo "deploy postgres operator"
-cd /tmp/postgres-operator
+cd /tmp/simple-flask
 terraform init
 terraform apply -auto-approve
