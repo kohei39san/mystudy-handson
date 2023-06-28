@@ -19,4 +19,13 @@ resource "null_resource" "init_ec2" {
   provisioner "remote-exec" {
     script = "../../scripts/install-helm.sh"
   }
+
+  provisioner "file" {
+    source = "../../k8s-manifests/simple-flask"
+    destination = "/tmp/simple-flask"
+  }
+
+  provisioner "remote-exec" {
+    script = "../../scripts/install-for-postgres-operator.sh"
+  }
 }

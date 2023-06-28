@@ -11,6 +11,6 @@ resource "null_resource" "init_ec2" {
   }
 
   provisioner "remote-exec" {
-    script = "../scripts/install-k0s.sh"
+    script = "../../scripts/install-k0s.sh"
   }
 }

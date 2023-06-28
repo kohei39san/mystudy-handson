@@ -6,7 +6,7 @@
 
 * tf-manifests/common: 各基盤で共通の要素を定義しています。
 * tf-manifests/k0s: シングルノードでk0sを構築する設定を定義しています。（参考：https://k0sproject.io/）
-* tf-manifests/scripts: DockerやKubernetesをインストールするためのスクリプトが入っています。
+* scripts: DockerやKubernetesをインストールするためのスクリプトが入っています。
 
 # 使い方
 

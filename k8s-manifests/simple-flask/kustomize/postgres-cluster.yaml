@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgresql
+---
+apiVersion: "acid.zalan.do/v1"
+kind: postgresql
+metadata:
+  name: acid-minimal-cluster
+  namespace: postgresql
+  labels:
+    app: test-pg
+spec:
+  teamId: "acid"
+  volume:
+    size: 1Gi
+  numberOfInstances: 1
+#  users:
+#    zalando:  # database owner
+#    - superuser
+#    - createdb
+#    foo_user: []  # role for application foo
+#  databases:
+#    foo: zalando  # dbname: owner
+#  preparedDatabases:
+#    bar: {}
+  postgresql:
+    version: "13"
+  sidecars:
+    - name: "exporter"
+      image: "wrouesnel/postgres_exporter"
+      ports:
+        - name: exporter
+          containerPort: 9187
+          protocol: TCP
+      resources:
+        limits:
+          cpu: 100m
+          memory: 256M
+        requests:
+          cpu: 100m
+          memory: 200M
+  patroni:
+    pg_hba:
+    - local   all,replication             all                                   trust
+    - host    all,replication             all                all                trust
+    - host    all,replication             all                localhost            md5
+    - hostssl all,replication             all           all                trust
+    - hostssl all,replication             all                all                md5
+    - hostssl all,replication             all           all                trust
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acid-minimal-cluster-svc-metrics-master
+  namespace: postgresql
+  labels:
+    app: test-pg
+    spilo-role: master
+  annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9187"
+spec:
+  type: ClusterIP
+  ports:
+    - name: exporter
+      port: 9187
+      targetPort: exporter
+  selector:
+    application: spilo
+    cluster-name: acid-minimal-cluster
+    spilo-role: master
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acid-minimal-cluster-svc-metrics-replica
+  namespace: postgresql
+  labels:
+    app: test-pg
+    spilo-role: replica
+  annotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "9187"
+spec:
+  type: ClusterIP
+  ports:
+    - name: exporter
+      port: 9187
+      targetPort: exporter
+  selector:
+    application: spilo
+    cluster-name: acid-minimal-cluster
+    spilo-role: replica
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: acid-minimal-cluster-svcm-master
+  namespace: monitoring
+  labels:
+    app: test-pg
+    spilo-role: master
+spec:
+  endpoints:
+    - port: exporter
+      interval: 15s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - pg
+  selector:
+    matchLabels:
+      app: test-pg
+      spilo-role: master
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: acid-minimal-cluster-svcm-replica
+  namespace: monitoring
+  labels:
+    app: test-pg
+    spilo-role: replica
+spec:
+  endpoints:
+    - port: exporter
+      interval: 15s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - pg
+  selector:
+    matchLabels:
+      app: test-pg
+      spilo-role: replica
