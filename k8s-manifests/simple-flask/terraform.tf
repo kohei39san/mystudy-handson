@@ -5,14 +5,18 @@ terraform {
       version = "0.9.4"
     }
     helm = {
-      source = "hashicorp/helm"
+      source  = "hashicorp/helm"
       version = "2.10.1"
+    }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "3.0.2"
     }
   }
 }
 
 provider "kustomization" {
-   kubeconfig_path = "~/.kube/config"
+  kubeconfig_path = "~/.kube/config"
 }
 
 provider "helm" {
@@ -20,3 +24,5 @@ provider "helm" {
     config_path = "~/.kube/config"
   }
 }
+
+provider "docker" {}

@@ -21,8 +21,13 @@ resource "null_resource" "init_ec2" {
   }
 
   provisioner "file" {
-    source = "../../k8s-manifests/simple-flask"
-    destination = "/tmp/simple-flask"
+    source      = "../../k8s-manifests/simple-flask"
+    destination = "/tmp/k8s-manifests"
+  }
+
+  provisioner "file" {
+    source      = "../../container-images/simple-flask"
+    destination = "/tmp/container-images"
   }
 
   provisioner "remote-exec" {
