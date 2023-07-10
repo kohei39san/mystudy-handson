@@ -15,6 +15,24 @@ module "postgres_operator" {
         "kustomize/postgres-cluster.yaml",
         "kustomize/pgpool.yaml",
       ]
+      secret_generator = [{
+        name = "postgresql-infrastructure-roles"
+        envs = [
+          ".pgpass"
+        ]
+        options {
+          disable_name_suffix_hash = true
+        }
+      }]
+
+      config_map_generator = [{
+        name = "postgres-operator"
+        behavior = "merge"
+        literals = [
+          "infrastructure_roles_secret_name=postgresql-infrastructure-roles"
+        ]
+      }]
     }
   }
+
 }

@@ -15,13 +15,13 @@ spec:
   volume:
     size: 1Gi
   numberOfInstances: 1
-#  users:
-#    zalando:  # database owner
-#    - superuser
-#    - createdb
-#    foo_user: []  # role for application foo
-#  databases:
-#    foo: zalando  # dbname: owner
+  users:
+    zalando:  # database owner
+    - superuser
+    - createdb
+    testdb_user: []  # role for application testdb
+  databases:
+    testdb: zalando  # dbname: owner
 #  preparedDatabases:
 #    bar: {}
   postgresql:

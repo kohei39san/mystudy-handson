@@ -18,6 +18,13 @@ module "myflask" {
       resources = [
         "kustomize/flask.yaml",
       ]
+      secret_generator = [{
+        name = "myflask"
+        envs = [
+          ".pgpass"
+        ]
+      }]
     }
   }
+
 }

@@ -3,9 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import time
 import traceback
+import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://user:pass$@pgpool.postgresql:5432/testdb'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://{}:{}$@pgpool.postgresql:5432/testdb'.format(os.environ['user'],os.environ['password'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
