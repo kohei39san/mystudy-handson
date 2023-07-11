@@ -20,13 +20,13 @@ module "postgres_operator" {
         envs = [
           ".pgpass"
         ]
-        options {
+        options = {
           disable_name_suffix_hash = true
         }
       }]
 
       config_map_generator = [{
-        name = "postgres-operator"
+        name     = "postgres-operator"
         behavior = "merge"
         literals = [
           "infrastructure_roles_secret_name=postgresql-infrastructure-roles"

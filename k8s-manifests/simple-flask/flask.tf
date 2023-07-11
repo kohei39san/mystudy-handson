@@ -4,6 +4,9 @@ resource "docker_image" "myflask" {
     context = "../container-images"
     tag     = ["myflask:v1.0"]
   }
+  triggers = {
+    dir_sha1 = sha1(join("", [for f in fileset(path.module, "../container-images") : filesha1(f)]))
+  }
 }
 
 module "myflask" {

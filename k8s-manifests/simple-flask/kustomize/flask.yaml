@@ -16,9 +16,21 @@ spec:
       - name: flask
         image: myflask:v1.0
         command: ["/bin/bash"]
-        args: ["-c", "FLASK_APP=run.py flask run"]
+        args: ["-c", "FLASK_APP=run.py flask run --host=0.0.0.0"]
         ports:
           - containerPort: 5000
         envFrom:
         - secretRef:
             name: myflask
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myflask
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 5000
+  selector:
+    app: flask
