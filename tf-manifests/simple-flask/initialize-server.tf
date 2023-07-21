@@ -31,6 +31,6 @@ resource "null_resource" "init_ec2" {
   }
 
   provisioner "remote-exec" {
-    script = "../../scripts/install-for-postgres-operator.sh"
+    script = "../../scripts/install-for-simple-flask.sh"
   }
 }
