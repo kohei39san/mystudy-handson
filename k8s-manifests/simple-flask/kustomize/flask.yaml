@@ -41,13 +41,15 @@ metadata:
   name: myflask
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.org/location-snippets: |
+      rewrite /myflask/(.*)$ /$1 break;
 spec:
   ingressClassName: nginx
   rules:
-  - host: "localhost"
+  - host: "*.*.*.*"
     http:
       paths:
-      - path: /
+      - path: /myflask/
         pathType: Prefix
         backend:
           service:
