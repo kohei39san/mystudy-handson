@@ -5,7 +5,8 @@ sudo yum install -y git
 cd /tmp
 git clone https://github.com/kohei39san/mystudy-handson.git
 cd mystudy-handson
-git submodule init
+git checkout feature/simple-flask
+git submodule update --init
 
 echo "install terraform"
 sudo yum install -y yum-utils shadow-utils
@@ -21,10 +22,10 @@ sudo yum -y install terraform
 #sudo amazon-linux-extras install nginx1 -y
 #sudo systemctl start nginx.service
 
-echo "build nginx ingress controller"
-cd /tmp/mystudy-handson/container-images/kubernetes-ingress
-make debian-image TARGET=container
-minikube image load nginx/nginx-ingress:$(docker images | grep nginx-ingress | awk '{print $2}')
+#echo "build nginx ingress controller"
+#cd /tmp/mystudy-handson/container-images/kubernetes-ingress
+#make debian-image TARGET=container
+#minikube image load nginx/nginx-ingress:$(docker images | grep nginx-ingress | awk '{print $2}')
 
 echo "deploy k8s objects"
 echo "user=zalando" >> /tmp/mystudy-handson/k8s-manifests/simple-flask/.pgpass

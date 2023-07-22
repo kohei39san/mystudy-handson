@@ -1,7 +1,7 @@
 resource "docker_image" "nginx_lb" {
   name = "nginx-lb"
   build {
-    context = "../container-images/nginx-lb"
+    context = "../../container-images/nginx-lb"
     tag     = ["${var.nginx_lb_image_tag}"]
   }
   triggers = {

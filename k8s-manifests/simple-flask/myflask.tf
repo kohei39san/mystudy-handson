@@ -1,7 +1,7 @@
 resource "docker_image" "myflask" {
   name = "myflask"
   build {
-    context = "../container-images/myflask"
+    context = "../../container-images/myflask"
     tag     = ["${var.myflask_image_tag}"]
   }
   triggers = {
