@@ -32,5 +32,5 @@ module "ingress_controller" {
       ]
     }
   }
-  depends_on = ["null_resource.build_nginx_ingress_controller_image"]
+  depends_on = [null_resource.build_nginx_ingress_controller_image]
 }
