@@ -5,7 +5,7 @@ resource "docker_image" "nginx_lb" {
     tag     = ["${var.nginx_lb_image_tag}"]
   }
   triggers = {
-    dir_sha1 = sha1(join("", [for f in fileset(path.module, "../container-images/nginx-lb") : filesha1(f)]))
+    dir_sha1 = sha1(join("", [for f in fileset(path.module, "../../container-images/nginx-lb/*") : filesha1(f)]))
   }
 }
 
