@@ -34,3 +34,22 @@ spec:
     targetPort: 5000
   selector:
     app: flask
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: myflask
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /myflask
+        pathType: Prefix
+        backend:
+          service:
+            name: myflask
+            port:
+              number: 80
