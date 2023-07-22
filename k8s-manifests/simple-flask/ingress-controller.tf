@@ -1,3 +1,7 @@
+data "http" "myip" {
+  url = "http://ipv4.icanhazip.com"
+}
+
 resource "null_resource" "build_nginx_ingress_controller_image" {
   provisioner "local-exec" {
     command = "cd kustomize/kubernetes-ingress && make debian-image TARGET=container"
@@ -32,4 +36,18 @@ module "ingress_controller" {
       ]
     }
   }
+
+  patches = [{
+    patch = <<-EOF
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: -enable-snippets
+    EOF
+    target = {
+      group = "apps"
+      version = "v1"
+      kind = "Deployment"
+      name = "nginx-ingress"
+    }
+  }]
 }

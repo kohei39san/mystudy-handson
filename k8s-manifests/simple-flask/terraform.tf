@@ -12,6 +12,10 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "3.0.2"
     }
+    http = {
+      source = "hashicorp/http"
+      version = "3.4.0"
+    }
   }
 }
 
@@ -26,3 +30,5 @@ provider "helm" {
 }
 
 provider "docker" {}
+
+provider "http" {}
