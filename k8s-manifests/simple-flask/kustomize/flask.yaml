@@ -44,10 +44,10 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: myflask
+  - host: "localhost"
     http:
       paths:
-      - path: /myflask
+      - path: /
         pathType: Prefix
         backend:
           service:
