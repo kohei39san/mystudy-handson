@@ -1,5 +1,5 @@
 data "http" "myip" {
-  url = "http://ipv4.icanhazip.com"
+  url = "https://ifconfig.co/ip"
 }
 
 resource "null_resource" "build_nginx_ingress_controller_image" {
@@ -37,17 +37,31 @@ module "ingress_controller" {
     }
   }
 
-  patches = [{
-    patch = <<-EOF
-      - op: add
-        path: /spec/template/spec/containers/0/args/-
-        value: -enable-snippets
-    EOF
-    target = {
-      group = "apps"
-      version = "v1"
-      kind = "Deployment"
-      name = "nginx-ingress"
+  patches = [
+    {
+      patch = <<-EOF
+        - op: add
+          path: /spec/template/spec/containers/0/args/-
+          value: -enable-snippets
+      EOF
+      target = {
+        group = "apps"
+        version = "v1"
+        kind = "Deployment"
+        name = "nginx-ingress"
+      }
+    },{
+      patch = <<-EOF
+        - op: replace
+          path: /spec/rules/0/host
+          value: "${data.http.myip.response_body}"
+      EOF
+      target = {
+        group = "networking.k8s.io"
+        version = "v1"
+        kind = "Ingress"
+        name = "myflask"
+      }
     }
-  }]
+  ]
 }
