@@ -17,3 +17,8 @@ output "test_instance" {
   description = "test instance"
   value       = aws_instance.test_instance
 }
+
+output "test_vpc" {
+  description = "test vpc"
+  value = aws_vpc.test_vpc
+}
