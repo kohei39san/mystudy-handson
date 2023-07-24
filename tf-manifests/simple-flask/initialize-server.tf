@@ -20,16 +20,6 @@ resource "null_resource" "init_ec2" {
     script = "../../scripts/install-helm.sh"
   }
 
-#  provisioner "file" {
-#    source      = "../../k8s-manifests"
-#    destination = "/tmp/k8s-manifests"
-#  }
-
-#  provisioner "file" {
-#    source      = "../../container-images"
-#    destination = "/tmp/container-images"
-#  }
-
   provisioner "remote-exec" {
     script = "../../scripts/install-for-simple-flask.sh"
   }
