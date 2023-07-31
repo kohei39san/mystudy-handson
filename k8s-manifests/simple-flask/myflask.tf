@@ -36,7 +36,7 @@ module "myflask" {
     default = {
       namespace = "default"
       resources = [
-        "kustomize/flask.yaml",
+        "kustomize/myflask.yaml",
       ]
       secret_generator = [{
         name = "myflask"
