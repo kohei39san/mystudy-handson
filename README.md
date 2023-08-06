@@ -54,5 +54,20 @@ module "common_resources" {
 }
 ```
 
+## AWSリソースに一括でタグを付ける
+
+以下のようなファイルを作成する。
+
+tf-manifests/minikube/override.tf
+
+```
+variable "aws_tags" {
+  type = map(string)
+  default = {
+    key = "value"
+  }
+}
+```
+
 ※参考
 https://developer.hashicorp.com/terraform/language/files/override

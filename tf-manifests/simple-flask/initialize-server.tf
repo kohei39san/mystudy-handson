@@ -16,9 +16,6 @@ resource "null_resource" "init_ec2" {
   provisioner "remote-exec" {
     script = "../../scripts/install-minikube.sh"
   }
-  provisioner "remote-exec" {
-    script = "../../scripts/install-helm.sh"
-  }
 
   provisioner "remote-exec" {
     script = "../../scripts/install-for-simple-flask.sh"
