@@ -12,7 +12,7 @@ resource "null_resource" "init_ec2" {
 
   provisioner "file" {
     source      = "../../scripts/git-clone.sh"
-    destination = "/tmp"
+    destination = "/tmp/git-clone.sh"
   }
   provisioner "remote-exec" {
     inline = [
