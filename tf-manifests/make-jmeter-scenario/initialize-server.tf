@@ -33,6 +33,7 @@ resource "null_resource" "init_ec2" {
   provisioner "remote-exec" {
     inline = [
       "JMETER_VERSION=${var.jmeter_version} /tmp/mystudy-handson/scripts/install-jmeter.sh",
+      "/tmp/mystudy-handson/scripts/install-terraform.sh",
     ]
   }
 }
