@@ -1,0 +1,4 @@
+controller:
+  name: ""
+  service:
+    type: ClusterIP
