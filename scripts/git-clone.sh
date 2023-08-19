@@ -7,8 +7,11 @@ echo "git clone"
 if [[ -z ${COMMIT_ID} ]]; then
   COMMIT_ID=main
 fi
+if [[ -z ${REPO_URL} ]];then
+  REPO_URL="https://github.com/kohei39san/mystudy-handson.git"
+fi
 cd /tmp
-git clone https://github.com/kohei39san/mystudy-handson.git
+git clone ${REPO_URL}
 cd mystudy-handson
 git checkout ${COMMIT_ID}
 git submodule update --init

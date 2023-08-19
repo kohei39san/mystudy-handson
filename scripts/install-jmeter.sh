@@ -1,3 +1,5 @@
+#!/bin/bash -e
+
 echo "install jmeter"
 if [[ -z ${JMETER_VERSION} ]];then
   JMETER_VERSION="5.6.2"

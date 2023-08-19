@@ -17,7 +17,7 @@ resource "null_resource" "init_ec2" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/git-clone.sh",
-      "COMMIT_ID=${var.commit_id} /tmp/git-clone.sh",
+      "COMMIT_ID=${var.commit_id} REPO_URL=${var.repo_url} /tmp/git-clone.sh",
     ]
   }
   provisioner "remote-exec" {

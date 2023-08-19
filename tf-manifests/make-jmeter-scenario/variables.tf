@@ -3,6 +3,11 @@ variable "aws_tags" {
   default = {}
 }
 
+variable "repo_url" {
+  type    = string
+  default = "https://github.com/kohei39san/mystudy-handson.git"
+}
+
 variable "commit_id" {
   type    = string
   default = "main"
