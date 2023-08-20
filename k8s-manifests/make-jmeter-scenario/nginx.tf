@@ -11,6 +11,14 @@ module "nginx" {
         "kustomize/nginx.yaml",
         "kustomize/ingress.yaml",
       ]
+      secret_generator = [{
+        name = "nginx"
+        type = "tls"
+        files = [
+          "kustomize/ssl/tls.crt",
+          "kustomize/ssl/tls.key",
+        ]
+      }]
     }
   }
 }
