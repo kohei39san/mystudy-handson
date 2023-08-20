@@ -24,7 +24,7 @@ resource "docker_container" "nginx_lb" {
 
   volumes {
     container_path = "/etc/nginx/conf.d/"
-    host_path = "/tmp/mystudy-handson/k8s-manifests/make-jmeter-scenario/nginx-lb/conf.d/"
+    host_path      = "/tmp/mystudy-handson/k8s-manifests/make-jmeter-scenario/nginx-lb/conf.d/"
   }
 
   dns        = ["10.96.0.10"]

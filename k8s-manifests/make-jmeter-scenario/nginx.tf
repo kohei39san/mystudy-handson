@@ -1,4 +1,4 @@
-module "nginx1" {
+module "nginx" {
   source  = "kbst.xyz/catalog/custom-manifests/kustomization"
   version = "0.4.0"
 
