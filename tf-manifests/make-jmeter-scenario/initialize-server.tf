@@ -34,7 +34,7 @@ resource "null_resource" "init_ec2" {
     inline = [
       "JMETER_VERSION=${var.jmeter_version} /tmp/mystudy-handson/scripts/install-jmeter.sh",
       "/tmp/mystudy-handson/scripts/install-terraform.sh",
-      "cd /tmp/mystudy-handson/k8s-manifests",
+      "cd /tmp/mystudy-handson/k8s-manifests/make-jmeter-scenario",
       "terraform init",
       "terraform apply -auto-approve",
     ]
