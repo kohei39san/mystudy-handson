@@ -4,11 +4,11 @@ metadata:
   name: nginx
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.org/server-snippets: |
-      listen 443;
-      location / {
-          return 200 $host;
-      }
+    #nginx.org/server-snippets: |
+    #  listen 443;
+    #  location / {
+    #      return 200 $host;
+    #  }
 spec:
   tls:
   - hosts:
@@ -16,7 +16,7 @@ spec:
     - "mynginx2.com"
     - "mynginx3.com"
     secretName: nginx
-  ingressClassname: nginx
+  ingressClassName: nginx
   rules:
   - host: "mynginx1.com"
     http:

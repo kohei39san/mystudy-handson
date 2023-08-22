@@ -13,7 +13,7 @@ module "nginx" {
       ]
       secret_generator = [{
         name = "nginx"
-        type = "tls"
+        type = "kubernetes.io/tls"
         files = [
           "kustomize/ssl/tls.crt",
           "kustomize/ssl/tls.key",
