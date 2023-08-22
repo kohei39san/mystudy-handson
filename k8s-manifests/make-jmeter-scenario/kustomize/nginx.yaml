@@ -16,7 +16,42 @@ spec:
       - name: nginx
         image: nginx
         ports:
-        - containerPort: 443
+        - containerPort: 80
+        volumeMounts:
+        - name: config
+          mountPath: "/etc/nginx/conf.d/"
+      volumes:
+      - name: config
+        configMap:
+          name: nginx
+---
+apiVersion: v1
+data:
+  default.conf: |
+    server {
+      listen       80;
+      listen  [::]:80;
+      server_name  mynginx1.com mynginx2.com mynginx3.com localhost;
+
+      #access_log  /var/log/nginx/host.access.log  main;
+
+      location / {
+          root   /usr/share/nginx/html;
+          index  index.html index.htm;
+      }
+
+      #error_page  404              /404.html;
+
+      # redirect server error pages to the static page /50x.html
+      #
+      error_page   500 502 503 504  /50x.html;
+      location = /50x.html {
+          root   /usr/share/nginx/html;
+      }
+    }
+kind: ConfigMap
+metadata:
+  name: nginx
 ---
 apiVersion: v1
 kind: Service
@@ -27,5 +62,5 @@ spec:
     app: nginx
   ports:
   - protocol: TCP
-    port: 443
-    targetPort: 443
+    port: 80
+    targetPort: 80

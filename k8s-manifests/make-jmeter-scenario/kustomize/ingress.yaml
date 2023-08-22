@@ -4,17 +4,13 @@ metadata:
   name: nginx
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    #nginx.org/server-snippets: |
-    #  listen 443;
-    #  location / {
-    #      return 200 $host;
-    #  }
 spec:
   tls:
   - hosts:
     - "mynginx1.com"
     - "mynginx2.com"
     - "mynginx3.com"
+    - "localhost"
     secretName: nginx
   ingressClassName: nginx
   rules:
@@ -27,7 +23,7 @@ spec:
           service:
             name: nginx
             port:
-              number: 443
+              number: 80
   - host: "mynginx2.com"
     http:
       paths:
@@ -37,7 +33,7 @@ spec:
           service:
             name: nginx
             port:
-              number: 443
+              number: 80
   - host: "mynginx3.com"
     http:
       paths:
@@ -47,4 +43,14 @@ spec:
           service:
             name: nginx
             port:
-              number: 443
+              number: 80
+  - host: "localhost"
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: nginx
+            port:
+              number: 80
