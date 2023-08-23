@@ -10,7 +10,6 @@ spec:
     - "mynginx1.com"
     - "mynginx2.com"
     - "mynginx3.com"
-    - "localhost"
     secretName: nginx
   ingressClassName: nginx
   rules:
@@ -35,16 +34,6 @@ spec:
             port:
               number: 80
   - host: "mynginx3.com"
-    http:
-      paths:
-      - pathType: Prefix
-        path: "/"
-        backend:
-          service:
-            name: nginx
-            port:
-              number: 80
-  - host: "localhost"
     http:
       paths:
       - pathType: Prefix

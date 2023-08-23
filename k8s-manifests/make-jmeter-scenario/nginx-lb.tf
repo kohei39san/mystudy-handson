@@ -18,13 +18,22 @@ resource "docker_container" "nginx_lb" {
     external = "443"
   }
 
+  ports {
+    internal = "80"
+    external = "80"
+  }
+
   networks_advanced {
     name = "minikube"
   }
 
+  #volumes {
+  #  container_path = "/etc/nginx/conf.d/"
+  #  host_path      = "/tmp/mystudy-handson/k8s-manifests/make-jmeter-scenario/nginx-lb/conf.d/"
+  #}
   volumes {
-    container_path = "/etc/nginx/conf.d/"
-    host_path      = "/tmp/mystudy-handson/k8s-manifests/make-jmeter-scenario/nginx-lb/conf.d/"
+    container_path = "/etc/nginx/nginx.conf"
+    host_path      = "/tmp/mystudy-handson/k8s-manifests/make-jmeter-scenario/nginx-lb/nginx.conf"
   }
 
   dns        = ["10.96.0.10"]
