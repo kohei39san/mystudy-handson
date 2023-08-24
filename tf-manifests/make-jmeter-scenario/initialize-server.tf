@@ -35,6 +35,7 @@ resource "null_resource" "init_ec2" {
       "JMETER_VERSION=${var.jmeter_version} /tmp/mystudy-handson/scripts/install-jmeter.sh",
       "/tmp/mystudy-handson/scripts/install-terraform.sh",
       "cd /tmp/mystudy-handson/k8s-manifests/make-jmeter-scenario",
+      "echo '127.0.0.1 mynginx1.com' | sudo tee -a /etc/hosts",
       "terraform init",
       "terraform apply -auto-approve",
     ]
