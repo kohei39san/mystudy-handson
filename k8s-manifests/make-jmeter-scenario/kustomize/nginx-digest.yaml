@@ -22,12 +22,12 @@ spec:
           mountPath: "/etc/nginx/conf.d/"
         - name: tls
           mountPath: "/etc/nginx/ssl/"
-        - name: nginx-digest
+        - name: digest
           mountPath: "/etc/nginx/digest"
       volumes:
       - name: tls
         secret:
-          secretName: nginx
+          secretName: nginx-tls
       - name: config
         configMap:
           name: nginx-digest
