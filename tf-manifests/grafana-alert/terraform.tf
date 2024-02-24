@@ -8,10 +8,6 @@ terraform {
       source  = "registry.terraform.io/hashicorp/http"
       version = "3.4.1"
     }
-    null = {
-      source  = "registry.terraform.io/hashicorp/null"
-      version = "3.2.2"
-    }
   }
 }
 
@@ -21,7 +17,6 @@ provider "aws" {
   }
 }
 provider "http" {}
-provider "null" {}
 
 module "common_resources" {
   source = "../commons/simple-ec2-eice"

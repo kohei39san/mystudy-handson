@@ -16,6 +16,9 @@ module "install_docker" {
   inline = [
     "/tmp/mystudy-handson/scripts/install-docker.sh",
   ]
+  environment = {
+    DOCKER_VERSION = "24.0.5-1"
+  }
 }
 
 module "install_kubernetes" {
