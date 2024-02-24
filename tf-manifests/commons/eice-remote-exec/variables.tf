@@ -29,11 +29,16 @@ variable "scripts" {
 }
 
 variable "inline" {
-  type = list(string)
+  type    = list(string)
   default = []
 }
 
 variable "environment" {
-  type = map(string)
+  type    = map(string)
   default = {}
+}
+
+variable "depends_on_cmd_id" {
+  type    = string
+  default = ""
 }
