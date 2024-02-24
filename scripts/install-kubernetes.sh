@@ -37,6 +37,7 @@ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 echo 'setup master node'
+sleep 30
 kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
 CONTROL_PLANE=$(kubectl get node | grep control-plane | awk '{print $1}')
 kubectl taint nodes $CONTROL_PLANE node-role.kubernetes.io/control-plane:NoSchedule-
