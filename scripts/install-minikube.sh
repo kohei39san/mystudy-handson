@@ -2,7 +2,7 @@
 
 echo 'install minikube'
 if [[ -z ${KUBE_VERSION} ]];then
-  KUBE_VERSION="v1.25.3"
+  KUBE_VERSION="v1.29.2"
 fi
 cd /tmp
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
@@ -13,7 +13,7 @@ minikube start \
 
 echo 'install helm'
 if [[ -z ${HELM_VERSION} ]];then
-  HELM_VERSION='v3.10.3'
+  HELM_VERSION='v3.14.2'
 fi
 WD=/tmp/helm
 mkdir -p ${WD}

@@ -24,6 +24,6 @@ variable "instance_private_key" {
 }
 
 variable "vpc_security_group_ids" {
-  type = list(string)
+  type    = list(string)
   default = []
 }

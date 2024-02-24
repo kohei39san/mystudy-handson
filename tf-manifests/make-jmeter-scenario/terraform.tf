@@ -24,5 +24,5 @@ provider "http" {}
 provider "null" {}
 
 module "common_resources" {
-  source = "../common"
+  source = "../commons/simple-ec2"
 }
