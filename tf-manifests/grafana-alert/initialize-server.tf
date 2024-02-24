@@ -18,12 +18,12 @@ module "install_docker" {
   ]
 }
 
-module "install_minikube" {
+module "install_kubernetes" {
   source         = "../commons/eice-remote-exec"
   instance_id    = module.common_resources.instance.id
   public_ip      = module.common_resources.instance.public_ip
   depends_on_cmd = module.install_docker.id
   inline = [
-    "/tmp/mystudy-handson/scripts/install-minikube.sh",
+    "/tmp/mystudy-handson/scripts/install-kubernetes.sh",
   ]
 }

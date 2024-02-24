@@ -15,7 +15,7 @@ gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cl
 EOF
 
 #sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
-VERSION="1.26.0"
+VERSION="1.29.2"
 sudo yum install -y kubelet-${VERSION} kubeadm-${VERSION} kubectl-${VERSION} --disableexcludes=kubernetes
 sudo swapoff -a
 sudo systemctl start kubelet

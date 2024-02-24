@@ -1,6 +1,6 @@
 variable "ami_name" {
   type    = string
-  default = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+  default = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
 }
 
 variable "instance_type" {
