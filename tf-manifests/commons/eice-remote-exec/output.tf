@@ -1,4 +1,4 @@
 output "id" {
   description = "remote-exec id"
-  value       = null_resource.remote_exec.id
+  value       = terraform_data.remote_exec.id
 }

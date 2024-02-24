@@ -38,7 +38,7 @@ variable "environment" {
   default = {}
 }
 
-variable "depends_on_cmd_id" {
+variable "depends_on_cmd" {
   type    = string
   default = ""
 }

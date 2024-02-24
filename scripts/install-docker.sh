@@ -2,7 +2,7 @@
 
 echo 'install docker'
 if [[ -z ${DOCKER_VERSION} ]]; then
-  DOCKER_VERSION="25.0.3"
+  DOCKER_VERSION="20.10.25"
 fi
 sudo yum install -y docker-${DOCKER_VERSION}
 sudo systemctl start docker

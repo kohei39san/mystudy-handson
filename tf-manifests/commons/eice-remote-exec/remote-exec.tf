@@ -6,11 +6,12 @@ locals {
   inline                  = length(var.scripts) == 0 ? concat(local.env_cmds, var.inline) : concat(local.env_cmds, local.script_cmds)
 }
 
-resource "null_resource" "send_file" {
+resource "terraform_data" "send_file" {
   for_each = { for k, v in local.remote_scripts : var.scripts[k] => local.remote_scripts[k] }
-  triggers = {
-    public_ip = "${var.public_ip}"
-  }
+  triggers_replace = [
+    var.public_ip,
+    var.depends_on_cmd,
+  ]
 
   provisioner "local-exec" {
     command = local.send_ssh_public_key_cmd
@@ -19,7 +20,7 @@ resource "null_resource" "send_file" {
   connection {
     type        = "ssh"
     user        = var.ssh_user
-    host        = self.triggers.public_ip
+    host        = var.public_ip
     private_key = file(var.ssh_private_key)
   }
 
@@ -29,11 +30,11 @@ resource "null_resource" "send_file" {
   }
 }
 
-resource "null_resource" "remote_exec" {
-  triggers = {
-    public_ip     = "${var.public_ip}"
-    send_file_ids = join(",", [for i in null_resource.send_file : i.id])
-  }
+resource "terraform_data" "remote_exec" {
+  triggers_replace = concat([
+    var.public_ip,
+    var.depends_on_cmd,
+  ], [for i in terraform_data.send_file : i.id])
 
   provisioner "local-exec" {
     command = local.send_ssh_public_key_cmd
@@ -42,7 +43,7 @@ resource "null_resource" "remote_exec" {
   connection {
     type        = "ssh"
     user        = var.ssh_user
-    host        = self.triggers.public_ip
+    host        = var.public_ip
     private_key = file(var.ssh_private_key)
   }
 
