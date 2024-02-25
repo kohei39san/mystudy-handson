@@ -1,8 +1,10 @@
 #!/bin/bash -ex
 
 echo "install cni plugin"
+if [[ -z ${CNI_PLUGIN_VERSION} ]];then
+  CNI_PLUGIN_VERSION="v1.4.0"
+fi
 cd /tmp
-CNI_PLUGIN_VERSION="v1.4.0"
 CNI_PLUGIN_TAR="cni-plugins-linux-amd64-$CNI_PLUGIN_VERSION.tgz"
 CNI_PLUGIN_INSTALL_DIR="/opt/cni/bin"
 curl -LO "https://github.com/containernetworking/plugins/releases/download/$CNI_PLUGIN_VERSION/$CNI_PLUGIN_TAR"
@@ -10,18 +12,26 @@ sudo mkdir -p "$CNI_PLUGIN_INSTALL_DIR"
 sudo tar -xf "$CNI_PLUGIN_TAR" -C "$CNI_PLUGIN_INSTALL_DIR"
 rm "$CNI_PLUGIN_TAR"
 
-echo "install cri-dockerd"
+echo "install cri"
+if [[ -z ${CRI_VERSION} ]];then
+  CRI_VERSION="v0.3.10"
+fi
 git clone https://github.com/Mirantis/cri-dockerd.git
 cd cri-dockerd
-ARCH="amd64" make cri-dockerd
-suod install -o root -g root -m 0755 cri-dockerd /usr/local/bin/cri-dockerd
+git checkout "${CRI_VERSION}"
+sudo chown -R root:root .
+docker run -v /tmp/cri-dockerd:/tmp/cri-dockerd -w /tmp/cri-dockerd -e "ARCH=amd64" --name golang golang:1.20.12 make cri-dockerd
+sudo install -o root -g root -m 0755 cri-dockerd /usr/local/bin/cri-dockerd
 sudo install packaging/systemd/* /etc/systemd/system
 sudo sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now cri-docker.socket
 
 echo "install conntrack"
-sudo yum install -y conntrack
+if [[ -z ${CONNTRACK_VERSION} ]];then
+  CONNTRACK_VERSION="1.4.6"
+fi
+sudo yum install -y conntrack-tools-${CONNTRACK_VERSION}
 
 echo "install crictl"
 if [[ -z ${CRICTL_VERSION} ]];then
@@ -49,7 +59,7 @@ echo 'install minikube'
 if [[ -z ${KUBE_VERSION} ]];then
   KUBE_VERSION="v1.28.3"
 fi
-if [[ -z ${POD_NETWORK_CIDR}]];then
+if [[ -z ${POD_NETWORK_CIDR} ]];then
   POD_NETWORK_CIDR="10.1.0.0/16"
 fi
 cd /tmp
@@ -57,8 +67,13 @@ curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-
 sudo install minikube-linux-amd64 /usr/local/bin/minikube
 minikube start \
 --kubernetes-version=${KUBE_VERSION} \
---kubeadm.pod-network-cidr=${POD_NETWORK_CIDR} \
+--extra-config="kubeadm.pod-network-cidr=${POD_NETWORK_CIDR}" \
 --driver=none
+sudo cp -a /root/.kube ~
+sudo cp -a /root/.minikube ~
+sudo chown -R ec2-user:ec2-user ~/.kube
+sudo chown -R ec2-user:ec2-user ~/.minikube
+sed -i -e "s@root@home/ec2-user@g" ~/.kube/config
 
 echo "setup addon"
 minikube addons enable metrics-server
