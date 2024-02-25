@@ -27,6 +27,6 @@ module "install_kubernetes" {
   public_ip      = module.common_resources.instance.public_ip
   depends_on_cmd = module.install_docker.id
   inline = [
-    "/tmp/mystudy-handson/scripts/install-kubernetes.sh",
+    "/tmp/mystudy-handson/scripts/install-minikube-bare-metal.sh",
   ]
 }

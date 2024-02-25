@@ -5,8 +5,7 @@ if [[ -z ${DOCKER_VERSION} ]]; then
   DOCKER_VERSION="20.10.25"
 fi
 sudo yum install -y docker-${DOCKER_VERSION}
-sudo systemctl start docker
-sudo systemctl enable docker
+sudo systemctl enable --now docker
 sudo usermod -aG docker $(whoami)
 
 echo "install docker-compose"
