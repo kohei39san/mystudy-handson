@@ -59,21 +59,12 @@ echo 'install minikube'
 if [[ -z ${KUBE_VERSION} ]];then
   KUBE_VERSION="v1.28.3"
 fi
-if [[ -z ${POD_NETWORK_CIDR} ]];then
-  POD_NETWORK_CIDR="10.1.0.0/16"
-fi
 cd /tmp
 curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 sudo install minikube-linux-amd64 /usr/local/bin/minikube
 minikube start \
 --kubernetes-version=${KUBE_VERSION} \
---extra-config="kubeadm.pod-network-cidr=${POD_NETWORK_CIDR}" \
 --driver=none
-sudo cp -a /root/.kube ~
-sudo cp -a /root/.minikube ~
-sudo chown -R ec2-user:ec2-user ~/.kube
-sudo chown -R ec2-user:ec2-user ~/.minikube
-sed -i -e "s@root@home/ec2-user@g" ~/.kube/config
 
 echo "setup addon"
 minikube addons enable metrics-server
