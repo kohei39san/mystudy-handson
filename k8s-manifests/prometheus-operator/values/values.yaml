@@ -3,8 +3,10 @@ grafana:
     type: NodePort
     port: 3000
     targetPort: 3000
-    nodePort: 30100
+    nodePort: ${var.grafana_nodeport}
   defaultDashboardsEnabled: true
+  datasources:
+    url: "http://${local.public_ip}:${var.prometheus_nodeport}/"
 
 prometheus:
   prometheusSpec:
@@ -13,7 +15,7 @@ prometheus:
     type: NodePort
     port: 9090
     targetPort: 9090
-    nodePort: 30200
+    nodePort: ${var.prometheus_nodeport}
   hostNetwork: true
 
 alertmanager:
@@ -21,4 +23,4 @@ alertmanager:
     type: NodePort
     port: 9093
     targetPort: 9093
-    nodePort: 30300
+    nodePort: ${var.alertmanager_nodeport}

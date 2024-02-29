@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/helm"
       version = "2.12.1"
     }
+    http = {
+      source  = "registry.terraform.io/hashicorp/http"
+      version = "3.4.1"
+    }
   }
 }
 
@@ -12,3 +16,4 @@ provider "helm" {
     config_path = "~/.kube/config"
   }
 }
+provider "http" {}
