@@ -4,6 +4,7 @@ grafana:
     port: 3000
     targetPort: 3000
     nodePort: 30100
+  defaultDashboardsEnabled: true
 
 prometheus:
   prometheusSpec:
@@ -13,6 +14,7 @@ prometheus:
     port: 9090
     targetPort: 9090
     nodePort: 30200
+  hostNetwork: true
 
 alertmanager:
   service:

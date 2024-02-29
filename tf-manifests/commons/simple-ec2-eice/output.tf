@@ -12,3 +12,8 @@ output "instance" {
   description = "ec2"
   value       = aws_instance.instance
 }
+
+output "vpc" {
+  description = "vpc"
+  value = aws_vpc.vpc
+}
