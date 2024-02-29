@@ -10,7 +10,10 @@ fi
 if [[ -z ${REPO_URL} ]];then
   REPO_URL="https://github.com/kohei39san/mystudy-handson.git"
 fi
-cd /tmp
+if [[ -z ${CLONE_DIR} ]]
+  CLONE_DIR="/tmp"
+fi
+cd "${CLONE_DIR}"
 git clone ${REPO_URL}
 cd mystudy-handson
 git checkout ${COMMIT_ID}

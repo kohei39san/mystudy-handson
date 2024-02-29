@@ -20,7 +20,7 @@ git clone https://github.com/Mirantis/cri-dockerd.git
 cd cri-dockerd
 git checkout "${CRI_VERSION}"
 sudo chown -R root:root .
-docker run -v /tmp/cri-dockerd:/tmp/cri-dockerd -w /tmp/cri-dockerd -e "ARCH=amd64" --name golang golang:1.20.12 make cri-dockerd
+docker run --rm -v /tmp/cri-dockerd:/tmp/cri-dockerd -w /tmp/cri-dockerd -e "ARCH=amd64" --name golang golang:1.20.12 make cri-dockerd
 sudo install -o root -g root -m 0755 cri-dockerd /usr/local/bin/cri-dockerd
 sudo install packaging/systemd/* /etc/systemd/system
 sudo sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service
