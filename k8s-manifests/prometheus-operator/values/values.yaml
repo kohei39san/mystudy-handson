@@ -16,7 +16,6 @@ prometheus:
     port: 9090
     targetPort: 9090
     nodePort: ${var.prometheus_nodeport}
-  hostNetwork: true
 
 alertmanager:
   service:
