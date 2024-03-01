@@ -1,27 +1,15 @@
-data "http" "metadata_token" {
-  url    = "http://169.254.169.254/latest/api/token"
-  method = "PUT"
-  request_headers = {
-    "X-aws-ec2-metadata-token-ttl-seconds" = "21600"
-  }
-}
-
 data "http" "elastic_ip" {
-  url = "http://169.254.169.254/latest/meta-data/public-ipv4"
-  request_headers = {
-    "X-aws-ec2-metadata-token" = ""
-  }
+  url = "https://ifconfig.co/ip"
 }
 
 locals {
-  token = "${data.http.metadata_token.response_body}"
   public_ip = replace("${data.http.elastic_ip.response_body}/32", "\n", "")
 }
 
 data "template_file" "values" {
   template = "${file("values/values.yaml")}"
   vars = {
-    public_ip = "${local.token}"
+    public_ip = "${local.public_ip}"
     prometheus_nodeport = "${var.prometheus_nodeport}"
     grafana_nodeport = "${var.grafana_nodeport}"
     alertmanager_nodeport = "${var.alertmanager_nodeport}"
