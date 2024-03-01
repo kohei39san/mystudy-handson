@@ -6,7 +6,7 @@ grafana:
     nodePort: ${grafana_nodeport}
   defaultDashboardsEnabled: true
   additionalDataSources:
-   - name: prometheus
+   - name: Prometheus
      type: prometheus
      url: "http://${public_ip}:${prometheus_nodeport}/"
 
