@@ -8,6 +8,10 @@ terraform {
       source  = "registry.terraform.io/hashicorp/http"
       version = "3.4.1"
     }
+    template = {
+      source = "hashicorp/template"
+      version = "2.2.0"
+    }
   }
 }
 
@@ -17,3 +21,4 @@ provider "helm" {
   }
 }
 provider "http" {}
+provider "template" {}
