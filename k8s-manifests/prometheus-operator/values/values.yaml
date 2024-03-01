@@ -5,8 +5,10 @@ grafana:
     targetPort: 3000
     nodePort: ${grafana_nodeport}
   defaultDashboardsEnabled: true
-  datasources:
-    url: "http://${public_ip}:${prometheus_nodeport}/"
+  additionalDataSources:
+   - name: prometheus
+     type: prometheus
+     url: "http://${public_ip}:${prometheus_nodeport}/"
 
 prometheus:
   prometheusSpec:

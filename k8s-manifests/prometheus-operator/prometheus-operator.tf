@@ -1,18 +1,18 @@
 data "http" "elastic_ip" {
-  url = "https://ifconfig.co/ip"
+  url = "https://ipinfo.io/ip"
 }
 
 locals {
-  public_ip = replace("${data.http.elastic_ip.response_body}/32", "\n", "")
+  public_ip = "${data.http.elastic_ip.response_body}/32"
 }
 
 data "template_file" "values" {
   template = "${file("values/values.yaml")}"
   vars = {
-    public_ip = "${local.public_ip}"
-    prometheus_nodeport = "${var.prometheus_nodeport}"
-    grafana_nodeport = "${var.grafana_nodeport}"
-    alertmanager_nodeport = "${var.alertmanager_nodeport}"
+    "public_ip" = "${local.public_ip}"
+    "prometheus_nodeport" = "${var.prometheus_nodeport}"
+    "grafana_nodeport" = "${var.grafana_nodeport}"
+    "alertmanager_nodeport" = "${var.alertmanager_nodeport}"
   }
 }
 
