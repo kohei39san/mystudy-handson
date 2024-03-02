@@ -77,6 +77,12 @@ curl -LO https://storage.googleapis.com/kubernetes-release/release/${KUBE_VERSIO
 chmod +x ./kubectl
 sudo mv ./kubectl /usr/local/bin/kubectl
 
+echo 'install network add ons'
+if [[ -z ${NETWORK_ADDON_VERSION} ]];then
+  NETWORK_ADDON_VERSION="v0.24.2"
+fi
+kubectl apply -f https://github.com/flannel-io/flannel/releases/download/${NETWORK_ADDON_VERSION}/kube-flannel.yml
+
 echo 'setup alias'
 echo 'alias k="kubectl"' >> ~/.bash_profile
 echo 'complete -F __start_kubectl k' >> ~/.bash_profile
