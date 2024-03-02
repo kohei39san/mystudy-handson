@@ -1,5 +1,5 @@
 data "http" "client_global_ip" {
-  url = "https://ifconfig.co/ip"
+  url = "https://ipinfo.io/ip"
 }
 
 resource "aws_security_group" "prometheus_sg" {
@@ -11,17 +11,20 @@ resource "aws_security_group" "prometheus_sg" {
     to_port     = 30100
     protocol    = "tcp"
     cidr_blocks = ["${chomp(data.http.client_global_ip.response_body)}/32"]
+    description = "allow access to grafana"
   }
   ingress {
     from_port   = 30200
     to_port     = 30200
     protocol    = "tcp"
     cidr_blocks = ["${chomp(data.http.client_global_ip.response_body)}/32"]
+    description = "allow access to prometheus"
   }
   ingress {
     from_port   = 30300
     to_port     = 30300
     protocol    = "tcp"
     cidr_blocks = ["${chomp(data.http.client_global_ip.response_body)}/32"]
+    description = "allow access to alertmanager"
   }
 }
