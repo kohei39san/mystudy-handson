@@ -5,6 +5,10 @@ grafana:
     targetPort: 3000
     nodePort: ${grafana_nodeport}
   defaultDashboardsEnabled: true
+  sidecar:
+    dashboards:
+      provider:
+        allowUiUpdates: true
 
 prometheus:
   prometheusSpec:
