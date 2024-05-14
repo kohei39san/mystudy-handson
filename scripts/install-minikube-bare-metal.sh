@@ -64,6 +64,7 @@ curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-
 sudo install minikube-linux-amd64 /usr/local/bin/minikube
 minikube start \
 --kubernetes-version=${KUBE_VERSION} \
+--cni=calico \
 --driver=none
 
 echo "setup addon"
