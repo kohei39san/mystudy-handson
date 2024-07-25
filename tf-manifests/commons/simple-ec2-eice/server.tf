@@ -6,8 +6,9 @@ resource "aws_network_interface" "ni" {
   security_groups = concat([aws_security_group.sg.id], var.vpc_security_group_ids)
 }
 resource "aws_instance" "instance" {
-  ami           = data.aws_ssm_parameter.ami.value
-  instance_type = var.instance_type
+  ami                  = data.aws_ssm_parameter.ami.value
+  instance_type        = var.instance_type
+  iam_instance_profile = var.iam_instance_profile
   network_interface {
     network_interface_id = aws_network_interface.ni.id
     device_index         = 0

@@ -4,10 +4,6 @@ terraform {
       source  = "registry.terraform.io/hashicorp/aws"
       version = "5.59.0"
     }
-    http = {
-      source  = "registry.terraform.io/hashicorp/http"
-      version = "3.4.3"
-    }
   }
 }
 
@@ -16,8 +12,9 @@ provider "aws" {
     tags = var.aws_tags
   }
 }
-provider "http" {}
 
 module "common_resources" {
-  source = "../commons/simple-ec2"
+  source               = "../commons/simple-ec2-eice"
+  iam_instance_profile = aws_iam_instance_profile.managed_node_instance_profile.id
+  instance_type        = var.instance_type
 }
