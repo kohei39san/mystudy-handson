@@ -14,7 +14,7 @@ provider "aws" {
 }
 
 module "common_resources" {
-  source               = "../commons/simple-ec2-eice"
+  source               = "../commons/ec2-eice-tunnel"
   iam_instance_profile = aws_iam_instance_profile.managed_node_instance_profile.id
   instance_type        = var.instance_type
 }
