@@ -5,7 +5,7 @@ variable "ami_name" {
 
 variable "instance_type" {
   type    = string
-  default = "t2.medium"
+  default = "t2.micro"
 }
 
 variable "iam_instance_profile" {
@@ -18,17 +18,22 @@ variable "root_block_volume_size" {
   default = 20
 }
 
-variable "instance_public_key" {
-  type    = string
-  default = "public-key-path"
-}
-
-variable "instance_private_key" {
-  type    = string
-  default = "private-key-path"
-}
-
 variable "vpc_security_group_ids" {
   type    = list(string)
   default = []
+}
+
+variable "key_pair" {
+  type    = string
+  default = ""
+}
+
+variable "vpc_cidr_block" {
+  type    = string
+  default = "10.0.0.0/16"
+}
+
+variable "subnet_cidr_block" {
+  type    = string
+  default = "10.0.0.0/24"
 }
