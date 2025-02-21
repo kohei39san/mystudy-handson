@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-digest
+spec:
+  selector:
+    matchLabels:
+      app: nginx-digest
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx-digest
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: config
+          mountPath: "/etc/nginx/conf.d/"
+        - name: tls
+          mountPath: "/etc/nginx/ssl/"
+        - name: digest
+          mountPath: "/etc/nginx/digest"
+      volumes:
+      - name: tls
+        secret:
+          secretName: nginx-tls
+      - name: config
+        configMap:
+          name: nginx-digest
+      - name: digest
+        secret:
+          secretName: nginx-digest
+---
+apiVersion: v1
+data:
+  default.conf: |
+    server {
+      listen       80;
+      listen  [::]:80;
+
+      server_name nginx-digest;
+
+      auth_digest "Realm";
+      auth_digest_user_file /etc/nginx/digest/.htdigest;
+
+      location / {
+          root   /usr/share/nginx/html;
+          index  index.html index.htm;
+      }
+
+      error_page   500 502 503 504  /50x.html;
+      location = /50x.html {
+          root   /usr/share/nginx/html;
+      }
+    }
+kind: ConfigMap
+metadata:
+  name: nginx-digest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-digest
+spec:
+  selector:
+    app: nginx-digest
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-digest
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  tls:
+  - hosts:
+    - "nginx-digest"
+    secretName: nginx-digest
+  ingressClassName: nginx
+  rules:
+  - host: "nginx-digest"
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: nginx-digest
+            port:
+              number: 80
