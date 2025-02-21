@@ -1,6 +1,6 @@
 variable "ami_name" {
   type    = string
-  default = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+  default = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
 }
 
 variable "instance_type" {
@@ -18,12 +18,17 @@ variable "root_block_volume_size" {
   default = 20
 }
 
-variable "vpc_security_group_ids" {
-  type    = list(string)
-  default = []
+variable "key_name" {
+  type    = string
+  default = "key_server"
 }
 
-variable "key_pair" {
+variable "instance_public_key" {
+  type    = string
+  default = ""
+}
+
+variable "instance_private_key" {
   type    = string
   default = ""
 }
@@ -36,4 +41,14 @@ variable "vpc_cidr_block" {
 variable "subnet_cidr_block" {
   type    = string
   default = "10.0.0.0/24"
+}
+
+variable "sg_name" {
+  type    = string
+  default = "sg_server"
+}
+
+variable "sg_eice_name" {
+  type    = string
+  default = "sg_eice"
 }

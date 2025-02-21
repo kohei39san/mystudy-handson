@@ -8,6 +8,11 @@ variable "instance_type" {
   default = "t2.medium"
 }
 
+variable "iam_instance_profile" {
+  type    = string
+  default = ""
+}
+
 variable "root_block_volume_size" {
   type    = number
   default = 20

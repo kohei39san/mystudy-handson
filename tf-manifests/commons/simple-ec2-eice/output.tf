@@ -15,5 +15,5 @@ output "instance" {
 
 output "vpc" {
   description = "vpc"
-  value = aws_vpc.vpc
+  value       = aws_vpc.vpc
 }
