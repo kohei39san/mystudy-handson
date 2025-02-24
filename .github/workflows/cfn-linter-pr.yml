@@ -1,0 +1,71 @@
+name: CloudFormation linter and PR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  cfn-linter:
+    runs-on: ubuntu-latest
+    outputs:
+      linted: ${{ steps.run_linter.outputs.linted }}
+      changes: ${{ steps.git_diff.outputs.changes }}
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Cloud Formation Linter with Latest Version
+      uses: scottbrenner/cfn-lint-action@v2
+
+    - name: Print the Cloud Formation Linter Version & run Linter.
+      id: run_linter
+      run: |
+        cfn-lint --version
+
+        shopt -s globstar # enable globbing
+        files=$(ls ./**/cfn/**/*.yaml ./**/cfn/**/*.yml 2>/dev/null || true)
+        [ -n "${files}" ] && out=$(cfn-lint -t $files --non-zero-exit-code none -f parseable)
+        if [ -n "${out}" ];then
+          echo "${out}" | tee /tmp/cfn-lint-output.txt
+          echo "linted=linted" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install and Run Ollama
+      if: steps.run_linter.outputs.linted == 'linted'
+      run: |
+        cat /tmp/cfn-lint-output.txt | cut -d':' -f1 | sort | uniq | while read f;do
+          echo -n "" > /tmp/input.txt
+
+          cat $f >> /tmp/input.txt
+          echo >> /tmp/input.txt
+          echo "---" >> /tmp/input.txt
+          echo >> /tmp/input.txt
+          grep "$f" /tmp/cfn-lint-output.txt >> /tmp/input.txt
+          echo >> /tmp/input.txt
+          echo "---" >> /tmp/input.txt
+          echo >> /tmp/input.txt
+          echo "Create a fixed cloudformation yaml file" >> /tmp/input.txt
+
+          if ! command -v ollama 1>/dev/null;then
+            curl -fsSL https://ollama.com/install.sh | sh
+          fi
+          cat /tmp/input.txt | ollama run llama3.2 | tee /tmp/output.txt
+          sed -n '/```/,/```/p' /tmp/output.txt | sed '1d;$d' > $f
+        done
+
+    - name: Check for changes
+      id: git_diff
+      run: |
+        git diff --exit-code && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+
+    - name: Create Pull Request
+      if: steps.git_diff.outputs.changes == 'changes'
+      uses: peter-evans/create-pull-request@v7
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: main
+        branch: cfn-lint-pr
+        title: "Changes by cfn-lint actions"
+        body-path: /tmp/cfn-lint-output.txt
