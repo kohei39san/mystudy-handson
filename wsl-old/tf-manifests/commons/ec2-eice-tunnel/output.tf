@@ -5,5 +5,5 @@ output "instance" {
 
 output "private_key" {
   description = "private key"
-  value = "${var.instance_private_key}"
+  value       = var.instance_private_key
 }

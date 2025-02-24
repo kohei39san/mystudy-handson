@@ -19,6 +19,6 @@ provider "aws" {
 provider "http" {}
 
 module "common_resources" {
-  source = "../commons/simple-ec2-eice"
+  source                 = "../commons/simple-ec2-eice"
   vpc_security_group_ids = ["${resource.aws_security_group.prometheus_sg.id}"]
 }

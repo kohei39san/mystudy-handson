@@ -4,16 +4,16 @@ variable "prometheus_operator_version" {
 }
 
 variable "grafana_nodeport" {
-  type = number
+  type    = number
   default = 30100
 }
 
 variable "prometheus_nodeport" {
-  type = number
+  type    = number
   default = 30200
 }
 
 variable "alertmanager_nodeport" {
-  type = number
+  type    = number
   default = 30300
 }

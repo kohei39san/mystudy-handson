@@ -1,0 +1,53 @@
+name: Terraform linter and PR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform-fmt:
+    runs-on: ubuntu-latest
+    outputs:
+      changes: ${{ steps.git_diff.outputs.changes }}
+      branch: ${{ steps.create_branch.outputs.branch }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: latest
+
+    - name: Format Terraform files
+      run: terraform fmt -recursive
+
+    - uses: actions/cache@v4
+      name: Cache plugin dir for TFLint
+      with:
+        path: ~/.tflint.d/plugins
+        key: ubuntu-latest-tflint-${{ hashFiles('.tflint.hcl') }}
+
+    - uses: terraform-linters/setup-tflint@v4
+      name: Setup TFLint
+      with:
+        tflint_version: "latest"
+
+    - name: Run TFLint to fix
+      run: tflint --recursive -f compact --fix
+
+    - name: Check for changes
+      id: git_diff
+      run: |
+        git diff --exit-code && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+
+    - name: Create Pull Request
+      if: steps.git_diff.outputs.changes == 'changes'
+      uses: peter-evans/create-pull-request@v7
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: main
+        branch: tflint-pr
+        title: "Changes by tflint actions"

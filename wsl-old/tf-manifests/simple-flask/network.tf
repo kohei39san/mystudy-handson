@@ -3,7 +3,7 @@ data "http" "client_global_ip" {
 }
 
 resource "aws_security_group" "http_sg" {
-  name        = "http_sg"
+  name           = "http_sg"
   description = "allow http"
   vpc_id      = module.common_resources.test_vpc.id
   ingress {
