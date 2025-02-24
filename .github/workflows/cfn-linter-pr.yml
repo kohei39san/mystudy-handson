@@ -51,6 +51,7 @@ jobs:
           if ! command -v ollama 1>/dev/null;then
             curl -fsSL https://ollama.com/install.sh | sh
           fi
+          sleep 5
           cat /tmp/input.txt | ollama run llama3.2 | tee /tmp/output.txt
           sed -n '/```/,/```/p' /tmp/output.txt | sed '1d;$d' > $f
         done
