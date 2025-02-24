@@ -10,7 +10,7 @@ resource "docker_image" "myflask" {
   name = "myflask"
   build {
     context = "../../container-images/myflask"
-    tag     = ["${var.myflask_image_tag}"]
+    tag     = [var.myflask_image_tag]
   }
   triggers = {
     dir_sha1 = sha1(join("", [for f in fileset(path.module, "../../container-images/myflask/*") : filesha1(f)]))
@@ -19,7 +19,7 @@ resource "docker_image" "myflask" {
 
 resource "null_resource" "push_image" {
   triggers = {
-    image_id = "${docker_image.myflask.image_id}"
+    image_id = docker_image.myflask.image_id
   }
   provisioner "local-exec" {
     command = "minikube image load ${var.myflask_image_tag}"

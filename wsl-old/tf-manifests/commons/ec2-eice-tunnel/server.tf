@@ -8,7 +8,7 @@ resource "aws_network_interface" "ni" {
 
 resource "aws_key_pair" "deployer" {
   key_name   = var.key_name
-  public_key = file("${var.instance_public_key}")
+  public_key = file(var.instance_public_key)
 }
 
 resource "aws_instance" "instance" {
