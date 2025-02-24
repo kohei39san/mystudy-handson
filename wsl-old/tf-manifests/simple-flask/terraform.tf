@@ -24,6 +24,6 @@ provider "http" {}
 provider "null" {}
 
 module "common_resources" {
-  source                 = "../common"
+  source                 = "../commons"
   vpc_security_group_ids = ["${resource.aws_security_group.http_sg.id}"]
 }
