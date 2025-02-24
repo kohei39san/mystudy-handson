@@ -1,4 +1,4 @@
-name: Terraform linter and PR
+name: Terraform Generate linter and PR
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
 
     - name: Run TFLint to fix
       id: run_linter
-      run:
+      run: |
         out=$(tflint --recursive -f compact --fix --minimum-failure-severity=error)
         if [ -n "${out}" ];then
           echo "${out}" | grep -E '\.tf:' | tee /tmp/tflint-gen-output.txt
@@ -85,3 +85,4 @@ jobs:
         base: main
         branch: tflint-gen-pr
         title: "Changes by tflint actions"
+        body-path: /tmp/tflint-gen-output.txt
