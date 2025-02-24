@@ -1,6 +1,6 @@
 resource "null_resource" "init_ec2" {
   triggers = {
-    public_ip = "${module.common_resources.test_instance.public_ip}"
+    public_ip = module.common_resources.test_instance.public_ip
   }
 
   connection {
