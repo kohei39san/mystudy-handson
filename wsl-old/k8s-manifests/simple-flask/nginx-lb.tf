@@ -32,6 +32,12 @@ resource "null_resource" "route_nginx_lb" {
     id = docker_container.nginx_lb.id
   }
   provisioner "local-exec" {
-    command = "docker exec nginx-lb route add -net 10.96.0.0 netmask 255.240.0.0 gw 192.168.49.2 eth0"
+    command     = "docker exec nginx-lb route add -net 10.96.0.0 netmask 255.240.0.0 gw 192.168.49.2 eth0"
+    connection {
+      type        = "ssh"
+      host        = "localhost"
+      user        = "username" # replace with your local username
+      private_key = "~/.local/share/docker/ssh PrivateKey.pem" # replace with the path to your ssh private key
+    }
   }
 }

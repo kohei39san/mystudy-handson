@@ -13,16 +13,18 @@ terraform {
       version = "3.0.2"
     }
   }
-}
 
-provider "helm" {
-  kubernetes {
-    config_path = var.kubeconfig_path
+  required_version = ">=1.10.5"
+
+  provider "helm" {
+    kubernetes {
+      config_path = var.kubeconfig_path
+    }
   }
-}
 
-provider "kustomization" {
-  kubeconfig_path = var.kubeconfig_path
-}
+  provider "kustomization" {
+    kubeconfig_path = var.kubeconfig_path
+  }
 
-provider "docker" {}
+  provider "docker" {}
+}

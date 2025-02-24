@@ -13,6 +13,8 @@ terraform {
       version = "2.2.0"
     }
   }
+
+  required_version = ">= 1.10.5"
 }
 
 provider "helm" {
@@ -22,3 +24,4 @@ provider "helm" {
 }
 provider "http" {}
 provider "template" {}
+

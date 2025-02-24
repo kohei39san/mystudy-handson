@@ -42,10 +42,9 @@ resource "docker_container" "nginx_lb" {
 }
 
 resource "null_resource" "route_nginx_lb" {
-  triggers = {
-    id = docker_container.nginx_lb.id
-  }
   provisioner "local-exec" {
-    command = "docker exec nginx-lb route add -net 10.96.0.0 netmask 255.240.0.0 gw 192.168.49.2 eth0"
+    command = <<EOT
+docker exec nginx-lb route add -net 10.96.0.0 netmask 255.240.0.0 gw 192.168.49.2 eth0
+EOT
   }
 }
