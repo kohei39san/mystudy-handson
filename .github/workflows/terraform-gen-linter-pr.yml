@@ -1,0 +1,87 @@
+name: Terraform linter and PR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform-fmt:
+    runs-on: ubuntu-latest
+    outputs:
+      linted: ${{ steps.run_linter.outputs.linted }}
+      changes: ${{ steps.git_diff.outputs.changes }}
+      branch: ${{ steps.create_branch.outputs.branch }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: latest
+
+    - name: Format Terraform files
+      run: terraform fmt -recursive
+
+    - uses: actions/cache@v4
+      name: Cache plugin dir for TFLint
+      with:
+        path: ~/.tflint.d/plugins
+        key: ubuntu-latest-tflint-${{ hashFiles('.tflint.hcl') }}
+
+    - uses: terraform-linters/setup-tflint@v4
+      name: Setup TFLint
+      with:
+        tflint_version: "latest"
+
+    - name: Run TFLint to fix
+      id: run_linter
+      run:
+        out=$(tflint --recursive -f compact --fix --minimum-failure-severity=error)
+        if [ -n "${out}" ];then
+          echo "${out}" | grep -E '\.tf:' | tee /tmp/tflint-gen-output.txt
+          echo "linted=linted" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install and Run Ollama
+      if: steps.run_linter.outputs.linted == 'linted'
+      run: |
+        cat /tmp/tflint-gen-output.txt | cut -d':' -f1 | sort | uniq | while read f;do
+          echo -n "" > /tmp/input.txt
+
+          cat $f >> /tmp/input.txt
+          echo >> /tmp/input.txt
+          echo "---" >> /tmp/input.txt
+          echo >> /tmp/input.txt
+          echo "The following error was found in one of the above files. Please correct only the above error. Please output the entire file." >> /tmp/input.txt
+          echo >> /tmp/input.txt
+          pushd .
+          cd $(dirname $f)
+          terraform version >> /tmp/input.txt
+          popd
+          echo "---" >> /tmp/input.txt
+          grep "$f:" /tmp/tflint-gen-output.txt >> /tmp/input.txt
+
+          if ! command -v ollama 1>/dev/null;then
+            curl -fsSL https://ollama.com/install.sh | sh
+          fi
+          sleep 5
+          cat /tmp/input.txt | ollama run llama3.2 | tee /tmp/output.txt
+          sed -n '/```/,/```/p' /tmp/output.txt | sed '1d;$d' > $f
+        done
+
+    - name: Check for changes
+      id: git_diff
+      run: |
+        git diff --exit-code && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+
+    - name: Create Pull Request
+      if: steps.git_diff.outputs.changes == 'changes'
+      uses: peter-evans/create-pull-request@v7
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        base: main
+        branch: tflint-gen-pr
+        title: "Changes by tflint actions"
