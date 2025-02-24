@@ -4,6 +4,6 @@ resource "helm_release" "kube-prometheus-stack" {
   namespace        = "monitoring"
   create_namespace = true
   values = [
-    "${file("kustomize/prometheus-operator/values.yaml")}"
+    file("kustomize/prometheus-operator/values.yaml")
   ]
 }
