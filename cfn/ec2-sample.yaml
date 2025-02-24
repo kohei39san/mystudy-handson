@@ -1,13 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Basic EC2 instance
 
-Resource:
+Parameters:
+  KeyName:
+    Type: String
+    Description: The name of the key pair to use for SSH access.
+
+Resources:
   MyEC2Instance:
     Type: 'AWS::EC2::Instance'
-    Properties: 
+    Properties:
       InstanceType: t2.micro
-      ImageId: ami-0abcdef1234567890 # ここに適切なAMI IDを入力してください
-      KeyName: my-key-pair # ここに適切なキーペアの名前を入力してください
+      ImageId: ami-0abcdef1234567890 # Replace with the ID of your AMI
+      KeyName: !Ref KeyName
       SecurityGroups:
         - Ref: MySecurityGroup
 
@@ -19,8 +23,8 @@ Resource:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
-          CidrIp: 0.0.0.0/0
+          CidrIp: '0.0.0.0/0'
         - IpProtocol: tcp
           FromPort: '80'
           ToPort: '80'
-          CidrIp: 0.0.0.0/0
+          CidrIp: '0.0.0.0/0'
