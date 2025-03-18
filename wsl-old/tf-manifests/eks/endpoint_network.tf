@@ -1,3 +1,7 @@
+provider "aws" {
+  region = var.region
+}
+
 data "http" "client_global_ip" {
   url = "https://ifconfig.co/ip"
 }
@@ -19,6 +23,7 @@ resource "aws_route_table_association" "kubectl_rta" {
 
 resource "aws_security_group" "kubectl_sg" {
   vpc_id = aws_vpc.vpc.id
+
   ingress {
     from_port   = 22
     to_port     = 22
