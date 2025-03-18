@@ -49,3 +49,8 @@ resource "null_resource" "route_nginx_lb" {
     command = "docker exec nginx-lb route add -net 10.96.0.0 netmask 255.240.0.0 gw 192.168.49.2 eth0"
   }
 }
+
+# Added the version constraint for the null provider
+required_providers {
+  null = ">= 3.2.1"
+}

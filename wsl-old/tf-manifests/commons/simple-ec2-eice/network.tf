@@ -1,6 +1,8 @@
 data "http" "client_global_ip" {
   url = "https://inet-ip.info"
+  version = "1.0.0"
 }
+
 locals {
   allowed_cidr = replace("${data.http.client_global_ip.response_body}/32", "\n", "")
 }

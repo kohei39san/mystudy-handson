@@ -1,4 +1,3 @@
-terraform {
   required_providers {
     aws = {
       source  = "registry.terraform.io/hashicorp/aws"
@@ -9,16 +8,18 @@ terraform {
       version = "3.4.1"
     }
   }
-}
 
-provider "aws" {
-  default_tags {
-    tags = var.aws_tags
+  required_version = ">= 1.11.2"
+
+  provider "aws" {
+    default_tags {
+      tags = var.aws_tags
+    }
   }
-}
-provider "http" {}
+  provider "http" {}
 
-module "common_resources" {
-  source                 = "../commons/simple-ec2-eice"
-  vpc_security_group_ids = [resource.aws_security_group.prometheus_sg.id]
+  module "common_resources" {
+    source                 = "../commons/simple-ec2-eice"
+    vpc_security_group_ids = [resource.aws_security_group.prometheus_sg.id]
+  }
 }

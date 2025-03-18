@@ -1,3 +1,7 @@
+provider "null" {
+  required_version = "~> 3.2"
+}
+
 resource "null_resource" "init_kubectl" {
   triggers = {
     instance_id = aws_instance.kubectl_instance.id

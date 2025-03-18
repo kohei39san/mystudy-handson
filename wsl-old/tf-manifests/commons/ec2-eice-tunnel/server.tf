@@ -1,6 +1,12 @@
+# Configure the AWS Provider
+provider "aws" {
+  region = var.region
+}
+
 data "aws_ssm_parameter" "ami" {
   name = var.ami_name
 }
+
 resource "aws_network_interface" "ni" {
   subnet_id       = aws_subnet.subnet.id
   security_groups = [aws_security_group.sg.id]
@@ -23,4 +29,9 @@ resource "aws_instance" "instance" {
   root_block_device {
     volume_size = var.root_block_volume_size
   }
+}
+```
+```hcl
+provider "aws" {
+  region = var.region
 }
