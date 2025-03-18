@@ -1,5 +1,9 @@
 terraform {
   required_providers {
+    null = {
+      source  = "registry.terraform.io/hashicorp/null"
+      version = "3.2.1"
+    }
     kustomization = {
       source  = "kbst/kustomization"
       version = "0.9.4"
