@@ -16,6 +16,7 @@ terraform {
     #      source = "hashicorp/http"
     #      version = "3.4.0"
     #    }
+    required_version = ">= v1.11.4"  # Added the required_version attribute
   }
 }
 

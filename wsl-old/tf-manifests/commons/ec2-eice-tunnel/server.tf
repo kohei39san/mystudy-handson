@@ -1,6 +1,11 @@
 data "aws_ssm_parameter" "ami" {
   name = var.ami_name
 }
+
+provider "aws" {
+  version = ">= 3.0.0"
+}
+
 resource "aws_network_interface" "ni" {
   subnet_id       = aws_subnet.subnet.id
   security_groups = [aws_security_group.sg.id]

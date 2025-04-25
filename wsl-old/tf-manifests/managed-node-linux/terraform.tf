@@ -2,9 +2,11 @@ terraform {
   required_providers {
     aws = {
       source  = "registry.terraform.io/hashicorp/aws"
-      version = "5.59.0"
+      version = ">= 5.59.0"
     }
   }
+
+  required_version = terraform_required_version()
 }
 
 provider "aws" {

@@ -2,13 +2,15 @@ terraform {
   required_providers {
     aws = {
       source  = "registry.terraform.io/hashicorp/aws"
-      version = "5.59.0"
+      version = ">=5.59.0" # Use >= to specify minimum version for compatibility
     }
     http = {
       source  = "hashicorp/http"
       version = "3.4.3"
     }
   }
+
+  required_version = ">=1.11.4, <2.0.0" # Specify the range of compatible versions
 }
 
 provider "aws" {

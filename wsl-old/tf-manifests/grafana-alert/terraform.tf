@@ -2,12 +2,18 @@ terraform {
   required_providers {
     aws = {
       source  = "registry.terraform.io/hashicorp/aws"
-      version = "5.38.0"
+      version = ">= 5.38.0"
     }
     http = {
       source  = "registry.terraform.io/hashicorp/http"
-      version = "3.4.1"
+      version = ">= 3.4.1"
     }
+  }
+
+  required_version = ">= 1.11.4"
+
+  default_tags {
+    tags = var.aws_tags
   }
 }
 
@@ -16,6 +22,7 @@ provider "aws" {
     tags = var.aws_tags
   }
 }
+
 provider "http" {}
 
 module "common_resources" {

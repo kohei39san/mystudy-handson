@@ -1,3 +1,7 @@
+provider "aws" {
+  version = ">= 3.0"
+}
+
 data "aws_ssm_parameter" "ami" {
   name = var.ami_name
 }

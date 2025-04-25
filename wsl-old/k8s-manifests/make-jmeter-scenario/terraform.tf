@@ -13,6 +13,8 @@ terraform {
       version = "3.0.2"
     }
   }
+
+  required_version = ">= 1.11.4" # specify the minimum version
 }
 
 provider "helm" {

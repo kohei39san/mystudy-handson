@@ -13,6 +13,8 @@ terraform {
       version = "2.2.0"
     }
   }
+
+  required_version = ">= v1.11.4"
 }
 
 provider "helm" {

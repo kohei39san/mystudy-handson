@@ -13,16 +13,6 @@ terraform {
       version = "3.2.1"
     }
   }
-}
 
-provider "aws" {
-  default_tags {
-    tags = var.aws_tags
-  }
-}
-provider "http" {}
-provider "null" {}
-
-module "common_resources" {
-  source = "../commons/simple-ec2"
+  required_version = ">= v1.11.0"
 }

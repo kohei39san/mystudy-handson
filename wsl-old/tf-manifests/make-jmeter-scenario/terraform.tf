@@ -13,6 +13,12 @@ terraform {
       version = "3.2.1"
     }
   }
+
+  required_version = ">= v1.10.0"
+
+  default_tags {
+    tags = var.aws_tags
+  }
 }
 
 provider "aws" {
@@ -20,6 +26,7 @@ provider "aws" {
     tags = var.aws_tags
   }
 }
+
 provider "http" {}
 provider "null" {}
 

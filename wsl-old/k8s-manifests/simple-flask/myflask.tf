@@ -1,10 +1,10 @@
 #data "http" "myip" {
-#  url = "http://ipv4.icanhazip.com"
-#}
-#
-#locals {
-#  myip = replace("${data.http.myip.response_body}","\n","")
-#}
+  url = "http://ipv4.icanhazip.com"
+}
+
+locals {
+  myip = replace("${data.http.myip.response_body}","\n","")
+}
 
 resource "docker_image" "myflask" {
   name = "myflask"
@@ -44,19 +44,7 @@ module "myflask" {
           ".pgpass"
         ]
       }]
-      #      patches = [{
-      #        patch = <<-EOF
-      #          - op: replace
-      #            path: /spec/rules/0/host
-      #            value: "${local.myip}"
-      #        EOF
-      #        target = {
-      #          group = "networking.k8s.io"
-      #          version = "v1"
-      #          kind = "Ingress"
-      #          name = "myflask"
-      #        }
-      #      }]
+      patches = []
     }
   }
 }
