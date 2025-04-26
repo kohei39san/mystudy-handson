@@ -54,24 +54,30 @@ GitHub Actionsを使用するには、先にAWS側でOIDC認証のための設�
      - 形式: `repo:ユーザー名/リポジトリ名:ref:refs/heads/ブランチ名`
      - 例: `repo:example/mystudy-handson:ref:refs/heads/main`
 
-2. デプロイ完了後、出力される`RoleARN`をコピーしてGitHubのSecretsに設定します。
+2. デプロイ完了後、GitHub CLIをインストールし、`gh auth login`で認証を完了してください。
+
+3. リポジトリの設定スクリプトを実行してGitHub Actions用の各種設定を行います：
+```powershell
+.\scripts\setup-repository-for-github-actions.ps1
+```
+このスクリプトは以下の設定を行います：
+* GitHub Actionsの権限設定
+* 必要なSecrets（GEMINI_API_KEY, LLM_API_KEY, LLM_BASE_URL, PAT_TOKEN, PAT_USERNAME）の設定
+* 必要なVariables（LLM_MODEL）の設定
 
 ## 実行手順
 
 リポジトリにはTerraformを実行するためのGitHub Actionsワークフローが用意されています。
 以下の手順で実行できます：
 
-1. リポジトリのSecretsに以下を設定します：
-   * `AWS_ROLE_ARN`: GitHub ActionsがAWSリソースにアクセスするために使用するIAMロールのARN
+1. GitHubのActionsタブから「Terraform Apply Manual Test」ワークフローを選択します。
 
-2. GitHubのActionsタブから「Terraform Apply Manual Test」ワークフローを選択します。
-
-3. 「Run workflow」をクリックし、以下の情報を入力します：
+2. 「Run workflow」をクリックし、以下の情報を入力します：
    * `Branch`: 実行するTerraformコードが存在するブランチ名（デフォルト: main）
    * `Directory containing Terraform files`: Terraformファイルが存在するディレクトリパス
      * 例: `001.ec2-ec2,ec2`
 
-4. 「Run workflow」をクリックして実行を開始します。
+3. 「Run workflow」をクリックして実行を開始します。
 
 ワークフローは以下の順序で実行されます：
 1. 指定されたブランチをチェックアウト
