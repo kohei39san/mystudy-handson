@@ -19,9 +19,9 @@ resource "aws_security_group" "allow_ssh" {
 }
 
 resource "aws_instance" "example" {
-  ami           = "ami-0bba6d834ab8a1c8b" # Amazon Linux 2023 in ap-northeast-1
-  instance_type = "t2.micro"
-  subnet_id     = aws_subnet.main.id
+  ami                    = "ami-0bba6d834ab8a1c8b" # Amazon Linux 2023 in ap-northeast-1
+  instance_type          = "t2.micro"
+  subnet_id              = aws_subnet.main.id
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
 
   tags = {
