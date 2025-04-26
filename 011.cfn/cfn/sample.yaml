@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+  MyEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !GetAtt 'MyAmi.AmazonLinux2'
+      InstanceType: 't2.micro'
+      KeyName: !GetAtt 'MyKeyPair.KeyName'
+      SecurityGroups: [!Ref MySecurityGroup]
+
+  MyAmi:
+    Type: 'AWS::EC2::Image'
+    Properties:
+      Name: 'my-ami'
+      Description: 'My Amazon Linux 2 AMI'
+      ImageType: 'public'
+
+  MyKeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    Properties:
+      KeyName: 'my-key-pair'
+
+  MySecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'My security group'
+      VpcId: !GetAtt 'MyVPC.VpcId'
+      SecurityGroups: []
