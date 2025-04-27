@@ -39,17 +39,14 @@ function Set-GithubActionsPermissions {
     Write-Host "Setting up GitHub Actions permissions for $RepoName..."
     
     # Enable GitHub Actions for the repository
-    gh api --method PUT "/repos/$RepoName/actions/permissions" `
-        --field enabled=true
+    gh api --method PUT "/repos/$RepoName/actions/permissions" --field enabled=true
     
     # Set repository permissions for OIDC
-    gh api --method PUT "/repos/$RepoName/actions/permissions" `
-        --field allowed_actions="all" `
-        --field can_approve_pull_request_reviews=false
+    gh api --method PUT "/repos/$RepoName/actions/permissions" --field allowed_actions="all"
 
-    # Enable ID token permissions for OIDC
-    gh api --method PUT "/repos/$RepoName/actions/permissions/id-token" `
-        --field enabled=true
+    # workflow permissions -> Read and write permissions
+    # workflow permissions -> enabled: Allow GitHub Actions to create and approve pull requests
+    # enable dependabot security updates
 }
 
 # Function to set repository secrets

@@ -56,9 +56,9 @@ GitHub Actionsを使用するには、先にAWS側でOIDC認証のための設�
 
 2. デプロイ完了後、GitHub CLIをインストールし、`gh auth login`で認証を完了してください。
 
-3. リポジトリの設定スクリプトを実行してGitHub Actions用の各種設定を行います：
-```powershell
-.\scripts\setup-repository-for-github-actions.ps1
+3. リポジトリの設定スクリプトを参考にGitHub Actions用の各種設定を行います：
+```bat
+scripts\setup-repository-for-github-actions.ps1
 ```
 このスクリプトは以下の設定を行います：
 * GitHub Actionsの権限設定
@@ -73,18 +73,23 @@ GitHub Actionsを使用するには、先にAWS側でOIDC認証のための設�
 1. GitHubのActionsタブから「Terraform Apply Manual Test」ワークフローを選択します。
 
 2. 「Run workflow」をクリックし、以下の情報を入力します：
-   * `Branch`: 実行するTerraformコードが存在するブランチ名（デフォルト: main）
-   * `Directory containing Terraform files`: Terraformファイルが存在するディレクトリパス
-     * 例: `001.ec2-ec2,ec2`
+   * `Directory number`: 実行するTerraformディレクトリの番号
+     * 例: `001` (001.ec2-ec2,ec2ディレクトリを指定する場合)
+   * `Name prefix`: リソースのNameタグに付与するプレフィックス
+     * デフォルト: test
+     * 例: dev, stg, prod など
+
+注: ワークフローは実行時に選択されているブランチ上で実行されます。
 
 3. 「Run workflow」をクリックして実行を開始します。
 
 ワークフローは以下の順序で実行されます：
-1. 指定されたブランチをチェックアウト
-2. terraform init
-3. terraform plan
-4. terraform apply
-5. terraform destroy
+1. 現在のブランチをチェックアウト
+2. 指定された番号のディレクトリを特定
+3. terraform init
+4. terraform plan (name_prefix変数を指定)
+5. terraform apply (name_prefix変数を指定)
+6. terraform destroy (name_prefix変数を指定)
 
 注意事項：
 * initまたはplanが失敗した場合、以降の処理は実行されません

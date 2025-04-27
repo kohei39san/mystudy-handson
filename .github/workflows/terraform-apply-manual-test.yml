@@ -1,17 +1,21 @@
 name: Terraform Apply Manual Test
 
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
 on:
   workflow_dispatch:
     inputs:
-      working-directory:
-        description: 'Directory containing Terraform files'
+      directory-number:
+        description: 'Directory number (e.g. 001 for 001.ec2-ec2,ec2)'
         required: true
         type: string
-      branch:
-        description: 'Branch to checkout'
+      name-prefix:
+        description: 'Prefix for Name tags'
         required: true
         type: string
-        default: 'main'
+        default: 'test'
 
 jobs:
   terraform:
@@ -24,7 +28,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.inputs.branch }}
+        ref: ${{ github.ref_name }}
+
+    - name: Set working directory
+      run: |
+        DIRECTORY=$(find . -maxdepth 1 -type d -name "${{ github.event.inputs.directory-number }}*" -printf "%f\n")
+        if [ -z "$DIRECTORY" ]; then
+          echo "Error: No directory found starting with ${{ github.event.inputs.directory-number }}"
+          exit 1
+        fi
+        echo "WORKING_DIRECTORY=$DIRECTORY" >> $GITHUB_ENV
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -37,24 +50,24 @@ jobs:
       
     - name: Terraform Init
       id: init
-      working-directory: ${{ github.event.inputs.working-directory }}
+      working-directory: ${{ env.WORKING_DIRECTORY }}
       run: terraform init
       
     - name: Terraform Plan
       id: plan
-      working-directory: ${{ github.event.inputs.working-directory }}
-      run: terraform plan -no-color
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+      run: terraform plan -var="name_prefix=${{ github.event.inputs.name-prefix }}" -no-color
       
     - name: Terraform Apply
       id: apply
       if: steps.plan.outcome == 'success'
-      working-directory: ${{ github.event.inputs.working-directory }}
-      run: terraform apply -auto-approve
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+      run: terraform apply -var="name_prefix=${{ github.event.inputs.name-prefix }}" -auto-approve
 
     - name: Terraform Destroy
       if: always()
-      working-directory: ${{ github.event.inputs.working-directory }}
-      run: terraform destroy -auto-approve
+      working-directory: ${{ env.WORKING_DIRECTORY }}
+      run: terraform destroy -var="name_prefix=${{ github.event.inputs.name-prefix }}" -auto-approve
 
     - name: Check Apply Status
       if: steps.apply.outcome == 'failure'
