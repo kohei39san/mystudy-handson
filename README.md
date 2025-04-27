@@ -53,6 +53,7 @@ GitHub Actionsを使用するには、先にAWS側でOIDC認証のための設�
    * デプロイ時にパラメータ`GitHubRepository`の指定が必要です
      - 形式: `repo:ユーザー名/リポジトリ名:ref:refs/heads/ブランチ名`
      - 例: `repo:example/mystudy-handson:ref:refs/heads/main`
+     - 例: `repo:example/mystudy-handson:ref:refs/heads/*`
 
 2. デプロイ完了後、GitHub CLIをインストールし、`gh auth login`で認証を完了してください。
 
