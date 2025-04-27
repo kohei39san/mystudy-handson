@@ -1,2 +1,2 @@
-git pull $args[0] main
+git pull public-mine main
 git push
