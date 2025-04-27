@@ -63,7 +63,7 @@ function Set-RepositorySecrets {
         @{Name="GEMINI_API_KEY"; Prompt="Enter Gemini API Key"},
         @{Name="LLM_API_KEY"; Prompt="Enter LLM API Key"},
         @{Name="LLM_BASE_URL"; Prompt="Enter LLM Base URL"},
-        @{Name="PAT_TOKEN"; Prompt="Enter GitHub PAT Token"},
+        @{Name="PAT_TOKEN"; Prompt="Enter GitHub PAT Token"}, #allow specific repositories to use the PAT token
         @{Name="PAT_USERNAME"; Prompt="Enter GitHub PAT Username"}
     )
 
