@@ -26,9 +26,6 @@ Resources:
           - Effect: Allow
             Action: iam:CreateRole
             Resource: '*'
-            Condition:
-              StringEquals:
-                'aws:FederatedProvider': !Ref GitHubOIDCProvider
 
   GitHubActionsRole:
     Type: AWS::IAM::Role
