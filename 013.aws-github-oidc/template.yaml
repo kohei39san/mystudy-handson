@@ -26,6 +26,9 @@ Resources:
           - Effect: Allow
             Action: iam:CreateRole
             Resource: '*'
+          - Effect: Allow
+            Action: iam:TagRole
+            Resource: '*'
 
   GitHubActionsRole:
     Type: AWS::IAM::Role
