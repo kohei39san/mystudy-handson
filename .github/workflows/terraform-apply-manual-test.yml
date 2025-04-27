@@ -11,11 +11,6 @@ on:
         description: 'Directory number (e.g. 001 for 001.ec2-ec2,ec2)'
         required: true
         type: string
-      name-prefix:
-        description: 'Prefix for Name tags'
-        required: true
-        type: string
-        default: 'test'
 
 jobs:
   terraform:
@@ -56,18 +51,18 @@ jobs:
     - name: Terraform Plan
       id: plan
       working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: terraform plan -var="name_prefix=${{ github.event.inputs.name-prefix }}" -no-color
+      run: terraform plan -no-color
       
     - name: Terraform Apply
       id: apply
       if: steps.plan.outcome == 'success'
       working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: terraform apply -var="name_prefix=${{ github.event.inputs.name-prefix }}" -auto-approve
+      run: terraform apply -auto-approve
 
     - name: Terraform Destroy
       if: always()
       working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: terraform destroy -var="name_prefix=${{ github.event.inputs.name-prefix }}" -auto-approve
+      run: terraform destroy -auto-approve
 
     - name: Check Apply Status
       if: steps.apply.outcome == 'failure'

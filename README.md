@@ -75,9 +75,6 @@ scripts\setup-repository-for-github-actions.ps1
 2. 「Run workflow」をクリックし、以下の情報を入力します：
    * `Directory number`: 実行するTerraformディレクトリの番号
      * 例: `001` (001.ec2-ec2,ec2ディレクトリを指定する場合)
-   * `Name prefix`: リソースのNameタグに付与するプレフィックス
-     * デフォルト: test
-     * 例: dev, stg, prod など
 
 注: ワークフローは実行時に選択されているブランチ上で実行されます。
 
@@ -87,9 +84,9 @@ scripts\setup-repository-for-github-actions.ps1
 1. 現在のブランチをチェックアウト
 2. 指定された番号のディレクトリを特定
 3. terraform init
-4. terraform plan (name_prefix変数を指定)
-5. terraform apply (name_prefix変数を指定)
-6. terraform destroy (name_prefix変数を指定)
+4. terraform plan
+5. terraform apply
+6. terraform destroy
 
 注意事項：
 * initまたはplanが失敗した場合、以降の処理は実行されません
