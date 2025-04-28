@@ -10,7 +10,7 @@ AWS CLIを使用して以下のようにスタックをデプロイします：
 
 ```bash
 aws cloudformation deploy \
-  --template-file template.yaml \
+  --template-file ../src/013.aws-github-oidc/template.yaml \
   --stack-name github-oidc-provider \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \

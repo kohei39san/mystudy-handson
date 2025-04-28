@@ -16,6 +16,20 @@ Resources:
       ThumbprintList:
         - 6938fd4d98bab03faadb97b34396831e3780aea1
 
+  GitHubActionsCreateRolePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: 'Policy allowing iam:CreateRole action only for GitHub OIDC provider'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: iam:CreateRole
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:TagRole
+            Resource: '*'
+
   GitHubActionsRole:
     Type: AWS::IAM::Role
     Properties:
@@ -32,6 +46,7 @@ Resources:
                 token.actions.githubusercontent.com:sub: !Sub ${GitHubRepository}
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/PowerUserAccess
+        - !Ref GitHubActionsCreateRolePolicy
 
 Outputs:
   RoleARN:

@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Bedrock Knowledge Base and Data Source for Web Crawler
+
+Parameters:
+  ProjectName:
+    Type: String
+    Description: プロジェクト名
+  
+  BedrockRoleArn:
+    Type: String
+    Description: BedrockがOpenSearchにアクセスするためのロールARN
+
+  OpenSearchArn:
+    Type: String
+    Description: OpenSearchドメインのARN
+
+  OpenSearchEndpoint:
+    Type: String
+    Description: OpenSearchドメインのエンドポイント
+
+  AwsRegion:
+    Type: String
+    Description: AWSリージョン
+
+  CrawlingUrls:
+    Type: String
+    Description: クロール対象のURLリスト（JSON形式）
+
+Resources:
+  BedrockKnowledgeBase:
+    Type: AWS::Bedrock::KnowledgeBase
+    Properties:
+      KnowledgeBaseName: !Sub "${ProjectName}-kb"
+      Description: Knowledge base for web crawler data
+      StorageConfiguration:
+        OpenSearchVectorStore:
+          FieldMapping:
+            EmbeddingFieldName: embedding
+            TextFieldName: text
+            MetadataFieldNames:
+              - url
+              - title
+          RoleArn: !Ref BedrockRoleArn
+          OpenSearchConfiguration:
+            Arn: !Ref OpenSearchArn
+            EndpointUrl: !Sub "https://${OpenSearchEndpoint}"
+            IndexName: bedrock-kb
+
+  BedrockDataSource:
+    Type: AWS::Bedrock::DataSource
+    Properties:
+      DataSourceName: !Sub "${ProjectName}-web-crawler"
+      Configuration:
+        WebsiteCrawlerConfiguration:
+          Urls: !Ref CrawlingUrls
+          CrawlMode: FULL
+          CrawlDepth: 2
+          MaxContentSizePerPage: 5000
+          MaxTotalContentSize: 1000000
+          DataRetentionPolicy: RETAIN
+        VectorConfiguration:
+          ModelArn: !Sub "arn:aws:bedrock:${AwsRegion}::foundation-model/amazon.titan-embed-text-v2:0"
+        StorageConfiguration:
+          OpenSearchConfiguration:
+            Arn: !Ref OpenSearchArn
+            EndpointUrl: !Sub "https://${OpenSearchEndpoint}"
+            IndexName: bedrock-kb
+            FieldMapping:
+              EmbeddingFieldName: embedding
+              TextFieldName: text
+              MetadataFieldNames:
+                - url
+                - title
+            RoleArn: !Ref BedrockRoleArn
+
+Outputs:
+  KnowledgeBaseId:
+    Description: Bedrock Knowledge Base ID
+    Value: !Ref BedrockKnowledgeBase
+
+  DataSourceId:
+    Description: Bedrock Data Source ID
+    Value: !Ref BedrockDataSource
