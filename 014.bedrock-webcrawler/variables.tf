@@ -22,12 +22,6 @@ variable "opensearch_instance_type" {
   default     = "t3.small.search"
 }
 
-variable "bedrock_max_tokens" {
-  description = "Bedrockモデルの最大トークン数"
-  type        = number
-  default     = 4096
-}
-
 variable "project_name" {
   description = "プロジェクト名"
   type        = string
