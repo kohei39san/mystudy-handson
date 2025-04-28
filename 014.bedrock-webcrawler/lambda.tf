@@ -18,7 +18,7 @@ resource "aws_lambda_function" "crawler" {
     security_group_ids = [aws_security_group.lambda.id]
   }
 
-  timeout     = 300  # 5分
+  timeout     = 300 # 5分
   memory_size = 256
 }
 
