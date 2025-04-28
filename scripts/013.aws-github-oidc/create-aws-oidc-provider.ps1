@@ -1,5 +1,28 @@
+# Check if stack exists
+$stackName = $args[0]
+$stackExists = $false
+
+try {
+    aws cloudformation describe-stacks --stack-name $stackName | Out-Null
+    $stackExists = $true
+    Write-Host "Stack '$stackName' exists."
+} catch {
+    Write-Host "Stack '$stackName' does not exist."
+}
+
+# If stack exists, delete it and wait for completion
+if ($stackExists) {
+    Write-Host "Deleting stack '$stackName'..."
+    aws cloudformation delete-stack --stack-name $stackName
+    
+    Write-Host "Waiting for stack deletion to complete..."
+    aws cloudformation wait stack-delete-complete --stack-name $stackName
+    Write-Host "Stack deletion completed."
+}
+
+Write-Host "Creating new stack '$stackName'..."
 aws cloudformation deploy `
-  --template-file ../../013.aws-github-oidc/template.yaml `
+  --template-file ../../src/013.aws-github-oidc/template.yaml `
   --stack-name $args[0] `
   --capabilities CAPABILITY_NAMED_IAM `
   --parameter-overrides `
