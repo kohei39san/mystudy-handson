@@ -24,14 +24,29 @@ Resources:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
+            Action: iam:GetRole
+            Resource: '*'
+          - Effect: Allow
             Action: iam:CreateRole
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:DeleteRole
             Resource: '*'
           - Effect: Allow
             Action: iam:TagRole
             Resource: '*'
           - Effect: Allow
-            Action: iam:GetRole
-            Resource: '*'          
+            Action: iam:GetPolicy
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:CreatePolicy
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:DeletePolicy
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:TagPolicy
+            Resource: '*'
 
   GitHubActionsRole:
     Type: AWS::IAM::Role
