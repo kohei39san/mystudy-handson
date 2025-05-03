@@ -22,9 +22,9 @@ Parameters:
     Type: String
     Description: AWSリージョン
 
-  CrawlingUrls:
+  CrawlingUrl:
     Type: String
-    Description: クロール対象のURLリスト（JSON形式）
+    Description: クロール対象のURL
 
 Resources:
   BedrockKnowledgeBase:
@@ -58,7 +58,8 @@ Resources:
         WebConfiguration:
           SourceConfiguration:
             UrlConfiguration:
-              SeedUrls: !Ref CrawlingUrls
+              SeedUrls:
+                - Url: !Ref CrawlingUrl
           CrawlerConfiguration:
             Scope: HOST_ONLY
       KnowledgeBaseId: !Ref BedrockKnowledgeBase
