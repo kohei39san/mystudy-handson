@@ -6,19 +6,7 @@
 
 ## デプロイ方法
 
-AWS CLIを使用して以下のようにスタックをデプロイします：
-
-```bash
-aws cloudformation deploy \
-  --template-file ../src/013.aws-github-oidc/template.yaml \
-  --stack-name github-oidc-provider \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --parameter-overrides \
-    GitHubRepository=組織名/リポジトリ名
-```
-
-`組織名/リポジトリ名` は、あなたのGitHubリポジトリの情報に置き換えてください。
-例：`repo:<GitHub username>/<GitHub repository name>:ref:refs/heads/<branch name>`
+../README.mdを参照してください
 
 ## GitHub Actionsでの利用方法
 

@@ -30,7 +30,22 @@ Resources:
             Action: iam:CreateRole
             Resource: '*'
           - Effect: Allow
+            Action: iam:AttachRolePolicy
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:PutRolePolicy
+            Resource: '*'
+          - Effect: Allow
             Action: iam:DeleteRole
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:ListRoles
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:ListRolePolicies
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:ListAttachedRolePolicies
             Resource: '*'
           - Effect: Allow
             Action: iam:TagRole
@@ -45,7 +60,13 @@ Resources:
             Action: iam:DeletePolicy
             Resource: '*'
           - Effect: Allow
+            Action: iam:ListPolicies
+            Resource: '*'
+          - Effect: Allow
             Action: iam:TagPolicy
+            Resource: '*'
+          - Effect: Allow
+            Action: iam:ListInstanceProfilesForRole
             Resource: '*'
 
   GitHubActionsRole:
