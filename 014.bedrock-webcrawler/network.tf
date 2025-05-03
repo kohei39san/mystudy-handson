@@ -39,3 +39,27 @@ resource "aws_security_group" "lambda" {
     Name = "${var.project_name}-lambda"
   }
 }
+
+resource "aws_security_group" "opensearch" {
+  name        = "${var.project_name}-opensearch-sg"
+  description = "Security group for OpenSearch domain"
+  vpc_id      = aws_vpc.main.id
+
+  # Lambda関数からのHTTPSアクセスを許可
+  ingress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda.id]
+    description     = "Allow HTTPS from Lambda function"
+  }
+
+  # 必要な通信のみ許可
+  egress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda.id]
+    description     = "Allow HTTPS to Lambda function"
+  }
+}
