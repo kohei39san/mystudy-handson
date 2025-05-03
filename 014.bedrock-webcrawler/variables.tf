@@ -4,10 +4,10 @@ variable "aws_region" {
   default     = "ap-northeast-1"
 }
 
-variable "crawling_urls" {
-  description = "クロール対象のURLリスト"
-  type        = list(string)
-  default     = ["https://aws.amazon.com/jp/about-aws/whats-new/recent/feed/"]
+variable "crawling_url" {
+  description = "クロール対象のURL"
+  type        = string
+  default     = "https://aws.amazon.com/jp/about-aws/whats-new/recent/feed/"
 }
 
 variable "crawling_interval" {
