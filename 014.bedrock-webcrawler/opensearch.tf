@@ -1,3 +1,13 @@
+resource "random_password" "opensearch_master" {
+  length           = 16
+  special          = true
+  override_special = "!#$%^&*()-_=+[]{}<>:?"
+  min_special      = 1
+  min_numeric      = 1
+  min_upper        = 1
+  min_lower        = 1
+}
+
 resource "aws_opensearch_domain" "vector_store" {
   domain_name    = "${var.project_name}-vectors"
   engine_version = "OpenSearch_2.9"
@@ -46,35 +56,6 @@ resource "aws_opensearch_domain" "vector_store" {
   }
 
   tags = {
-    Name = "${var.project_name}-vectors"
-  }
-}
-
-resource "random_password" "opensearch_master" {
-  length  = 16
-  special = true
-}
-
-resource "aws_security_group" "opensearch" {
-  name        = "${var.project_name}-opensearch"
-  description = "Security group for OpenSearch"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.project_name}-opensearch"
+    Name        = "${var.project_name}-vectors"
   }
 }
