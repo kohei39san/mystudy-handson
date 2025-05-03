@@ -32,42 +32,36 @@ Resources:
     Properties:
       Name: !Sub "${ProjectName}-kb"
       Description: Knowledge base for web crawler data
+      RoleArn: !Ref BedrockRoleArn
       KnowledgeBaseConfiguration: 
         Type: VECTOR
         VectorKnowledgeBaseConfiguration:
-          StorageConfiguration:
-            Type: OPENSEARCH_MANAGED_CLUSTER
-            OpenSearchManagedClusterConfiguration:
-              FieldMapping:
-                EmbeddingFieldName: embedding
-                TextFieldName: text
-                MetadataFieldNames:
-                  - url
-                  - title
-              RoleArn: !Ref BedrockRoleArn
-              Endpoint: !Sub "https://${OpenSearchEndpoint}"
-              IndexName: bedrock-kb
+          EmbeddingModelArn: arn:aws:bedrock:${AwsRegion}:amazon.titan-embed-text-v2:0
+      StorageConfiguration:
+        Type: OPENSEARCH_MANAGED_CLUSTER
+        OpenSearchManagedClusterConfiguration:
+          DomainArn: !Ref OpenSearchArn
+          DomainEndpoint: !Ref OpenSearchEndpoint
+          VectorIndexName: bedrock-kb
+          FieldMapping:
+            MetadataField: metadata
+            TextField: text
+            VectorField: vector
 
   BedrockDataSource:
     Type: AWS::Bedrock::DataSource
     Properties:
       Name: !Sub "${ProjectName}-web-crawler"
-      VectorIngestionConfiguration:
-        KnowledgeBaseConfiguration:
-          KnowledgeBaseId: !Ref BedrockKnowledgeBase
-          ModelId: amazon.titan-embed-text-v2:0
-        Schedule:
-          Frequency: P7D
-        Source:
-          WebCrawler:
-            Urls: !Ref CrawlingUrls
-            MaxFileSize: 5000
-            MaxTotalFiles: 1000
-            UrlPatterns:
-              AllowList:
-                - "*"
-            StorageConfiguration:
-              Type: RETAIN
+      DataDeletionPolicy: RETAIN
+      DataSourceConfiguration:
+        Type: WEB
+        WebConfiguration:
+          SourceConfiguration:
+            UrlConfiguration:
+              SeedUrls: !Ref CrawlingUrls
+          CrawlerConfiguration:
+            Scope: HOST_ONLY
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
 
 Outputs:
   KnowledgeBaseId:
