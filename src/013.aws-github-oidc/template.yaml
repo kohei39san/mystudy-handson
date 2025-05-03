@@ -27,6 +27,9 @@ Resources:
             Action: iam:GetRole
             Resource: '*'
           - Effect: Allow
+            Action: iam:GetRolePolicy 
+            Resource: '*'
+          - Effect: Allow
             Action: iam:CreateRole
             Resource: '*'
           - Effect: Allow

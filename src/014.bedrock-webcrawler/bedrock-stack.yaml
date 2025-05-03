@@ -32,19 +32,21 @@ Resources:
     Properties:
       Name: !Sub "${ProjectName}-kb"
       Description: Knowledge base for web crawler data
-      VectorStoreConfiguration:
-        OpenSearchServerlessConfiguration:
-          FieldMapping:
-            EmbeddingFieldName: embedding
-            TextFieldName: text
-            MetadataFieldNames:
-              - url
-              - title
-          RoleArn: !Ref BedrockRoleArn
-          ServerlessConfiguration:
-            CollectionArn: !Ref OpenSearchArn
-            CollectionEndpoint: !Sub "https://${OpenSearchEndpoint}"
-            VectorIndexName: bedrock-kb
+      KnowledgeBaseConfiguration: 
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          StorageConfiguration:
+            Type: OPENSEARCH_MANAGED_CLUSTER
+            OpenSearchManagedClusterConfiguration:
+              FieldMapping:
+                EmbeddingFieldName: embedding
+                TextFieldName: text
+                MetadataFieldNames:
+                  - url
+                  - title
+              RoleArn: !Ref BedrockRoleArn
+              Endpoint: !Sub "https://${OpenSearchEndpoint}"
+              IndexName: bedrock-kb
 
   BedrockDataSource:
     Type: AWS::Bedrock::DataSource

@@ -56,12 +56,8 @@ GitHub Actionsを使用するには、先にAWS側でOIDC認証のための設�
      - 例: `repo:example/mystudy-handson:ref:refs/heads/*`
 
 ```powershell
-aws cloudformation deploy `
-  --template-file ../src/013.aws-github-oidc/template.yaml `
-  --stack-name github-oidc-provider `
-  --capabilities CAPABILITY_NAMED_IAM `
-  --parameter-overrides `
-    GitHubRepository=組織名/リポジトリ名
+> cd .\scripts\013.aws-github-oidc\
+> PowerShell -ExecutionPolicy RemoteSigned './create-aws-oidc-provider.ps1 <stack-name> "組織名/リポジトリ名"'
 ```
 
 `組織名/リポジトリ名` は、あなたのGitHubリポジトリの情報に置き換えてください。
