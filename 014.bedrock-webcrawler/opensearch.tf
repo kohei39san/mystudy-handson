@@ -18,11 +18,6 @@ resource "aws_opensearch_domain" "vector_store" {
     zone_awareness_enabled = false
   }
 
-  vpc_options {
-    subnet_ids         = [aws_subnet.private[0].id]
-    security_group_ids = [aws_security_group.opensearch.id]
-  }
-
   ebs_options {
     ebs_enabled = true
     volume_size = 10
