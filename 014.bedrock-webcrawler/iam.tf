@@ -92,7 +92,8 @@ resource "aws_iam_role_policy" "bedrock_opensearch_access" {
         Effect = "Allow"
         Action = [
           "aoss:APIAccessAll",
-          "es:DescribeDomain"
+          "es:DescribeDomain",
+          "es:ESHttp*"
         ]
         Resource = ["*"]
       }
