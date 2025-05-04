@@ -39,7 +39,7 @@ Resources:
           EmbeddingModelArn: !Sub "arn:aws:bedrock:${AwsRegion}::foundation-model/amazon.titan-embed-text-v2:0"
       StorageConfiguration:
         Type: OPENSEARCH_MANAGED_CLUSTER
-        OpenSearchManagedClusterConfiguration:
+        OpensearchManagedClusterConfiguration:
           DomainArn: !Ref OpenSearchArn
           DomainEndpoint: !Ref OpenSearchEndpoint
           VectorIndexName: bedrock-kb
