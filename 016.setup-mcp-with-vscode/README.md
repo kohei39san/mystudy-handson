@@ -19,7 +19,7 @@
 - 公式ドキュメントに従ってインストール
 
 ### 6. MCPサーバーの設定
-- 設定ファイルは `src/016.setup-mcp-with-vscode/mcp-servers-config.json` に配置
+- 設定ファイルは [mcp-servers-config.json](../src/016.setup-mcp-with-vscode/mcp-servers-config.json) に配置
 
 ## GitHub Issueからの開発手順
 
