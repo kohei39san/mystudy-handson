@@ -41,7 +41,7 @@ Resources:
         Type: OPENSEARCH_MANAGED_CLUSTER
         OpensearchManagedClusterConfiguration:
           DomainArn: !Ref OpenSearchArn
-          DomainEndpoint: !Ref OpenSearchEndpoint
+          DomainEndpoint: !Sub "https://${OpenSearchEndpoint}"
           VectorIndexName: bedrock-kb
           FieldMapping:
             MetadataField: metadata
