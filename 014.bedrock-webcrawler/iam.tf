@@ -94,7 +94,7 @@ resource "aws_iam_role_policy" "bedrock_opensearch_access" {
           "aoss:APIAccessAll",
           "es:DescribeDomain"
         ]
-        Resource = [aws_opensearch_domain.vector_store.arn]
+        Resource = ["*"]
       }
     ]
   })
