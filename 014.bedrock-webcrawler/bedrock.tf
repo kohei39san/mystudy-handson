@@ -2,6 +2,7 @@
 resource "aws_cloudformation_stack" "bedrock" {
   name          = "${var.project_name}-bedrock"
   template_body = file("${path.module}/../src/014.bedrock-webcrawler/bedrock-stack.yaml")
+  iam_role_arn      = aws_iam_role.cloudformation.arn
   capabilities  = ["CAPABILITY_IAM"]
 
   parameters = {

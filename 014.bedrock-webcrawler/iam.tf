@@ -98,3 +98,49 @@ resource "aws_iam_role_policy" "bedrock_opensearch_access" {
     ]
   })
 }
+
+# CloudFormation実行用のIAMロール
+resource "aws_iam_role" "cloudformation" {
+  name = "${var.project_name}-cloudformation-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudformation.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  managed_policy_arns = [
+    "arn:aws:iam::aws:policy/PowerUserAccess"  # PowerUserAccessを追加
+  ]
+}
+
+resource "aws_iam_role_policy" "cloudformation_bedrock" {
+  name = "bedrock-access"
+  role = aws_iam_role.cloudformation.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:*",
+          "iam:CreateRole",
+          "iam:DeleteRole",
+          "iam:GetRole",
+          "iam:PutRolePolicy",
+          "iam:DeleteRolePolicy",
+          "iam:PassRole"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
