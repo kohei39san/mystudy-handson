@@ -10,7 +10,19 @@ terraform {
       source  = "hashicorp/archive"
       version = "~> 2.7.0"
     }
+    opensearch = {
+      source  = "opensearch-project/opensearch"
+      version = "~> 2.3.0"
+    }
   }
+}
+
+provider "opensearch" {
+  url                   = aws_opensearch_domain.vector_store.endpoint
+  aws_region            = var.aws_region
+  sign_aws_requests   = true
+  aws_assume_role_arn   = aws_iam_role.bedrock_opensearch.arn
+  insecure             = false
 }
 
 provider "aws" {

@@ -42,7 +42,7 @@ Resources:
         OpensearchManagedClusterConfiguration:
           DomainArn: !Ref OpenSearchArn
           DomainEndpoint: !Sub "https://${OpenSearchEndpoint}"
-          VectorIndexName: bedrock-kb
+          VectorIndexName: blog-index
           FieldMapping:
             MetadataField: metadata
             TextField: text
