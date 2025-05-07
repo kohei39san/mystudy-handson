@@ -1,13 +1,3 @@
-resource "random_password" "opensearch_master" {
-  length           = 16
-  special          = true
-  override_special = "!#$%^&*()-_=+[]{}<>:?"
-  min_special      = 1
-  min_numeric      = 1
-  min_upper        = 1
-  min_lower        = 1
-}
-
 resource "aws_opensearch_domain" "vector_store" {
   domain_name    = "${var.project_name}-vectors"
   engine_version = "OpenSearch_2.9"
@@ -43,10 +33,9 @@ resource "aws_opensearch_domain" "vector_store" {
 
   advanced_security_options {
     enabled                        = true
-    internal_user_database_enabled = true
+    internal_user_database_enabled = false
     master_user_options {
-      master_user_name     = "admin"
-      master_user_password = random_password.opensearch_master.result
+      master_user_arn = aws_iam_role.bedrock_opensearch.arn
     }
   }
 
