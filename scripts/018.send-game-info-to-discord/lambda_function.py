@@ -76,7 +76,138 @@ def lambda_handler(event, context):
             })
         }
 
+}
+    
+    except Exception as e:
+        # import traceback
+        logger.error(f"Error in lambda_handler: {str(e)}")
+        logger.error(f"Stack trace: {traceback.format_exc()}")  # Add stack trace logging
+        return {
+            'statusCode': 500,
+            'body': json.dumps({
+                'message': f'Error in lambda_handler: {str(e)}'
+            })
+        }
+
 def get_game_codes(game_name, reference_url, api_key):
+    """
+    Use OpenRouter API to extract game codes from the reference URL.
+    
+    Args:
+        game_name (str): Name of the game
+        reference_url (str): URL to extract codes from
+        api_key (str): OpenRouter API key
+    
+    Returns:
+        list: List of dictionaries containing code information
+    """
+    # import html
+    # html.escape() is used to sanitize user input before logging
+    logger.info(f"Fetching codes for {html.escape(game_name)}")
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    # Create prompt for the AI
+    prompt = f"""
+    あなたはゲームのリワードコードを抽出するアシスタントです。
+    以下のURL（{reference_url}）から{html.escape(game_name)}の最新のリワードコードを抽出してください。
+    
+    各コードについて以下の情報を抽出してください：
+    1. コード文字列
+    2. 報酬内容
+    3. 有効期限
+    
+    結果はJSON形式で返してください。例：
+    [
+      {{
+        "code": "ABCD1234",
+        "rewards": "原石×100",
+        "expiry_date": "2023-12-31"
+      }}
+    ]
+    
+    有効期限が不明な場合は "unknown" と記入してください。
+    """
+    
+    payload = {
+        "model": "anthropic/claude-3-opus-20240229",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.1
+    }
+    
+    try:
+        response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        
+        # Extract JSON from the response
+        ai_response = response.json()
+        content = ai_response["choices"][0]["message"]["content"]
+        
+        # Extract JSON from the content (AI might wrap it in markdown code blocks)
+        json_match = re.search(r'
+```(?:json)?\s*([\s\S]*?)\s*```|(\[[\s\S]*?\])', content)
+        if json_match:
+            json_str = json_match.group(1) or json_match.group(2)
+            codes = json.loads(json_str)
+        else:
+            # Try to find JSON array directly
+            json_match = re.search(r'\[\s*{.*}\s*\]', content, re.DOTALL)
+            if json_match:
+                codes = json.loads(json_match.group(0))
+            else:
+                logger.warning(f"Could not extract JSON from AI response for {html.escape(game_name)}")
+                codes = []
+        
+        # Add game name to each code
+        for code in codes:
+            code["game"] = html.escape(game_name)
+            
+            # Standardize date format if it's not "unknown"
+            if code.get("expiry_date") and code["expiry_date"].lower() != "unknown":
+                try:
+                    # Try to parse the date in various formats
+                    for fmt in ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日"]:
+                        try:
+                            date_obj = datetime.strptime(code["expiry_date"], fmt)
+                            code["expiry_date"] = date_obj.strftime("%Y-%m-%d")
+                            break
+                        except ValueError:
+                            continue
+                except Exception:
+                    # If parsing fails, keep the original string
+                    pass
+        
+        return codes
+    
+    except Exception as e:
+        logger.error(f"Error fetching codes for {html.escape(game_name)}: {html.escape(str(e))}")
+        return []
+
+def filter_expiring_codes(codes):
+    """
+    Filter codes to only include those expiring within 2 weeks.
+    
+    Args:
+        codes (list): List of code dictionaries
+    
+    Returns:
+        list: Filtered list of code dictionaries
+    """
+    today = datetime.now()
+    two_weeks_later = today + timedelta(days=14)
+    
+    filtered_codes = []
+    for code in codes:
+        # Include codes with unknown expiry date
+        if code.get("expiry_date", "").lower() == "unknown":
+            filtered_codes.append(code)
+            continue
+
     """
     Use OpenRouter API to extract game codes from the reference URL.
     
