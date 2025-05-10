@@ -7,6 +7,12 @@ variable "allowed_ip" {
 variable "public_key_path" {
   description = "Path to the public key file to use for SSH access"
   type        = string
+  default     = "~/.ssh/id_rsa.pub"  # Added default value
+}
+
+variable "instance_type" {
+  description = "Path to the public key file to use for SSH access"
+  type        = string
 }
 
 variable "instance_type" {
