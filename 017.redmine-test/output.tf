@@ -1,21 +1,21 @@
 output "redmine_public_ip" {
   description = "Public IP address of the Redmine instance"
-  value       = aws_instance.redmine.public_ip
+  value       = aws_instance.redmine_instance.public_ip
 }
 
 output "redmine_public_dns" {
   description = "Public DNS name of the Redmine instance"
-  value       = aws_instance.redmine.public_dns
+  value       = aws_instance.redmine_instance.public_dns
 }
 
 output "redmine_http_url" {
   description = "HTTP URL to access Redmine"
-  value       = "http://${aws_instance.redmine.public_dns}"
+  value       = "http://${aws_instance.redmine_instance.public_dns}"
 }
 
 output "ssh_command" {
   description = "SSH command to connect to the Redmine instance"
-  value       = local.is_bitnami ? "ssh bitnami@${aws_instance.redmine.public_dns}" : "ssh ec2-user@${aws_instance.redmine.public_dns}"
+  value       = local.is_bitnami ? "ssh bitnami@${aws_instance.redmine_instance.public_dns}" : "ssh ec2-user@${aws_instance.redmine_instance.public_dns}"
 }
 
 output "redmine_ami_type" {
@@ -25,7 +25,7 @@ output "redmine_ami_type" {
 
 output "redmine_ami_id" {
   description = "AMI ID used for the Redmine instance"
-  value       = aws_instance.redmine.ami
+  value       = aws_instance.redmine_instance.ami
 }
 
 output "security_note" {

@@ -1,9 +1,9 @@
 terraform {
-  required_version = "~> 1.9.6"
+  required_version = "~> 1.11.4"
   required_providers {
     aws = {
       source  = "registry.terraform.io/hashicorp/aws"
-      version = "5.67.0"
+      version = "~> 4.0"
     }
     http = {
       source  = "registry.terraform.io/hashicorp/http"
@@ -13,7 +13,7 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region = var.region
   default_tags {
     tags = {
       Project = "Redmine"
