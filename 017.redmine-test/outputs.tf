@@ -10,6 +10,9 @@ output "redmine_url" {
 
 output "ssh_command" {
   description = "SSH command to connect to the instance"
+  value       = "ssh -i ${var.private_key_path} ec2-user@${aws_instance.redmine_instance.public_ip}"
+}
+  description = "SSH command to connect to the instance"
 output "ssh_command" {
   description = "SSH command to connect to the instance"
   value       = "ssh -i ${var.private_key_path} ec2-user@${aws_instance.redmine_instance.public_ip}"
