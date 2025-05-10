@@ -32,52 +32,7 @@ def parse_arguments():
     
     return parser.parse_args()
 
-return parser.parse_args()
-
-def fetch_game_codes(game_name, reference, api_key):
-    """Fetch game codes for a specific game."""
-    logger.info(f"Fetching {game_name} codes...")
-    return get_game_codes(game_name, reference, api_key)
-
-def process_game_codes(codes, game_name, args):
-    """Process and display game codes."""
-    filtered_codes = filter_expiring_codes(codes)
-    logger.info(f"Found {len(filtered_codes)} {game_name} codes expiring within 2 weeks")
-    if args.verbose and filtered_codes:
-        print(f"
-{game_name} Codes:")
-        print(json.dumps(filtered_codes, indent=2, ensure_ascii=False))
-    return filtered_codes
-
-def send_codes_to_discord(webhook_url, star_rail_codes, genshin_codes, dry_run):
-    """Send codes to Discord if not in dry-run mode."""
-    if not dry_run:
-        logger.info("Sending codes to Discord...")
-        send_to_discord(webhook_url, star_rail_codes, genshin_codes)
-        logger.info("Successfully sent codes to Discord")
-    else:
-        logger.info("Dry run mode - not sending to Discord")
-
 def main():
-    """Main function to test the game info notification system."""
-    args = parse_arguments()
-    
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    
-    try:
-        logger.info("Starting local test")
-        
-        star_rail_codes = fetch_game_codes("崩壊スターレイル", STAR_RAIL_REFERENCE, args.api_key)
-        genshin_codes = fetch_game_codes("原神インパクト", GENSHIN_REFERENCE, args.api_key)
-        
-        logger.info("Filtering codes expiring within 2 weeks...")
-        star_rail_codes = process_game_codes(star_rail_codes, "Star Rail", args)
-        genshin_codes = process_game_codes(genshin_codes, "Genshin Impact", args)
-        
-        send_codes_to_discord(args.webhook_url, star_rail_codes, genshin_codes, args.dry_run)
-        
-        logger.info("Local test completed successfully")
     """Main function to test the game info notification system."""
     args = parse_arguments()
     
