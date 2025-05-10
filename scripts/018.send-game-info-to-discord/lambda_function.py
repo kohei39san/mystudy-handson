@@ -302,7 +302,14 @@ content = ai_response["choices"][0]["message"]["content"]
                             break
                         except ValueError:
                             continue
-                except Exception:
+break
+                        except ValueError:
+                            continue
+                except Exception as e:
+                    # If parsing fails, log the error and keep the original string
+                    logger.error(f"Error parsing date for {game_name}: {str(e)}")
+        
+        return codes
                     # If parsing fails, keep the original string
                     pass
         
