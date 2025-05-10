@@ -450,7 +450,11 @@ def send_to_discord(webhook_url, star_rail_codes, genshin_codes):
     response = requests.post(webhook_url, json=payload)
     response.raise_for_status()
     
-    logger.info(f"Successfully sent {len(star_rail_codes)} Star Rail codes and {len(genshin_codes)} Genshin codes to Discord")
+response = requests.post(webhook_url, json=payload)
+    response.raise_for_status()
+    
+    # import html
+    logger.info("Successfully sent %d Star Rail codes and %d Genshin codes to Discord", html.escape(str(len(star_rail_codes))), html.escape(str(len(genshin_codes))))
 
 if __name__ == "__main__":
     # For local testing
