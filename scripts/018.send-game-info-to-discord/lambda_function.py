@@ -200,7 +200,12 @@ content = ai_response["choices"][0]["message"]["content"]
         return codes
     
     except Exception as e:
-        logger.error(f"Error fetching codes for {game_name}: {str(e)}")
+return codes
+    
+    except Exception as e:
+        # import html  # Used to escape special characters in the error message
+        logger.error(f"Error fetching codes for {game_name}: {html.escape(str(e))}")
+        return []
         return []
 
 def filter_expiring_codes(codes):
