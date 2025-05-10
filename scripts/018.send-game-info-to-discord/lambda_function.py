@@ -57,7 +57,18 @@ def lambda_handler(event, context):
         }
     
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+}
+    
+    except Exception as e:
+        # import traceback
+        logger.error(f"Error in lambda_handler: {str(e)}")
+        logger.error(f"Stack trace: {traceback.format_exc()}")  # Add stack trace logging
+        return {
+            'statusCode': 500,
+            'body': json.dumps({
+                'message': f'Error in lambda_handler: {str(e)}'
+            })
+        }
         return {
             'statusCode': 500,
             'body': json.dumps({
