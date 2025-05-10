@@ -133,7 +133,49 @@ def get_game_codes(game_name, reference_url, api_key):
             if json_match:
                 codes = json.loads(json_match.group(0))
             else:
-                logger.warning(f"Could not extract JSON from AI response for {game_name}")
+content = ai_response["choices"][0]["message"]["content"]
+        
+        # Extract JSON from the content (AI might wrap it in markdown code blocks)
+        json_match = re.search(r'
+```(?:json)?\s*([\s\S]*?)\s*```|(\[[\s\S]*?\])', content)
+        if json_match:
+            json_str = json_match.group(1) or json_match.group(2)
+            codes = json.loads(json_str)
+        else:
+            # Try to find JSON array directly
+            json_match = re.search(r'\[\s*{.*}\s*\]', content, re.DOTALL)
+            if json_match:
+                codes = json.loads(json_match.group(0))
+            else:
+                # Use html.escape to sanitize the game_name before logging
+                logger.warning(f"Could not extract JSON from AI response for {html.escape(game_name)}") # import html
+                codes = []
+        
+        # Add game name to each code
+        for code in codes:
+            code["game"] = game_name
+            
+            # Standardize date format if it's not "unknown"
+            if code.get("expiry_date") and code["expiry_date"].lower() != "unknown":
+                try:
+                    # Try to parse the date in various formats
+                    for fmt in ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日"]:
+                        try:
+                            date_obj = datetime.strptime(code["expiry_date"], fmt)
+                            code["expiry_date"] = date_obj.strftime("%Y-%m-%d")
+                            break
+                        except ValueError:
+                            continue
+                except Exception:
+                    # If parsing fails, keep the original string
+                    pass
+        
+        return codes
+    
+    except Exception as e:
+        logger.error(f"Error fetching codes for {html.escape(game_name)}: {html.escape(str(e))}") # import html
+        return []
+
                 codes = []
         
         # Add game name to each code
