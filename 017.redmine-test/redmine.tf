@@ -36,7 +36,13 @@ resource "aws_instance" "redmine_instance" {
     volume_type = "gp2"
   }
 
-  user_data = file("${path.module}/../src/17.redmine-test/userdata.sh")
+volume_type = "gp2"
+  }
+
+  user_data = file(var.user_data_path)
+
+  tags = var.tags
+}
 
   tags = var.tags
 }
