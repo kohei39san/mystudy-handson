@@ -1,8 +1,8 @@
 resource "opensearch_index" "blog_index" {
-  name               = "blog-index"
+  name = "blog-index"
 
-  index_knn           = true
-  mappings            = file("${path.module}/../src/014.bedrock-webcrawler/index.json")
+  index_knn = true
+  mappings  = file("${path.module}/../src/014.bedrock-webcrawler/index.json")
 
   depends_on = [
     aws_opensearch_domain.vector_store
