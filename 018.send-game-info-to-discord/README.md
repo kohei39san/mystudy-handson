@@ -46,19 +46,32 @@
 
 ```bash
 # OpenRouter APIキーをSSMパラメータストアに保存
-aws ssm put-parameter --name "/game-info/openrouter-api-key" --value "your-api-key" --type SecureString
+aws ssm put-parameter --name "/game-info/openrouter-api-key" --value "your-api-key" --type SecureString --tier "Standard"
 
 # Discordウェブフック URLをSSMパラメータストアに保存
-aws ssm put-parameter --name "/game-info/discord-webhook-url" --value "your-webhook-url" --type SecureString
+aws ssm put-parameter --name "/game-info/discord-webhook-url" --value "your-webhook-url" --type SecureString --tier "Standard"
 ```
 
-2. Terraformを使用してデプロイします：
+2. Terraformを使用してデプロイする前に、必要なPythonモジュールをインストールして`../../lambda_function/package`ディレクトリを準備します：
+
+```bash
+cp -r ../scripts/018.send-game-info-to-discord/* ../../lambda_function/
+pip install -r ../scripts/018.send-game-info-to-discord/requirements.txt --target ../../lambda_function/
+```
+
+3. Terraformを使用してデプロイします：
 
 ```bash
 cd 018.send-game-info-to-discord
 terraform init
 terraform plan
 terraform apply
+```
+
+4. CloudWatch Logsロググループの保持期間を3日に設定します：
+
+```bash
+aws logs put-retention-policy --log-group-name "/aws/lambda/GameInfoToDiscordFunction" --retention-in-days 3
 ```
 
 ## 設定パラメータ

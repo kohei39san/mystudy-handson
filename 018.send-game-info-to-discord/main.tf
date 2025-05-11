@@ -12,30 +12,14 @@ resource "aws_cloudformation_stack" "game_info_discord_stack" {
   }
   
   capabilities = ["CAPABILITY_IAM"]
-  
-  # Upload Lambda code before deploying CloudFormation
-  depends_on = [null_resource.upload_lambda_code]
 }
 
 # Create a zip file of the Lambda code
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../scripts/018.send-game-info-to-discord"
-  output_path = "${path.module}/lambda_function.zip"
+  output_path = "${path.module}/../../lambda_function.zip"
+  source_dir = "${path.module}/../../lambda_function"
   excludes    = ["local_test.py", "__pycache__", "*.pyc"]
-}
-
-# Upload Lambda code to S3
-resource "aws_s3_bucket" "lambda_code_bucket" {
-  bucket_prefix = "game-info-lambda-code-"
-  force_destroy = true
-}
-
-resource "aws_s3_object" "lambda_code" {
-  bucket = aws_s3_bucket.lambda_code_bucket.id
-  key    = "lambda_function.zip"
-  source = data.archive_file.lambda_zip.output_path
-  etag   = filemd5(data.archive_file.lambda_zip.output_path)
 }
 
 # Update Lambda function code
@@ -46,13 +30,7 @@ resource "null_resource" "upload_lambda_code" {
 
   provisioner "local-exec" {
     command = <<EOF
-      aws lambda update-function-code \
-        --function-name GameInfoToDiscordFunction \
-        --s3-bucket ${aws_s3_object.lambda_code.bucket} \
-        --s3-key ${aws_s3_object.lambda_code.key} \
-        --region ${var.aws_region} || echo "Lambda function not yet created, will be created by CloudFormation"
+      aws lambda update-function-code --function-name ${aws_cloudformation_stack.game_info_discord_stack.outputs["LambdaFunctionName"]} --zip-file fileb://${data.archive_file.lambda_zip.output_path} --region ${var.aws_region} || echo "Lambda function not yet created, will be created by CloudFormation"
     EOF
   }
-
-  depends_on = [aws_s3_object.lambda_code]
 }
