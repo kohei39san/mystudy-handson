@@ -45,11 +45,17 @@
 1. 必要なパラメータを設定します：
 
 ```bash
-# OpenRouter APIキーをSSMパラメータストアに保存
+# OpenRouter APIキーをSSMパラメータストアに保存 (上書きしない場合)
 aws ssm put-parameter --name "/game-info/openrouter-api-key" --value "your-api-key" --type SecureString --tier "Standard"
 
-# Discordウェブフック URLをSSMパラメータストアに保存
+# OpenRouter APIキーをSSMパラメータストアに保存 (上書きする場合)
+aws ssm put-parameter --name "/game-info/openrouter-api-key" --value "your-api-key" --type SecureString --tier "Standard" --overwrite
+
+# Discordウェブフック URLをSSMパラメータストアに保存 (上書きしない場合)
 aws ssm put-parameter --name "/game-info/discord-webhook-url" --value "your-webhook-url" --type SecureString --tier "Standard"
+
+# Discordウェブフック URLをSSMパラメータストアに保存 (上書きする場合)
+aws ssm put-parameter --name "/game-info/discord-webhook-url" --value "your-webhook-url" --type SecureString --tier "Standard" --overwrite
 ```
 
 2. Terraformを使用してデプロイする前に、必要なPythonモジュールをインストールして`../../lambda_function/package`ディレクトリを準備します：
