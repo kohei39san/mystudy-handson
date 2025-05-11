@@ -84,7 +84,7 @@ def get_game_codes(game_name, reference_url, api_key):
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    
+    reference_text=requests.get(reference_url).text
     # Create prompt for the AI
     prompt = f"""
     あなたはゲームのリワードコードを抽出するアシスタントです。
@@ -105,6 +105,7 @@ def get_game_codes(game_name, reference_url, api_key):
     ]
     
     有効期限が不明な場合は "unknown" と記入してください。
+    URL（{reference_url}）の内容は以下の通り: {reference_text}
     """
     
     payload = {
@@ -145,7 +146,7 @@ def get_game_codes(game_name, reference_url, api_key):
             if code.get("expiry_date") and code["expiry_date"].lower() != "unknown":
                 try:
                     # Try to parse the date in various formats
-                    for fmt in ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日"]:
+                    for fmt in ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日", "%Y-%m-%d %H:%M", "%Y/%m/%d %H:%M", "%Y年%m月%d日 %H:%M"]:
                         try:
                             date_obj = datetime.strptime(code["expiry_date"], fmt)
                             code["expiry_date"] = date_obj.strftime("%Y-%m-%d")
@@ -177,19 +178,19 @@ def filter_expiring_codes(codes):
     
     filtered_codes = []
     for code in codes:
-        # Include codes with unknown expiry date
-        if code.get("expiry_date", "").lower() == "unknown":
-            filtered_codes.append(code)
+        # Exclude codes with unknown expiry date
+        if code.get("expiry_date", "9999-12-31").lower() == "unknown":
             continue
-        
+
         try:
             expiry_date = datetime.strptime(code.get("expiry_date", "9999-12-31"), "%Y-%m-%d")
             # Include codes that expire within 2 weeks
             if today <= expiry_date <= two_weeks_later:
                 filtered_codes.append(code)
-        except ValueError:
+        except ValueError as e:
             # If date parsing fails, include the code anyway
-            filtered_codes.append(code)
+            #filtered_codes.append(code)
+            logger.error(f"Error: {str(e)}")
     
     return filtered_codes
 
