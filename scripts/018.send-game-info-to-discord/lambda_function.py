@@ -141,10 +141,14 @@ def get_game_codes(game_name, reference_url, api_key):
         # Add game name to each code
         for code in codes:
             code["game"] = game_name
-            
+
             # Standardize date format if it's not "unknown"
             if code.get("expiry_date") and code["expiry_date"].lower() != "unknown":
                 try:
+                    # Handle cases where time and minutes are separated by a space
+                    if " " in code["expiry_date"]:
+                        code["expiry_date"] = code["expiry_date"].split(" ")[0]
+
                     # Try to parse the date in various formats
                     for fmt in ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日", "%Y-%m-%d %H:%M", "%Y/%m/%d %H:%M", "%Y年%m月%d日 %H:%M"]:
                         try:
