@@ -55,6 +55,14 @@ GitHub Actionsを使用するには、先にAWS側でOIDC認証のための設�
      - 例: `repo:example/mystudy-handson:ref:refs/heads/main`
      - 例: `repo:example/mystudy-handson:ref:refs/heads/*`
 
+```powershell
+> cd .\scripts\013.aws-github-oidc\
+> PowerShell -ExecutionPolicy RemoteSigned './create-aws-oidc-provider.ps1 <stack-name> "組織名/リポジトリ名"'
+```
+
+`組織名/リポジトリ名` は、あなたのGitHubリポジトリの情報に置き換えてください。
+例：`repo:<GitHub username>/<GitHub repository name>:ref:refs/heads/<branch name>`
+
 2. デプロイ完了後、GitHub CLIをインストールし、`gh auth login`で認証を完了してください。
 
 3. リポジトリの設定スクリプトを参考にGitHub Actions用の各種設定を行います：

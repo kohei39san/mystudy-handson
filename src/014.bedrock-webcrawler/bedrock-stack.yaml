@@ -22,56 +22,47 @@ Parameters:
     Type: String
     Description: AWSリージョン
 
-  CrawlingUrls:
+  CrawlingUrl:
     Type: String
-    Description: クロール対象のURLリスト（JSON形式）
+    Description: クロール対象のURL
 
 Resources:
   BedrockKnowledgeBase:
     Type: AWS::Bedrock::KnowledgeBase
     Properties:
-      KnowledgeBaseName: !Sub "${ProjectName}-kb"
+      Name: !Sub "${ProjectName}-kb"
       Description: Knowledge base for web crawler data
+      RoleArn: !Ref BedrockRoleArn
+      KnowledgeBaseConfiguration: 
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: !Sub "arn:aws:bedrock:${AwsRegion}::foundation-model/amazon.titan-embed-text-v2:0"
       StorageConfiguration:
-        OpenSearchVectorStore:
+        Type: OPENSEARCH_MANAGED_CLUSTER
+        OpensearchManagedClusterConfiguration:
+          DomainArn: !Ref OpenSearchArn
+          DomainEndpoint: !Sub "https://${OpenSearchEndpoint}"
+          VectorIndexName: blog-index
           FieldMapping:
-            EmbeddingFieldName: embedding
-            TextFieldName: text
-            MetadataFieldNames:
-              - url
-              - title
-          RoleArn: !Ref BedrockRoleArn
-          OpenSearchConfiguration:
-            Arn: !Ref OpenSearchArn
-            EndpointUrl: !Sub "https://${OpenSearchEndpoint}"
-            IndexName: bedrock-kb
+            MetadataField: metadata
+            TextField: text
+            VectorField: vector
 
   BedrockDataSource:
     Type: AWS::Bedrock::DataSource
     Properties:
-      DataSourceName: !Sub "${ProjectName}-web-crawler"
-      Configuration:
-        WebsiteCrawlerConfiguration:
-          Urls: !Ref CrawlingUrls
-          CrawlMode: FULL
-          CrawlDepth: 2
-          MaxContentSizePerPage: 5000
-          MaxTotalContentSize: 1000000
-          DataRetentionPolicy: RETAIN
-        VectorConfiguration:
-          ModelArn: !Sub "arn:aws:bedrock:${AwsRegion}::foundation-model/amazon.titan-embed-text-v2:0"
-        StorageConfiguration:
-          OpenSearchConfiguration:
-            Arn: !Ref OpenSearchArn
-            EndpointUrl: !Sub "https://${OpenSearchEndpoint}"
-            IndexName: bedrock-kb
-            FieldMapping:
-              EmbeddingFieldName: embedding
-              TextFieldName: text
-              MetadataFieldNames:
-                - url
-                - title
-            RoleArn: !Ref BedrockRoleArn
+      Name: !Sub "${ProjectName}-web-crawler"
+      DataDeletionPolicy: RETAIN
+      DataSourceConfiguration:
+        Type: WEB
+        WebConfiguration:
+          SourceConfiguration:
+            UrlConfiguration:
+              SeedUrls:
+                - Url: !Ref CrawlingUrl
+          CrawlerConfiguration:
+            Scope: HOST_ONLY
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
 
 Outputs:
   KnowledgeBaseId:

@@ -32,10 +32,10 @@ resource "aws_iam_role_policy" "bedrock_invoke_model" {
         Sid    = "BedrockInvokeModelStatement"
         Effect = "Allow"
         Action = [
-          "bedrock:InvokeModel"
+          "bedrock:*"
         ]
         Resource = [
-          "arn:aws:bedrock:ap-northeast-1::foundation-model/amazon.titan-embed-text-v2:0"
+          "*"
         ]
       }
     ]
@@ -91,10 +91,35 @@ resource "aws_iam_role_policy" "bedrock_opensearch_access" {
       {
         Effect = "Allow"
         Action = [
-          "aoss:APIAccessAll"
+          "aoss:APIAccessAll",
+          "es:DescribeDomain",
+          "es:ESHttp*"
         ]
-        Resource = [aws_opensearch_domain.vector_store.arn]
+        Resource = ["*"]
       }
     ]
   })
+}
+
+# CloudFormation実行用のIAMロール
+resource "aws_iam_role" "cloudformation" {
+  name = "${var.project_name}-cloudformation-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudformation.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "cloudformation" {
+  role       = aws_iam_role.cloudformation.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }

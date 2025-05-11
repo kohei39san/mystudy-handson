@@ -43,21 +43,24 @@ provider "registry.terraform.io/hashicorp/aws" {
   ]
 }
 
-provider "registry.terraform.io/hashicorp/random" {
-  version = "3.7.2"
+provider "registry.terraform.io/opensearch-project/opensearch" {
+  version     = "2.3.1"
+  constraints = "~> 2.3.0"
   hashes = [
-    "h1:Def/iHM4HihJCIxQ8AYoxtoVL5lVlYx0V7bX91pxwgM=",
-    "zh:14829603a32e4bc4d05062f059e545a91e27ff033756b48afbae6b3c835f508f",
-    "zh:1527fb07d9fea400d70e9e6eb4a2b918d5060d604749b6f1c361518e7da546dc",
-    "zh:1e86bcd7ebec85ba336b423ba1db046aeaa3c0e5f921039b3f1a6fc2f978feab",
-    "zh:24536dec8bde66753f4b4030b8f3ef43c196d69cccbea1c382d01b222478c7a3",
-    "zh:29f1786486759fad9b0ce4fdfbbfece9343ad47cd50119045075e05afe49d212",
-    "zh:4d701e978c2dd8604ba1ce962b047607701e65c078cb22e97171513e9e57491f",
-    "zh:78d5eefdd9e494defcb3c68d282b8f96630502cac21d1ea161f53cfe9bb483b3",
-    "zh:7b8434212eef0f8c83f5a90c6d76feaf850f6502b61b53c329e85b3b281cba34",
-    "zh:ac8a23c212258b7976e1621275e3af7099e7e4a3d4478cf8d5d2a27f3bc3e967",
-    "zh:b516ca74431f3df4c6cf90ddcdb4042c626e026317a33c53f0b445a3d93b720d",
-    "zh:dc76e4326aec2490c1600d6871a95e78f9050f9ce427c71707ea412a2f2f1a62",
-    "zh:eac7b63e86c749c7d48f527671c7aee5b4e26c10be6ad7232d6860167f99dbb0",
+    "h1:KTaQQL7eyB+KZXVkC0tQMpGywDwfbvfrbEm0xFXIB+k=",
+    "zh:358c2bc54c798fdbf2108ecac670bc158cf0f9cde314ef0c859e9739fba8c3e6",
+    "zh:3be1db7317d0cf16cb240b5af401e240e074213c2a81dd70440c5929c18a9627",
+    "zh:42e7b72d762781bec4ff5cf086fa3eb4e00ae1195cc4eb98cf79b062cdc72cdf",
+    "zh:54a05a9601a8646eb757e5b81a90b1b1ef01c0455fe3b24effb7ff4376b86803",
+    "zh:58c2147a51d7dbcddda93a61a3a4e8e1b0eb0649da1c4f483ad75144b120e668",
+    "zh:5dde2183886c4e2a3ef63acf2d6e7acbfef082868d00377a320b8ab284982017",
+    "zh:654a30ad455088a4889e3ae2860b705936731ca558ff82deeeb0ed70ce4b76e8",
+    "zh:76294d9d62f5764bef81b00f62aaa734279e801175ece2017907e4ac3e146d47",
+    "zh:814bc3e85e9f6edf73bd2a3d466a720b1a0be31c39f87551014bac48c196563d",
+    "zh:98bb9890e52541de6e98cb80f7ee8724a5895ca7162b6ff9e1beff3109d10059",
+    "zh:9dcad557f5e99950aa22f2fe2619f7e4c0267b8b9473609f1acef5197d61e515",
+    "zh:c0302d3555b59ecd3eeaa9a63fd68507df0e2ab507d01d9c974f133aa74abdf8",
+    "zh:c3e3d2874c116a0002ba725395fec7d5c71f97b6d54da63868364f18bf441bb1",
+    "zh:ef86d739e907cfe5b198340d5166c5540a80f5143ea3c2c8a2744cedacf884e3",
   ]
 }

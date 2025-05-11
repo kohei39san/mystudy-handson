@@ -8,11 +8,6 @@ resource "aws_opensearch_domain" "vector_store" {
     zone_awareness_enabled = false
   }
 
-  vpc_options {
-    subnet_ids         = [aws_subnet.private[0].id]
-    security_group_ids = [aws_security_group.opensearch.id]
-  }
-
   ebs_options {
     ebs_enabled = true
     volume_size = 10
@@ -38,43 +33,13 @@ resource "aws_opensearch_domain" "vector_store" {
 
   advanced_security_options {
     enabled                        = true
-    internal_user_database_enabled = true
+    internal_user_database_enabled = false
     master_user_options {
-      master_user_name     = "admin"
-      master_user_password = random_password.opensearch_master.result
+      master_user_arn = aws_iam_role.bedrock_opensearch.arn
     }
   }
 
   tags = {
     Name = "${var.project_name}-vectors"
-  }
-}
-
-resource "random_password" "opensearch_master" {
-  length  = 16
-  special = true
-}
-
-resource "aws_security_group" "opensearch" {
-  name        = "${var.project_name}-opensearch"
-  description = "Security group for OpenSearch"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.lambda.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "${var.project_name}-opensearch"
   }
 }

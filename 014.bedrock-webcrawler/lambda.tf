@@ -13,11 +13,6 @@ resource "aws_lambda_function" "crawler" {
     }
   }
 
-  vpc_config {
-    subnet_ids         = aws_subnet.private[*].id
-    security_group_ids = [aws_security_group.lambda.id]
-  }
-
   timeout     = 300 # 5分
   memory_size = 256
 }
