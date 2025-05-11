@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region to deploy resources"
   type        = string
-  default     = "ap-northeast-1"  # Tokyo region
+  default     = "ap-northeast-1" # Tokyo region
 }
 
 variable "openrouter_api_key_param" {
@@ -19,7 +19,7 @@ variable "discord_webhook_url_param" {
 variable "schedule_expression" {
   description = "Schedule expression for the EventBridge rule"
   type        = string
-  default     = "cron(0 0 ? * SUN *)"  # Every Sunday at midnight
+  default     = "cron(0 0 ? * SUN *)" # Every Sunday at midnight
 }
 
 variable "lambda_timeout" {

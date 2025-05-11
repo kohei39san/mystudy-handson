@@ -1,8 +1,8 @@
 resource "aws_cloudformation_stack" "game_info_discord_stack" {
   name = "game-info-discord-stack"
-  
+
   template_body = file("${path.module}/../src/018.send-game-info-to-discord/template.yaml")
-  
+
   parameters = {
     OpenRouterApiKeyParam  = var.openrouter_api_key_param
     DiscordWebhookUrlParam = var.discord_webhook_url_param
@@ -10,7 +10,7 @@ resource "aws_cloudformation_stack" "game_info_discord_stack" {
     LambdaTimeout          = var.lambda_timeout
     LambdaMemorySize       = var.lambda_memory_size
   }
-  
+
   capabilities = ["CAPABILITY_IAM"]
 }
 
@@ -18,7 +18,7 @@ resource "aws_cloudformation_stack" "game_info_discord_stack" {
 data "archive_file" "lambda_zip" {
   type        = "zip"
   output_path = "${path.module}/../../lambda_function.zip"
-  source_dir = "${path.module}/../../lambda_function"
+  source_dir  = "${path.module}/../../lambda_function"
   excludes    = ["local_test.py", "__pycache__", "*.pyc"]
 }
 
