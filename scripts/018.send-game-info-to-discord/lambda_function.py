@@ -79,6 +79,7 @@ def get_game_codes(game_name, reference_url, api_key):
     """
     logger.info(f"Fetching codes for {game_name}")
     
+    # Add optional headers for OpenRouter API
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -107,7 +108,7 @@ def get_game_codes(game_name, reference_url, api_key):
     """
     
     payload = {
-        "model": "anthropic/claude-3-opus-20240229",
+        "model": "deepseek/deepseek-chat-v3-0324:free",
         "messages": [
             {"role": "user", "content": prompt}
         ],
@@ -115,7 +116,7 @@ def get_game_codes(game_name, reference_url, api_key):
     }
     
     try:
-        response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload)
+        response = requests.post(url=OPENROUTER_API_URL, headers=headers, json=payload)
         response.raise_for_status()
         
         # Extract JSON from the response
