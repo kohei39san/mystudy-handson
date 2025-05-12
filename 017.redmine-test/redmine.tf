@@ -1,11 +1,11 @@
-# Find the latest Amazon Linux 2 AMI
+# Find the latest Bitnami Redmine AMI
 data "aws_ami" "redmine_ami" {
   most_recent = true
-  owners      = ["amazon"]
+  owners      = ["979382823631"] # Bitnami's AWS account ID
 
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+    values = ["bitnami-redmine-*-linux-debian-*"]
   }
 
   filter {
@@ -36,13 +36,19 @@ resource "aws_instance" "redmine_instance" {
     volume_type = "gp2"
   }
 
-volume_type = "gp2"
+  # Enable EC2 Instance Connect
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
   }
 
-  user_data = file(var.user_data_path)
-
+  # Only use user_data if is_bitnami is true
+  user_data = local.is_bitnami ? file(var.user_data_path) : null
   tags = var.tags
 }
 
-  tags = var.tags
+# Key pair for SSH access
+resource "aws_key_pair" "redmine_key" {
+  key_name   = "redmine-key"
+  public_key = file(var.public_key_path)
 }
