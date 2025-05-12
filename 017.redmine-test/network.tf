@@ -44,14 +44,6 @@ resource "aws_security_group" "redmine_sg" {
   description = "Security group for Redmine server"
   vpc_id      = aws_vpc.redmine_vpc.id
 
-  # SSH access from allowed IP
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.allowed_ip]
-  }
-
   # HTTP access from allowed IP
   ingress {
     from_port   = 80

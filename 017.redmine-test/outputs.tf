@@ -14,8 +14,8 @@ output "redmine_http_url" {
 }
 
 output "ssh_command" {
-  description = "SSH command to connect to the Redmine instance"
-  value       = local.is_bitnami ? "ssh bitnami@${aws_instance.redmine_instance.public_dns}" : "ssh ec2-user@${aws_instance.redmine_instance.public_dns}"
+  description = "SSH command to connect to the Redmine instance using EC2 Instance Connect"
+  value       = "aws ec2-instance-connect ssh --instance-id ${aws_instance.redmine_instance.id} --os-user bitnami --private-key-file ${var.private_key_path} --region ${var.region}"
 }
 
 output "redmine_ami_type" {

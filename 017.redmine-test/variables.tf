@@ -10,6 +10,12 @@ variable "public_key_path" {
   default     = "~/.ssh/id_rsa.pub"  # Added default value
 }
 
+variable "private_key_path" {
+  description = "Path to the private key file to use for SSH access"
+  type        = string
+  default     = "~/.ssh/id_rsa"
+}
+
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
