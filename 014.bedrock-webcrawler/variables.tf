@@ -11,9 +11,9 @@ variable "crawling_url" {
 }
 
 variable "crawling_interval" {
-  description = "クローラー実行のスケジュール (cron式)"
+  description = "クローラー実行のスケジュール (cron形式)"
   type        = string
-  default     = "cron(0 0 ? * MON *)" # 毎週月曜日の午前0時に実行
+  default     = "cron(0 0 ? * SUN *)" # 毎週日曜日の午前0時に実行
 }
 
 variable "opensearch_instance_type" {
@@ -28,10 +28,10 @@ variable "project_name" {
   default     = "bedrock-webcrawler"
 }
 
-variable "tags" {
-  description = "リソースに付与するタグ"
+variable "default_tags" {
+  description = "デフォルトのリソースタグ"
   type        = map(string)
-  default = {
+  default     = {
     Environment = "Production"
     Project     = "BedrockWebCrawler"
     ManagedBy   = "Terraform"
@@ -39,9 +39,9 @@ variable "tags" {
 }
 
 variable "bedrock_model_arn" {
-  description = "Bedrockのモデル ARN"
+  description = "BedrockのEmbeddingモデルARN"
   type        = string
-  default     = "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.titan-embed-text-v2:0"
+  default     = "amazon.titan-embed-text-v2:0"
 }
 
 variable "crawler_scope" {

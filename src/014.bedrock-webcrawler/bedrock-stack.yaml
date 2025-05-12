@@ -28,14 +28,15 @@ Parameters:
     
   BedrockModelArn:
     Type: String
-    Description: Bedrockのモデル ARN
+    Description: BedrockのEmbeddingモデルARN
     
   CrawlerScope:
     Type: String
     Description: クローラーのスコープ
+    Default: HOST_ONLY
     AllowedValues:
       - HOST_ONLY
-      - SITE_ONLY
+      - SUBDOMAIN
       - WEB
 
 Resources:
@@ -48,7 +49,7 @@ Resources:
       KnowledgeBaseConfiguration: 
         Type: VECTOR
         VectorKnowledgeBaseConfiguration:
-          EmbeddingModelArn: !Ref BedrockModelArn
+          EmbeddingModelArn: !Sub "arn:aws:bedrock:${AwsRegion}::foundation-model/${BedrockModelArn}"
       StorageConfiguration:
         Type: OPENSEARCH_MANAGED_CLUSTER
         OpensearchManagedClusterConfiguration:

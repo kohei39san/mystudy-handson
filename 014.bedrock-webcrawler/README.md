@@ -44,7 +44,9 @@ graph TB
 resource "aws_iam_role" "crawler_lambda" {}
 resource "aws_iam_policy" "bedrock_invoke_model" {}
 resource "aws_iam_role" "bedrock_opensearch" {}
-resource "aws_iam_role" "opensearch_index_role" {}
+resource "aws_iam_policy" "bedrock_opensearch_access" {}
+resource "aws_iam_role" "opensearch_provider" {}
+resource "aws_iam_policy" "opensearch_provider_access" {}
 
 # OpenSearchドメイン
 resource "aws_opensearch_domain" "vector_store" {}
@@ -54,15 +56,15 @@ resource "opensearch_index" "blog_index" {}
 resource "aws_lambda_function" "crawler" {}
 resource "aws_cloudwatch_event_rule" "crawler_schedule" {}
 
-# Bedrock (CloudFormation)
+# Bedrock (CloudFormation経由)
 resource "aws_cloudformation_stack" "bedrock" {}
 ```
 
 ## 前提条件
 
 1. AWS CLIのインストールと設定
-2. Terraformのインストール（バージョン1.0.0以上）
-3. Amazon Bedrockサービスへのアクセス権限
+2. Amazon Bedrockサービスへのアクセス権限
+3. Terraformのインストール（バージョン1.0.0以上）
 4. OpenSearchサービスの利用権限
 
 ## デプロイ方法
@@ -79,58 +81,63 @@ resource "aws_cloudformation_stack" "bedrock" {}
 ## 変数の説明
 
 1. **aws_region** (オプション):
-   - 型: String
-   - デフォルト: `ap-northeast-1`
    - 説明: AWSリージョン
+   - デフォルト: `ap-northeast-1`
 
 2. **crawling_url** (オプション):
-   - 型: String
-   - デフォルト: `https://aws.amazon.com/jp/about-aws/whats-new/recent/feed/`
    - 説明: クロール対象のURL
+   - デフォルト: `https://aws.amazon.com/jp/about-aws/whats-new/recent/feed/`
 
 3. **crawling_interval** (オプション):
-   - 型: String
-   - デフォルト: `cron(0 0 ? * MON *)`（毎週月曜日の午前0時に実行）
-   - 説明: クローラー実行のスケジュール（cron式）
+   - 説明: クローラー実行のスケジュール (cron形式)
+   - デフォルト: `cron(0 0 ? * SUN *)` (毎週日曜日の午前0時に実行)
 
 4. **opensearch_instance_type** (オプション):
-   - 型: String
-   - デフォルト: `t3.small.search`
    - 説明: OpenSearchのインスタンスタイプ
+   - デフォルト: `t3.small.search`
 
 5. **project_name** (オプション):
-   - 型: String
-   - デフォルト: `bedrock-webcrawler`
    - 説明: プロジェクト名
+   - デフォルト: `bedrock-webcrawler`
 
-6. **tags** (オプション):
-   - 型: Map(String)
-   - デフォルト: 環境、プロジェクト、管理ツールの情報
-   - 説明: リソースに付与するタグ
+6. **default_tags** (オプション):
+   - 説明: デフォルトのリソースタグ
+   - デフォルト: Environment=Production, Project=BedrockWebCrawler, ManagedBy=Terraform
 
 7. **bedrock_model_arn** (オプション):
-   - 型: String
-   - デフォルト: Titan Embed Text v2のARN
-   - 説明: Bedrockのモデル ARN
+   - 説明: BedrockのEmbeddingモデルARN
+   - デフォルト: `amazon.titan-embed-text-v2:0`
 
 8. **crawler_scope** (オプション):
-   - 型: String
-   - デフォルト: `HOST_ONLY`
    - 説明: Bedrockウェブクローラーのスコープ
+   - デフォルト: `HOST_ONLY`
+   - 許容値: `HOST_ONLY`, `SUBDOMAIN`, `WEB`
+
+## ローカルテスト
+
+`scripts/014.bedrock-webcrawler/local_test.py`を使用して、ローカル環境からBedrockウェブクローラーをテストできます：
+
+```bash
+# データソースIDを指定してクロールを開始
+python local_test.py --data-source-id ds-12345abcdef
+
+# クロール完了を待機する場合
+python local_test.py --data-source-id ds-12345abcdef --wait
+
+# タイムアウト時間を指定する場合（秒単位）
+python local_test.py --data-source-id ds-12345abcdef --wait --timeout 600
+```
 
 ## セキュリティ考慮事項
 
 1. **IAMロール**: 
    - Lambda関数に対する最小権限アクセス
-   - Bedrockサービスに対する制限されたアクセス
-   - OpenSearchに対する制限されたアクセス
+   - Bedrockサービスに必要な最小限の権限
+   - OpenSearchへのアクセスは適切なIAMロールを通じて制御
 
 2. **OpenSearchセキュリティ**: 
    - 暗号化とアクセス制御
-   - IAMベースの認証
-
-3. **ネットワークセキュリティ**: 
-   - VPCエンドポイントとセキュリティグループ（必要に応じて設定）
+   - マスターユーザーとしてIAMロールを使用
 
 ## モニタリングとログ
 
@@ -178,10 +185,6 @@ resource "aws_cloudformation_stack" "bedrock" {}
 
 エラーはCloudWatchログに記録され、必要に応じてアラートを設定できます。
 
-## ローカルテスト
-
-`scripts/014.bedrock-webcrawler/local_test.py`を使用して、ローカル環境からBedrockウェブクローラーをテストできます。詳細は`scripts/014.bedrock-webcrawler/README.md`を参照してください。
-
 ## 料金概算
 
 1か月あたりの概算費用（東京リージョン）：
@@ -204,17 +207,9 @@ resource "aws_cloudformation_stack" "bedrock" {}
   - 1回あたり約10,000トークン = 月40,000トークン
 小計: $0.004/月
 
-### VPCリソース（オプション）
-- NAT Gateway: $32.40/月
-  - 時間料金: $0.045/時 × 24時間 × 30日
-  - データ処理: 約$1/月
-- VPCエンドポイント: $7.20/月
-  - $0.01/時 × 24時間 × 30日
-小計: $40.60/月
-
 ### 合計推定費用
-- USD: $71.844/月（税抜）
-- JPY: ¥10,777/月（税抜）※1USD=150円で計算
+- USD: $31.244/月（税抜）
+- JPY: ¥4,687/月（税抜）※1USD=150円で計算
 
 ※ この見積もりは以下の前提に基づきます：
 - OpenSearchは24時間365日稼働

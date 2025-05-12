@@ -21,7 +21,7 @@ provider "opensearch" {
   url                 = aws_opensearch_domain.vector_store.endpoint
   aws_region          = var.aws_region
   sign_aws_requests   = true
-  aws_assume_role_arn = aws_iam_role.opensearch_index_role.arn
+  aws_assume_role_arn = aws_iam_role.opensearch_provider.arn
   insecure            = false
 }
 
@@ -29,6 +29,6 @@ provider "aws" {
   region = var.aws_region
 
   default_tags {
-    tags = var.tags
+    tags = var.default_tags
   }
 }

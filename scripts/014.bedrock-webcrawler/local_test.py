@@ -10,89 +10,120 @@ import time
 import os
 from botocore.exceptions import ClientError
 
-def setup_argparse():
-    """コマンドライン引数の設定"""
-    parser = argparse.ArgumentParser(description='Bedrock Web Crawler Local Test')
-    parser.add_argument('--region', type=str, default='ap-northeast-1', help='AWS region')
-    parser.add_argument('--profile', type=str, help='AWS profile name')
-    parser.add_argument('--data-source-id', type=str, required=True, help='Bedrock data source ID')
-    parser.add_argument('--wait', action='store_true', help='Wait for crawl completion')
-    parser.add_argument('--timeout', type=int, default=300, help='Timeout in seconds when waiting for completion')
-    return parser
-
-def get_boto3_client(service, region, profile=None):
-    """Boto3クライアントの取得"""
-    session = boto3.Session(profile_name=profile) if profile else boto3.Session()
-    return session.client(service, region_name=region)
-
-def start_subsequent_crawl(bedrock_client, data_source_id):
-    """BedrockデータソースのSubsequent Crawlを開始"""
+def get_knowledge_base_info(kb_id):
+    """
+    Knowledge Baseの情報を取得
+    """
+    bedrock = boto3.client('bedrock')
     try:
-        response = bedrock_client.start_data_source_subsequent_crawl(
-            dataSourceId=data_source_id
+        response = bedrock.get_knowledge_base(
+            knowledgeBaseId=kb_id
+        )
+        return response
+    except ClientError as e:
+        print(f"Error getting knowledge base: {e}")
+        raise
+
+def get_data_source_info(ds_id):
+    """
+    Data Sourceの情報を取得
+    """
+    bedrock = boto3.client('bedrock')
+    try:
+        response = bedrock.get_data_source(
+            dataSourceId=ds_id
+        )
+        return response
+    except ClientError as e:
+        print(f"Error getting data source: {e}")
+        raise
+
+def start_crawl(ds_id):
+    """
+    クロールを開始
+    """
+    bedrock = boto3.client('bedrock')
+    try:
+        response = bedrock.start_data_source_subsequent_crawl(
+            dataSourceId=ds_id
         )
         return response['subsequentCrawlId']
     except ClientError as e:
-        print(f"Error starting subsequent crawl: {e}")
+        print(f"Error starting crawl: {e}")
         raise
 
-def check_crawl_status(bedrock_client, crawl_id):
-    """クロール状態を確認"""
+def check_crawl_status(crawl_id):
+    """
+    クロール状態を確認
+    """
+    bedrock = boto3.client('bedrock')
     try:
-        response = bedrock_client.get_data_source_subsequent_crawl(
+        response = bedrock.get_data_source_subsequent_crawl(
             subsequentCrawlId=crawl_id
         )
-        return response['status']
+        return response
     except ClientError as e:
         print(f"Error checking crawl status: {e}")
         raise
 
-def wait_for_crawl_completion(bedrock_client, crawl_id, timeout=300):
-    """クロールの完了を待機"""
+def wait_for_crawl_completion(crawl_id, timeout_seconds=300, check_interval=10):
+    """
+    クロールの完了を待機
+    """
     start_time = time.time()
-    interval = 10  # 10秒ごとにステータスチェック
-    
-    while (time.time() - start_time) < timeout:
-        status = check_crawl_status(bedrock_client, crawl_id)
+    while time.time() - start_time < timeout_seconds:
+        status_response = check_crawl_status(crawl_id)
+        status = status_response['status']
         print(f"Crawl status: {status}")
         
         if status == 'COMPLETED':
-            print(f"Crawl completed successfully in {int(time.time() - start_time)} seconds")
+            print("Crawl completed successfully!")
             return True
         elif status in ['FAILED', 'CANCELLED']:
             print(f"Crawl failed with status: {status}")
+            if 'failureReasons' in status_response:
+                print(f"Failure reasons: {status_response['failureReasons']}")
             return False
         
-        time.sleep(interval)
+        print(f"Waiting {check_interval} seconds...")
+        time.sleep(check_interval)
     
-    print(f"Timeout after {timeout} seconds. Crawl is still in progress.")
+    print(f"Timeout after {timeout_seconds} seconds. Crawl is still in progress.")
     return False
 
 def main():
-    """メイン関数"""
-    parser = setup_argparse()
+    parser = argparse.ArgumentParser(description='Test Bedrock Web Crawler locally')
+    parser.add_argument('--data-source-id', required=True, help='Bedrock Data Source ID')
+    parser.add_argument('--wait', action='store_true', help='Wait for crawl completion')
+    parser.add_argument('--timeout', type=int, default=300, help='Timeout in seconds for crawl completion')
+    
     args = parser.parse_args()
     
-    # Bedrockクライアントの初期化
-    bedrock_client = get_boto3_client('bedrock', args.region, args.profile)
+    # Data Source情報の取得
+    print(f"Getting information for Data Source: {args.data_source_id}")
+    ds_info = get_data_source_info(args.data_source_id)
+    print(f"Data Source Name: {ds_info['name']}")
+    print(f"Knowledge Base ID: {ds_info['knowledgeBaseId']}")
     
-    try:
-        # クロールの開始
-        print(f"Starting subsequent crawl for data source: {args.data_source_id}")
-        crawl_id = start_subsequent_crawl(bedrock_client, args.data_source_id)
-        print(f"Subsequent crawl started with ID: {crawl_id}")
-        
-        # 完了を待つかどうか
-        if args.wait:
-            wait_for_crawl_completion(bedrock_client, crawl_id, args.timeout)
-        else:
-            print("Not waiting for completion. Exiting.")
+    # Knowledge Base情報の取得
+    kb_id = ds_info['knowledgeBaseId']
+    print(f"\nGetting information for Knowledge Base: {kb_id}")
+    kb_info = get_knowledge_base_info(kb_id)
+    print(f"Knowledge Base Name: {kb_info['name']}")
+    print(f"Storage Type: {kb_info['storageConfiguration']['type']}")
     
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        return 1
+    # クロールの開始
+    print("\nStarting subsequent crawl...")
+    crawl_id = start_crawl(args.data_source_id)
+    print(f"Crawl started with ID: {crawl_id}")
     
-    return 0
+    # クロール完了を待機する場合
+    if args.wait:
+        print(f"\nWaiting for crawl completion (timeout: {args.timeout} seconds)...")
+        wait_for_crawl_completion(crawl_id, timeout_seconds=args.timeout)
+    else:
+        print("\nCrawl is running in the background. Use the following command to check status:")
+        print(f"aws bedrock get-data-source-subsequent-crawl --subsequent-crawl-id {crawl_id}")
 
 if __name__ == "__main__":
-    exit(main())
+    main()

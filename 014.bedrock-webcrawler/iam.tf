@@ -1,3 +1,6 @@
+# 現在のAWSアカウントIDを取得
+data "aws_caller_identity" "current" {}
+
 # Lambda用IAMロール
 resource "aws_iam_role" "crawler_lambda" {
   name = "${var.project_name}-crawler-role"
@@ -21,7 +24,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Bedrock呼び出し用のIAMポリシー
+# Bedrock呼び出し用のポリシー
 resource "aws_iam_policy" "bedrock_invoke_model" {
   name        = "${var.project_name}-bedrock-invoke-model"
   description = "Allow invoking Bedrock models and managing data sources"
@@ -33,51 +36,21 @@ resource "aws_iam_policy" "bedrock_invoke_model" {
         Sid    = "BedrockInvokeModelStatement"
         Effect = "Allow"
         Action = [
+          "bedrock:InvokeModel",
           "bedrock:StartDataSourceSubsequentCrawl",
           "bedrock:GetDataSourceSubsequentCrawl"
         ]
         Resource = [
-          "arn:aws:bedrock:${var.aws_region}:*:data-source/*"
+          "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*"
         ]
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy_attachment" "bedrock_invoke_attachment" {
+resource "aws_iam_role_policy_attachment" "lambda_bedrock" {
   role       = aws_iam_role.crawler_lambda.name
   policy_arn = aws_iam_policy.bedrock_invoke_model.arn
-}
-
-# OpenSearch アクセス用のIAMポリシー
-resource "aws_iam_policy" "opensearch_access" {
-  name        = "${var.project_name}-opensearch-access"
-  description = "Allow access to OpenSearch APIs"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "OpenSearchAccessStatement"
-        Effect = "Allow"
-        Action = [
-          "es:ESHttpGet",
-          "es:ESHttpPut",
-          "es:ESHttpPost",
-          "es:ESHttpDelete"
-        ]
-        Resource = [
-          aws_opensearch_domain.vector_store.arn,
-          "${aws_opensearch_domain.vector_store.arn}/*"
-        ]
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "opensearch_access_attachment" {
-  role       = aws_iam_role.crawler_lambda.name
-  policy_arn = aws_iam_policy.opensearch_access.arn
 }
 
 # BedrockとOpenSearchの連携用のIAMロール
@@ -98,65 +71,10 @@ resource "aws_iam_role" "bedrock_opensearch" {
   })
 }
 
-# Bedrock用のOpenSearchアクセスポリシー
+# OpenSearch操作用のポリシー
 resource "aws_iam_policy" "bedrock_opensearch_access" {
   name        = "${var.project_name}-bedrock-opensearch-access"
   description = "Allow Bedrock to access OpenSearch"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "es:ESHttpGet",
-          "es:ESHttpPut",
-          "es:ESHttpPost",
-          "es:DescribeDomain"
-        ]
-        Resource = [
-          aws_opensearch_domain.vector_store.arn,
-          "${aws_opensearch_domain.vector_store.arn}/*"
-        ]
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "bedrock_opensearch_attachment" {
-  role       = aws_iam_role.bedrock_opensearch.name
-  policy_arn = aws_iam_policy.bedrock_opensearch_access.arn
-}
-
-# OpenSearch Index作成用のIAMロール
-resource "aws_iam_role" "opensearch_index_role" {
-  name = "${var.project_name}-opensearch-index-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "opensearch.amazonaws.com"
-        }
-      },
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        }
-      }
-    ]
-  })
-}
-
-# OpenSearch Index作成用のIAMポリシー
-resource "aws_iam_policy" "opensearch_index_access" {
-  name        = "${var.project_name}-opensearch-index-access"
-  description = "Allow creating and managing OpenSearch indices"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -179,9 +97,57 @@ resource "aws_iam_policy" "opensearch_index_access" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "opensearch_index_attachment" {
-  role       = aws_iam_role.opensearch_index_role.name
-  policy_arn = aws_iam_policy.opensearch_index_access.arn
+resource "aws_iam_role_policy_attachment" "bedrock_opensearch" {
+  role       = aws_iam_role.bedrock_opensearch.name
+  policy_arn = aws_iam_policy.bedrock_opensearch_access.arn
+}
+
+# OpenSearchプロバイダー用のIAMロール
+resource "aws_iam_role" "opensearch_provider" {
+  name = "${var.project_name}-opensearch-provider-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+      }
+    ]
+  })
+}
+
+# OpenSearchプロバイダー用のポリシー
+resource "aws_iam_policy" "opensearch_provider_access" {
+  name        = "${var.project_name}-opensearch-provider-access"
+  description = "Allow OpenSearch provider to manage indices"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "es:ESHttpGet",
+          "es:ESHttpPut",
+          "es:ESHttpPost",
+          "es:ESHttpDelete"
+        ]
+        Resource = [
+          aws_opensearch_domain.vector_store.arn,
+          "${aws_opensearch_domain.vector_store.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "opensearch_provider" {
+  role       = aws_iam_role.opensearch_provider.name
+  policy_arn = aws_iam_policy.opensearch_provider_access.arn
 }
 
 # CloudFormation実行用のIAMロール
@@ -202,9 +168,8 @@ resource "aws_iam_role" "cloudformation" {
   })
 }
 
-# CloudFormation用のIAMポリシー（最小権限に制限）
-resource "aws_iam_policy" "cloudformation_policy" {
-  name        = "${var.project_name}-cloudformation-policy"
+resource "aws_iam_policy" "cloudformation_admin" {
+  name        = "${var.project_name}-cloudformation-admin"
   description = "Allow CloudFormation to create Bedrock resources"
 
   policy = jsonencode({
@@ -213,37 +178,16 @@ resource "aws_iam_policy" "cloudformation_policy" {
       {
         Effect = "Allow"
         Action = [
-          "bedrock:CreateKnowledgeBase",
-          "bedrock:DeleteKnowledgeBase",
-          "bedrock:GetKnowledgeBase",
-          "bedrock:UpdateKnowledgeBase",
-          "bedrock:CreateDataSource",
-          "bedrock:DeleteDataSource",
-          "bedrock:GetDataSource",
-          "bedrock:UpdateDataSource"
-        ]
-        Resource = [
-          "arn:aws:bedrock:${var.aws_region}:*:knowledge-base/*",
-          "arn:aws:bedrock:${var.aws_region}:*:data-source/*"
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
+          "bedrock:*",
           "iam:PassRole"
         ]
-        Resource = [
-          aws_iam_role.bedrock_opensearch.arn
-        ]
+        Resource = "*"
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy_attachment" "cloudformation_attachment" {
+resource "aws_iam_role_policy_attachment" "cloudformation" {
   role       = aws_iam_role.cloudformation.name
-  policy_arn = aws_iam_policy.cloudformation_policy.arn
+  policy_arn = aws_iam_policy.cloudformation_admin.arn
 }
-
-# 現在のAWSアカウントIDを取得
-data "aws_caller_identity" "current" {}

@@ -5,7 +5,6 @@ from crawl_utils import start_subsequent_crawl
 def handler(event, context):
     """
     Lambda関数のメインハンドラー
-    クロールを開始するだけで、完了を待たずに終了します
     """
     try:
         data_source_id = os.environ['DATA_SOURCE_ID']
@@ -14,7 +13,7 @@ def handler(event, context):
         crawl_id = start_subsequent_crawl(data_source_id)
         print(f"Started subsequent crawl: {crawl_id}")
         
-        # クロールの完了を待たずに終了
+        # 同期結果を待たずに終了
         return {
             'statusCode': 200,
             'body': json.dumps({
