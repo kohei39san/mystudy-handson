@@ -53,7 +53,6 @@ pip install -r requirements.txt
 開発用と本番用でパッケージを分けたい場合は、`requirements-dev.txt`を作成し、以下のように記述します。
 
 ```text
--r requirements.txt
 black==23.3.0
 flake8==6.0.0
 ```
