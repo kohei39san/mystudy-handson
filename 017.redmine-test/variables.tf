@@ -7,7 +7,7 @@ variable "allowed_ip" {
 variable "public_key_path" {
   description = "Path to the public key file to use for SSH access"
   type        = string
-  default     = "~/.ssh/id_rsa.pub"  # Added default value
+  default     = "../src/017.redmine-test/id_rsa.dummy.pub"  # Added default value
 }
 
 variable "private_key_path" {
@@ -25,7 +25,7 @@ variable "instance_type" {
 variable "root_volume_size" {
   description = "Size of the root volume in GB"
   type        = number
-  default     = 8
+  default     = 10
 }
 
 variable "region" {
@@ -56,6 +56,12 @@ variable "user_data_path" {
   description = "redmine user data path"
   type        = string
   default     = "../scripts/017.redmine-test/userdata.sh"
+}
+
+variable "sg_eice_name" {
+  description = "redmine sg eice name"
+  type        = string
+  default     = "redmine-eice"
 }
 
 variable "tags" {

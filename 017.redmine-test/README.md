@@ -40,7 +40,7 @@ variable "instance_type" {
 }
 
 variable "allowed_ip" {
-  default = "203.0.113.0/24"  # 許可するIPアドレス範囲を指定
+  default = "127.0.0.1/32"  # 許可するIPアドレス範囲を指定
 }
 
 variable "private_key_path" {
@@ -60,12 +60,17 @@ variable "private_key_path" {
 
 ### Redmineへのログイン
 
-1. ブラウザで `http://<redmine_public_ip>` にアクセスします
-2. デフォルトのログイン情報：
-   - ユーザー名: admin
-   - パスワード: admin
+1. AWS Management Consoleにログインします。
+2. EC2ダッシュボードで、Redmineがデプロイされたインスタンスを選択します。
+3. **アクション > インスタンスの設定 > システムログの取得** を選択します。
+4. システムログ内に記載されているRedmineの初期ログイン情報を確認します。
+   - ユーザー名: `user`
+   - パスワード: システムログ内に記載されています。
 
 **注意**: 初回ログイン後、必ずパスワードを変更してください。
+
+詳細は以下のURLを参照してください:  
+[Bitnami Documentation - Find Application Credentials](https://docs.bitnami.com/aws/faq/get-started/find-credentials/#using-aws-amis)
 
 ### SSHアクセス
 
@@ -77,11 +82,7 @@ aws ec2-instance-connect ssh --instance-id <インスタンスID> --os-user bitn
 
 ## データベース情報
 
-Redmineは内部でMariaDBを使用しています：
-
-- データベース名: redmine
-- ユーザー名: redmine
-- パスワード: redmine
+Redmineは内部でMariaDBを使用しています
 
 ## 注意事項
 
