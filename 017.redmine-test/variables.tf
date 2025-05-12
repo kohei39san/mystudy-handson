@@ -11,11 +11,6 @@ variable "public_key_path" {
 }
 
 variable "instance_type" {
-  description = "Path to the public key file to use for SSH access"
-  type        = string
-}
-
-variable "instance_type" {
   description = "EC2 instance type"
   type        = string
   default     = "t2.micro"
@@ -43,6 +38,18 @@ variable "subnet_cidr" {
   description = "CIDR block for the subnet"
   type        = string
   default     = "10.0.1.0/24"
+}
+
+variable "security_group_name" {
+  description = "security group name"
+  type        = string
+  default     = "redmine-security-group-name"
+}
+
+variable "user_data_path" {
+  description = "redmine user data path"
+  type        = string
+  default     = "../scripts/017.redmine-test/userdata.sh"
 }
 
 variable "tags" {
