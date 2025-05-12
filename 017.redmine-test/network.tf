@@ -44,37 +44,32 @@ resource "aws_security_group" "redmine_sg" {
   description = "Security group for Redmine server"
   vpc_id      = aws_vpc.redmine_vpc.id
 
-  # SSH access from allowed IP
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [var.allowed_ip]
-  }
-
-  # HTTP access from allowed IP
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = [var.allowed_ip]
-  }
-
-  # HTTPS access from allowed IP
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [var.allowed_ip]
-  }
-
-  # Outbound internet access
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = var.tags
+}
+
+resource "aws_vpc_security_group_ingress_rule" "redmine_sg_ingress80" {
+  security_group_id = aws_security_group.redmine_sg.id
+
+  cidr_ipv4 = var.allowed_ip
+  ip_protocol                  = "tcp"
+  from_port                    = 80
+  to_port                      = 80
+}
+
+resource "aws_vpc_security_group_ingress_rule" "redmine_sg_ingress443" {
+  security_group_id = aws_security_group.redmine_sg.id
+
+  cidr_ipv4 = var.allowed_ip
+  ip_protocol                  = "tcp"
+  from_port                    = 443
+  to_port                      = 443
+}
+
+resource "aws_vpc_security_group_egress_rule" "redmine_sg_egress" {
+  security_group_id = aws_security_group.redmine_sg.id
+
+  cidr_ipv4 = "0.0.0.0/0"
+  ip_protocol                  = "-1"
+  from_port                    = 0
+  to_port                      = 0
 }

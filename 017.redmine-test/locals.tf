@@ -1,3 +1,3 @@
 locals {
-  is_bitnami = false  # Set to false since we're using Amazon Linux 2
+  is_bitnami = true  # Set to true since we're using Bitnami's Redmine AMI
 }
