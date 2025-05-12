@@ -44,7 +44,7 @@ resource "aws_instance" "redmine_instance" {
 
   # Only use user_data if is_bitnami is true
   user_data = local.is_bitnami ? file(var.user_data_path) : null
-  tags = var.tags
+  tags      = var.tags
 }
 
 # Key pair for SSH access
