@@ -1,14 +1,14 @@
-# Bedrock ウェブクローラー CloudFormation アーキテクチャ
+# Bedrock ウェブクローラー Terraform アーキテクチャ
 
 ## 概要
 
-このプロジェクトは、Amazon BedrockとAWS CloudFormationを使用してウェブクローラーアーキテクチャを実装します。BedrockのClaude 3.5 Sonnet v2モデルを使用してウェブコンテンツを解析し、OpenSearchをベクトルデータベースとして使用します。クローリング対象のURLはCloudFormationのパラメータとして指定します。
+このプロジェクトは、Amazon BedrockとTerraformを使用してウェブクローラーアーキテクチャを実装します。BedrockのTitan Embed Text v2モデルを使用してウェブコンテンツを解析し、OpenSearchをベクトルデータベースとして使用します。クローリング対象のURLはTerraformの変数として指定します。
 
 ## アーキテクチャ
 
 ```mermaid
 graph TB
-    Bedrock[Amazon Bedrock<br/>Claude 3.5 Sonnet v2] --> OpenSearch[OpenSearch<br/>ベクトルDB]
+    Bedrock[Amazon Bedrock<br/>Titan Embed Text v2] --> OpenSearch[OpenSearch<br/>ベクトルDB]
     EventBridge[EventBridge<br/>スケジューラー] --> Lambda[AWS Lambda<br/>クローラー]
     Lambda --> Bedrock
     Bedrock --> WebCrawler[Bedrock データソース<br/>ウェブクローラー]
@@ -17,7 +17,7 @@ graph TB
 ## コンポーネント
 
 1. **Amazon Bedrock**:
-   - Claude 3.5 Sonnet v2モデルを使用
+   - Titan Embed Text v2モデルを使用
    - ウェブページからの情報抽出と解析
    - テキストのベクトル化と意味解析
    - クローリング対象URLの管理
@@ -34,88 +34,103 @@ graph TB
    - エラーハンドリング
 
 4. **EventBridge**:
-   - クローリングの定期実行
+   - クローリングの定期実行（cron式で設定）
    - スケジュール管理
 
-## CloudFormationテンプレート構造
+## Terraformリソース構造
 
-```yaml
-Parameters:
-  CrawlingUrls:
-    Type: CommaDelimitedList
-    Description: クロール対象のURLリスト（カンマ区切り）
+```hcl
+# IAMロール・ポリシー
+resource "aws_iam_role" "crawler_lambda" {}
+resource "aws_iam_policy" "bedrock_invoke_model" {}
+resource "aws_iam_role" "bedrock_opensearch" {}
+resource "aws_iam_role" "opensearch_index_role" {}
 
-Resources:
-  # IAMロール
-  CrawlerLambdaRole:
-    Type: AWS::IAM::Role
-    # Lambda用のBedrock、OpenSearchアクセス権限
+# OpenSearchドメイン
+resource "aws_opensearch_domain" "vector_store" {}
+resource "opensearch_index" "blog_index" {}
 
-  # OpenSearchドメイン
-  VectorStore:
-    Type: AWS::OpenSearchService::Domain
-    # ベクトルエンジン設定
+# Lambda関数
+resource "aws_lambda_function" "crawler" {}
+resource "aws_cloudwatch_event_rule" "crawler_schedule" {}
 
-  # Lambda関数
-  CrawlerFunction:
-    Type: AWS::Lambda::Function
-    # ウェブクローラーの実装
-
-  # EventBridge
-  CrawlerSchedule:
-    Type: AWS::Events::Rule
-    # スケジューリング設定
+# Bedrock (CloudFormation)
+resource "aws_cloudformation_stack" "bedrock" {}
 ```
 
 ## 前提条件
 
 1. AWS CLIのインストールと設定
-2. Amazon Bedrockサービスへのアクセス権限
-3. CloudFormationデプロイ用の適切なIAM権限
+2. Terraformのインストール（バージョン1.0.0以上）
+3. Amazon Bedrockサービスへのアクセス権限
 4. OpenSearchサービスの利用権限
 
 ## デプロイ方法
 
 1. このリポジトリをクローン
 2. `014.bedrock-webcrawler`ディレクトリに移動
-3. CloudFormationスタックのデプロイ：
+3. Terraformの初期化と適用：
    ```bash
-   aws cloudformation create-stack \
-     --stack-name bedrock-webcrawler \
-     --template-body file://template.yaml \
-     --parameters \
-       ParameterKey=CrawlingUrls,ParameterValue=\"https://example.com,https://example.org\" \
-     --capabilities CAPABILITY_IAM
+   terraform init
+   terraform plan
+   terraform apply
    ```
 
-## パラメータの説明
+## 変数の説明
 
-1. **CrawlingUrls** (必須):
-   - 型: CommaDelimitedList
-   - 説明: クロール対象のURLリスト（カンマ区切り）
-   - 例: `"https://example.com,https://example.org"`
-
-2. **CrawlingInterval** (オプション):
+1. **aws_region** (オプション):
    - 型: String
-   - デフォルト: `rate(1 hour)`
-   - 説明: クローリングの実行間隔
-   - 例: `rate(30 minutes)`, `rate(2 hours)`
+   - デフォルト: `ap-northeast-1`
+   - 説明: AWSリージョン
 
-3. **OpenSearchInstanceType** (オプション):
+2. **crawling_url** (オプション):
    - 型: String
-   - デフォルト: `r6g.large.search`
+   - デフォルト: `https://aws.amazon.com/jp/about-aws/whats-new/recent/feed/`
+   - 説明: クロール対象のURL
+
+3. **crawling_interval** (オプション):
+   - 型: String
+   - デフォルト: `cron(0 0 ? * MON *)`（毎週月曜日の午前0時に実行）
+   - 説明: クローラー実行のスケジュール（cron式）
+
+4. **opensearch_instance_type** (オプション):
+   - 型: String
+   - デフォルト: `t3.small.search`
    - 説明: OpenSearchのインスタンスタイプ
 
-4. **BedrockMaxTokens** (オプション):
-   - 型: Number
-   - デフォルト: 4096
-   - 説明: Bedrockモデルの最大トークン数
+5. **project_name** (オプション):
+   - 型: String
+   - デフォルト: `bedrock-webcrawler`
+   - 説明: プロジェクト名
+
+6. **tags** (オプション):
+   - 型: Map(String)
+   - デフォルト: 環境、プロジェクト、管理ツールの情報
+   - 説明: リソースに付与するタグ
+
+7. **bedrock_model_arn** (オプション):
+   - 型: String
+   - デフォルト: Titan Embed Text v2のARN
+   - 説明: Bedrockのモデル ARN
+
+8. **crawler_scope** (オプション):
+   - 型: String
+   - デフォルト: `HOST_ONLY`
+   - 説明: Bedrockウェブクローラーのスコープ
 
 ## セキュリティ考慮事項
 
-1. **IAMロール**: Lambda関数に対する最小権限アクセス
-2. **OpenSearchセキュリティ**: 暗号化とアクセス制御
-3. **ネットワークセキュリティ**: VPCエンドポイントとセキュリティグループ
+1. **IAMロール**: 
+   - Lambda関数に対する最小権限アクセス
+   - Bedrockサービスに対する制限されたアクセス
+   - OpenSearchに対する制限されたアクセス
+
+2. **OpenSearchセキュリティ**: 
+   - 暗号化とアクセス制御
+   - IAMベースの認証
+
+3. **ネットワークセキュリティ**: 
+   - VPCエンドポイントとセキュリティグループ（必要に応じて設定）
 
 ## モニタリングとログ
 
@@ -132,7 +147,7 @@ Resources:
 ## コスト考慮事項
 
 1. **Bedrock**: 
-   - Claude 3.5 Sonnet v2の使用料金
+   - Titan Embed Text v2の使用料金
    - トークン数に応じた課金
 
 2. **OpenSearch**: 
@@ -163,6 +178,10 @@ Resources:
 
 エラーはCloudWatchログに記録され、必要に応じてアラートを設定できます。
 
+## ローカルテスト
+
+`scripts/014.bedrock-webcrawler/local_test.py`を使用して、ローカル環境からBedrockウェブクローラーをテストできます。詳細は`scripts/014.bedrock-webcrawler/README.md`を参照してください。
+
 ## 料金概算
 
 1か月あたりの概算費用（東京リージョン）：
@@ -185,7 +204,7 @@ Resources:
   - 1回あたり約10,000トークン = 月40,000トークン
 小計: $0.004/月
 
-### VPCリソース
+### VPCリソース（オプション）
 - NAT Gateway: $32.40/月
   - 時間料金: $0.045/時 × 24時間 × 30日
   - データ処理: 約$1/月
@@ -199,6 +218,6 @@ Resources:
 
 ※ この見積もりは以下の前提に基づきます：
 - OpenSearchは24時間365日稼働
-- Lambda関数は週1回、5分間実行
+- Lambda関数は週1回実行
 - データ転送量は最小限
 - すべて東京リージョンでの料金

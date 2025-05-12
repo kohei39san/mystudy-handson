@@ -25,6 +25,18 @@ Parameters:
   CrawlingUrl:
     Type: String
     Description: クロール対象のURL
+    
+  BedrockModelArn:
+    Type: String
+    Description: Bedrockのモデル ARN
+    
+  CrawlerScope:
+    Type: String
+    Description: クローラーのスコープ
+    AllowedValues:
+      - HOST_ONLY
+      - SITE_ONLY
+      - WEB
 
 Resources:
   BedrockKnowledgeBase:
@@ -36,7 +48,7 @@ Resources:
       KnowledgeBaseConfiguration: 
         Type: VECTOR
         VectorKnowledgeBaseConfiguration:
-          EmbeddingModelArn: !Sub "arn:aws:bedrock:${AwsRegion}::foundation-model/amazon.titan-embed-text-v2:0"
+          EmbeddingModelArn: !Ref BedrockModelArn
       StorageConfiguration:
         Type: OPENSEARCH_MANAGED_CLUSTER
         OpensearchManagedClusterConfiguration:
@@ -61,7 +73,7 @@ Resources:
               SeedUrls:
                 - Url: !Ref CrawlingUrl
           CrawlerConfiguration:
-            Scope: HOST_ONLY
+            Scope: !Ref CrawlerScope
       KnowledgeBaseId: !Ref BedrockKnowledgeBase
 
 Outputs:
