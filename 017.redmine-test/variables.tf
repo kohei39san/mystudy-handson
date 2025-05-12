@@ -7,13 +7,13 @@ variable "allowed_ip" {
 variable "public_key_path" {
   description = "Path to the public key file to use for SSH access"
   type        = string
-  default     = "../src/017.redmine-test/id_rsa.dummy.pub"  # Added default value
+  default     = "../src/017.redmine-test/id_rsa.dummy.pub" # Added default value
 }
 
 variable "private_key_path" {
   description = "Path to the private key file to use for SSH access"
   type        = string
-  default     = "~/.ssh/id_rsa"  # Default private key path
+  default     = "~/.ssh/id_rsa" # Default private key path
 }
 
 variable "instance_type" {
