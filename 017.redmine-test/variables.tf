@@ -13,7 +13,7 @@ variable "public_key_path" {
 variable "private_key_path" {
   description = "Path to the private key file to use for SSH access"
   type        = string
-  default     = "~/.ssh/id_rsa"
+  default     = "~/.ssh/id_rsa"  # Default private key path
 }
 
 variable "instance_type" {
