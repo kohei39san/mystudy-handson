@@ -49,6 +49,7 @@ resource "aws_instance" "redmine_instance" {
 
 # Key pair for SSH access
 resource "aws_key_pair" "redmine_key" {
+  depends_on = [null_resource.setup_ssh]
   key_name   = "redmine-key"
   public_key = file(var.public_key_path)
 }
