@@ -35,7 +35,7 @@ resource "aws_opensearch_domain" "vector_store" {
     enabled                        = true
     internal_user_database_enabled = false
     master_user_options {
-      master_user_arn = aws_iam_role.opensearch_provider.arn
+      master_user_arn = aws_iam_role.bedrock_opensearch.arn
     }
   }
 
