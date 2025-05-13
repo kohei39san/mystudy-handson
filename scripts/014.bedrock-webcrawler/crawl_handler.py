@@ -1,7 +1,6 @@
 import json
 import os
-import time
-from crawl_utils import start_subsequent_crawl, check_crawl_status
+from crawl_utils import start_subsequent_crawl
 
 def handler(event, context):
     """
@@ -14,32 +13,11 @@ def handler(event, context):
         crawl_id = start_subsequent_crawl(data_source_id)
         print(f"Started subsequent crawl: {crawl_id}")
         
-        # 同期状態の確認（最大4分間）
-        max_attempts = 24  # 10秒ごとに24回 = 4分
-        attempts = 0
-        while attempts < max_attempts:
-            status = check_crawl_status(crawl_id)
-            print(f"Crawl status: {status}")
-            
-            if status == 'COMPLETED':
-                return {
-                    'statusCode': 200,
-                    'body': json.dumps({
-                        'message': 'Subsequent crawl completed successfully',
-                        'crawlId': crawl_id
-                    })
-                }
-            elif status in ['FAILED', 'CANCELLED']:
-                raise Exception(f"Subsequent crawl failed with status: {status}")
-            
-            time.sleep(10)
-            attempts += 1
-        
-        # タイムアウトの場合
+        # 同期結果を待たずに終了
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'Subsequent crawl is still in progress',
+                'message': 'Subsequent crawl started successfully',
                 'crawlId': crawl_id
             })
         }
