@@ -87,6 +87,7 @@ resource "aws_iam_policy" "bedrock_opensearch_access" {
           "es:ESHttpPut",
           "es:ESHttpPost",
           "es:ESHttpDelete",
+          "es:ESHttpHead",
           "es:DescribeDomain"
         ]
         Resource = [
