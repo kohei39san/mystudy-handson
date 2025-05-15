@@ -25,7 +25,7 @@
 1. VSCode左下の歯車マーク->設定を押下する
 2. 「mcp」というキーワードで検索する
 3. MCP モデルコンテキストプロトコルサーバー構成の「settings.jsonで編集」を押下
-4. settings.jsonを書き直す
+4. [settings.json](../src/016.setup-mcp-with-vscode/settings.json)を書き直す
 5. settings.json編集画面から「起動」を押下してMCPサーバーを起動する
 6. Github Copilotをエージェントに切り替える
 
