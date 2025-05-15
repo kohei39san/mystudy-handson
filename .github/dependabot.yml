@@ -9,12 +9,3 @@ updates:
       interval: "weekly"
     target-branch: master
     open-pull-requests-limit: 10
-  - package-ecosystem: terraform
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    target-branch: master
-    open-pull-requests-limit: 10
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
