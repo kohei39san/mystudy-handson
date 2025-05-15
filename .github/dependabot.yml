@@ -10,7 +10,8 @@ updates:
     target-branch: main
     open-pull-requests-limit: 10
   - package-ecosystem: terraform
-    directory: "/"
+    directories: 
+      - "**/*"
     schedule:
       interval: "weekly"
     target-branch: main
