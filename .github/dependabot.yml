@@ -8,12 +8,14 @@ updates:
       # Check for updates to GitHub Actions every week
       interval: "weekly"
     target-branch: main
+    open-pull-requests-limit: 1000
   - package-ecosystem: terraform
     directories: 
       - "**/*"
     schedule:
       interval: "weekly"
     target-branch: main
+    open-pull-requests-limit: 1000
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
