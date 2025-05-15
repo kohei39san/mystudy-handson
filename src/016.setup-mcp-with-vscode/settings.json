@@ -1,0 +1,28 @@
+{
+    "git.autofetch": true,
+    "github.copilot.advanced": {},
+    "chat.mcp.discovery.enabled": true,
+    "mcp": {
+        
+
+        "inputs": [],
+        "servers": {
+            "awslabs.aws-documentation-mcp-server": {
+                "command": "uvx",
+                "args": [
+                    "--from",
+                    "awslabs-aws-documentation-mcp-server",
+                    "awslabs.aws-documentation-mcp-server.exe"
+                ]
+            },
+            "awslabs.cost-analysis-mcp-server": {
+                "command": "uvx",
+                "args": [
+                    "--from",
+                    "awslabs-cost-analysis-mcp-server",
+                    "awslabs.cost-analysis-mcp-server.exe"
+                ]
+            }
+        }
+    }
+}
