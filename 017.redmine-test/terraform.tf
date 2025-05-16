@@ -7,7 +7,7 @@ terraform {
     }
     http = {
       source  = "registry.terraform.io/hashicorp/http"
-      version = "3.4.5"
+      version = "3.5.0"
     }
   }
 }
