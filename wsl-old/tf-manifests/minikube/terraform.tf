@@ -6,7 +6,7 @@ terraform {
     }
     http = {
       source  = "registry.terraform.io/hashicorp/http"
-      version = "3.2.1"
+      version = "3.5.0"
     }
     null = {
       source  = "registry.terraform.io/hashicorp/null"
