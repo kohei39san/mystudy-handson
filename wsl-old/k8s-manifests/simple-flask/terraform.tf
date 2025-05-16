@@ -10,7 +10,7 @@ terraform {
     }
     docker = {
       source  = "kreuzwerker/docker"
-      version = "3.0.2"
+      version = "3.5.0"
     }
     #    http = {
     #      source = "hashicorp/http"
