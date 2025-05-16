@@ -2,11 +2,11 @@ terraform {
   required_providers {
     helm = {
       source  = "hashicorp/helm"
-      version = "2.12.1"
+      version = "2.17.0"
     }
     http = {
       source  = "registry.terraform.io/hashicorp/http"
-      version = "3.4.1"
+      version = "3.5.0"
     }
     template = {
       source  = "hashicorp/template"

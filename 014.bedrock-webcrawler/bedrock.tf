@@ -12,10 +12,13 @@ resource "aws_cloudformation_stack" "bedrock" {
     OpenSearchEndpoint = aws_opensearch_domain.vector_store.endpoint
     AwsRegion          = var.aws_region
     CrawlingUrl        = var.crawling_url
+    BedrockModelArn    = var.bedrock_model_arn
+    CrawlerScope       = var.crawler_scope
   }
 
   depends_on = [
     aws_opensearch_domain.vector_store,
-    aws_iam_role.bedrock_opensearch
+    aws_iam_role.bedrock_opensearch,
+    opensearch_index.blog_index
   ]
 }
