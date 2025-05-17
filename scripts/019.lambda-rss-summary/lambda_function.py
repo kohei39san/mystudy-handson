@@ -157,7 +157,7 @@ def generate_summary(rss_content, prompt, api_key):
         """
         
         payload = {
-            "model": "anthropic/claude-3-haiku-20240307:free",
+            "model": "deepseek/deepseek-chat-v3-0324:free",
             "messages": [
                 {"role": "user", "content": full_prompt}
             ],

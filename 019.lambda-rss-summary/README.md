@@ -23,21 +23,20 @@
 
 ```bash
 # OpenRouter APIキーを保存
-aws ssm put-parameter \
-    --name "/rss-summary/openrouter-api-key" \
-    --type "SecureString" \
-    --value "your-openrouter-api-key" \
-    --overwrite
+aws ssm put-parameter --name "/rss-summary/openrouter-api-key" --type "SecureString" --value "your-openrouter-api-key" --overwrite --tier Standard
 
 # Slack Webhook URLを保存
-aws ssm put-parameter \
-    --name "/rss-summary/slack-webhook-url" \
-    --type "SecureString" \
-    --value "your-slack-webhook-url" \
-    --overwrite
+aws ssm put-parameter --name "/rss-summary/slack-webhook-url" --type "SecureString" --value "your-slack-webhook-url" --overwrite --tier Standard
 ```
 
-2. Lambda関数のデプロイパッケージを作成します：
+2. Terraformを使用してデプロイする前に、必要なPythonモジュールをインストールして../../lambda_function/packageディレクトリを準備します：
+
+```bash
+cp -r ../scripts/019.lambda-rss-summary/* ../../lambda_function_019.lambda-rss-summary/
+pip install -r ..\scripts\019.lambda-rss-summary\requirements.txt --target ../../lambda_function_019.lambda-rss-summary/
+```
+
+3. Lambda関数のデプロイパッケージを作成します：
 
 ```bash
 cd scripts/019.lambda-rss-summary
@@ -45,7 +44,7 @@ chmod +x deploy.sh
 ./deploy.sh
 ```
 
-3. CloudFormationスタックをデプロイします：
+4. CloudFormationスタックをデプロイします：
 
 ```bash
 aws cloudformation deploy \
@@ -62,7 +61,7 @@ aws cloudformation deploy \
         LambdaMemorySize=256
 ```
 
-4. Lambda関数のコードを更新します：
+5. Lambda関数のコードを更新します：
 
 ```bash
 aws lambda update-function-code \

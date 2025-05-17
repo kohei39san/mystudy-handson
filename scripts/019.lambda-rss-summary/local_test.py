@@ -25,7 +25,7 @@ def parse_arguments():
     parser.add_argument('--webhook-url', required=True, help='Slack webhook URL')
     parser.add_argument('--rss-url', default='https://aws.amazon.com/about-aws/whats-new/recent/feed/', 
                         help='RSS feed URL')
-    parser.add_argument('--prompt', default='AWSの新機能の追加を優先事項として、サービスごとに分類して要約してください。要約は1000文字以内にしてください。', 
+    parser.add_argument('--prompt', default='AWSの新機能の追加を優先事項として、AWSサービス名ごとに分類して要約してください。要約は1000文字以内にしてください。過去7日分の情報としてください。AWSサービス名は「# *任意のAWSサービス名* 」とすること。リンクURLは<任意のURL|「表示するテキスト」>とすること。リストは「•」を行頭につけること。', 
                         help='Summary prompt')
     parser.add_argument('--dry-run', action='store_true', help='Run without sending to Slack')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
