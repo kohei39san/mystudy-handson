@@ -13,6 +13,7 @@ resource "aws_cloudformation_stack" "rss_summary" {
   capabilities = ["CAPABILITY_IAM"]
 }
 
+# tflint-ignore: terraform_required_providers
 data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../../lambda_function_019.lambda-rss-summary"
@@ -20,6 +21,7 @@ data "archive_file" "lambda_zip" {
   excludes    = ["local_test.py", "__pycache__", "*.pyc"]
 }
 
+# tflint-ignore: terraform_required_providers
 resource "null_resource" "update_lambda_code" {
   provisioner "local-exec" {
     command = "aws lambda update-function-code --function-name RssSummaryToSlackFunction --zip-file fileb://${path.module}/../../lambda_function_019.lambda-rss-summary.zip"

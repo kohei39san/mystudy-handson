@@ -1,5 +1,5 @@
+# tflint-ignore: terraform_required_version
 terraform {
-  required_version = ">= 1.0.0"
   required_providers {
     kustomization = {
       source  = "kbst/kustomization"
@@ -15,7 +15,7 @@ terraform {
     }
     null = {
       source  = "hashicorp/null"
-      version = "~> 3.2"
+      version = "3.2.4"
     }
     #    http = {
     #      source = "hashicorp/http"
