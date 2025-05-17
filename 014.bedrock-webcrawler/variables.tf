@@ -31,7 +31,7 @@ variable "project_name" {
 variable "default_tags" {
   description = "デフォルトのリソースタグ"
   type        = map(string)
-  default     = {
+  default = {
     Environment = "Production"
     Project     = "BedrockWebCrawler"
     ManagedBy   = "Terraform"
