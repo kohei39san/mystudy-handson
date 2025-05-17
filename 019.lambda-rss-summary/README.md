@@ -48,7 +48,7 @@ chmod +x deploy.sh
 
 ```bash
 aws cloudformation deploy \
-    --template-file src/019.lambda-rss-summary/template.yaml \
+    --template-file src/019.lambda-rss-summary/cfn/template.yaml \
     --stack-name rss-summary-stack \
     --capabilities CAPABILITY_IAM \
     --parameter-overrides \

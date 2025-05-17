@@ -1,7 +1,7 @@
 resource "aws_cloudformation_stack" "game_info_discord_stack" {
   name = "game-info-discord-stack"
 
-  template_body = file("${path.module}/../src/018.send-game-info-to-discord/template.yaml")
+  template_body = file("${path.module}/../src/018.send-game-info-to-discord/cfn/template.yaml")
 
   parameters = {
     OpenRouterApiKeyParam  = var.openrouter_api_key_param
