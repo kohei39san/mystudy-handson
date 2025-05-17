@@ -22,7 +22,7 @@ if ($stackExists) {
 
 Write-Host "Creating new stack '$stackName'..."
 aws cloudformation deploy `
-  --template-file ../../src/013.aws-github-oidc/template.yaml `
+  --template-file ../../src/013.aws-github-oidc/cfn/template.yaml `
   --stack-name $args[0] `
   --capabilities CAPABILITY_NAMED_IAM `
   --parameter-overrides `
