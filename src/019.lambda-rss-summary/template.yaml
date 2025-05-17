@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template for RSS feed summary to Slack using OpenRouter'
+
+Parameters:
+  OpenRouterApiKeyParam:
+    Type: String
+    Description: SSM Parameter Store name for OpenRouter API key
+    Default: /rss-summary/openrouter-api-key
+  
+  SlackWebhookUrlParam:
+    Type: String
+    Description: SSM Parameter Store name for Slack webhook URL
+    Default: /rss-summary/slack-webhook-url
+  
+  RssFeedUrl:
+    Type: String
+    Description: URL of the RSS feed to summarize
+    Default: https://aws.amazon.com/about-aws/whats-new/recent/feed/
+  
+  SummaryPrompt:
+    Type: String
+    Description: Prompt to use for summarizing the RSS feed
+    Default: "AWSの新機能の追加を優先事項として、サービスごとに分類して要約してください。要約は1000文字以内にしてください。"
+  
+  ScheduleExpression:
+    Type: String
+    Description: Schedule expression for the EventBridge rule
+    Default: cron(0 9 ? * MON-FRI *)  # Every weekday at 9:00 AM
+  
+  LambdaTimeout:
+    Type: Number
+    Description: Lambda function timeout in seconds
+    Default: 60
+    MinValue: 3
+    MaxValue: 900
+  
+  LambdaMemorySize:
+    Type: Number
+    Description: Lambda function memory size in MB
+    Default: 256
+    MinValue: 128
+    MaxValue: 10240
+
+Resources:
+  # IAM Role for Lambda function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: SSMParameterAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${OpenRouterApiKeyParam}'
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SlackWebhookUrlParam}'
+
+  # Lambda function
+  RssSummaryLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: RssSummaryToSlackFunction
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.9
+      Timeout: !Ref LambdaTimeout
+      MemorySize: !Ref LambdaMemorySize
+      Environment:
+        Variables:
+          OPENROUTER_API_KEY_PARAM: !Ref OpenRouterApiKeyParam
+          SLACK_WEBHOOK_URL_PARAM: !Ref SlackWebhookUrlParam
+          RSS_FEED_URL: !Ref RssFeedUrl
+          SUMMARY_PROMPT: !Ref SummaryPrompt
+      Code:
+        ZipFile: |
+          # This is a placeholder. The actual code will be uploaded during deployment.
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': 'Placeholder function'
+              }
+
+  # EventBridge rule to trigger Lambda function
+  RssSummaryScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: RssSummaryToSlackSchedule
+      Description: Schedule to trigger the RSS summary Lambda function
+      ScheduleExpression: !Ref ScheduleExpression
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt RssSummaryLambdaFunction.Arn
+          Id: RssSummaryLambdaTarget
+
+  # Permission for EventBridge to invoke Lambda
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref RssSummaryLambdaFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt RssSummaryScheduleRule.Arn
+
+Outputs:
+  LambdaFunctionName:
+    Description: Name of the Lambda function
+    Value: !Ref RssSummaryLambdaFunction
+  
+  LambdaFunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt RssSummaryLambdaFunction.Arn
+  
+  EventBridgeRuleName:
+    Description: Name of the EventBridge rule
+    Value: !Ref RssSummaryScheduleRule
