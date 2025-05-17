@@ -1,3 +1,4 @@
+# tflint-ignore: terraform_required_version
 terraform {
   required_providers {
     helm = {
