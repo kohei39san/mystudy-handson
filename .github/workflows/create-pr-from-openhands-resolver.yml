@@ -2,6 +2,10 @@ name: Create Pull Request From OpenHands Resolver
 
 on: create
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   create-pr:
     if: ${{ contains(github.ref, 'refs/heads/openhands-fix-issue-') }}
