@@ -1,7 +1,9 @@
 variable "rss_feed_url" {
+  type    = string
   default = "https://aws.amazon.com/about-aws/whats-new/recent/feed/"
 }
 variable "summary_prompt" {
+  type    = string
   default = <<-EOT
     AWSの新機能の追加を優先事項として、サービスごとに分類して要約してください。
     以下のカテゴリに分けて整理してください：
@@ -28,23 +30,29 @@ variable "summary_prompt" {
   EOT
 }
 variable "schedule_expression" {
+  type    = string
   default = "cron(0 0 ? * MON *)"
 }
 variable "lambda_timeout" {
+  type    = number
   default = 300
 }
 variable "lambda_memory_size" {
+  type    = number
   default = 256
 }
 
 variable "aws_region" {
+  type    = string
   default = "ap-northeast-1"
 }
 
 variable "openrouter_api_key_param" {
+  type    = string
   default = "/rss-summary/openrouter-api-key"
 }
 
 variable "slack_webhook_url_param" {
+  type    = string
   default = "/rss-summary/slack-webhook-url"
 }
