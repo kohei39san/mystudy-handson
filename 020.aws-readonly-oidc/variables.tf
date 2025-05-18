@@ -1,21 +1,11 @@
-variable "aws_region" {
-  description = "AWS region to deploy resources"
-  type        = string
-  default     = "us-east-1"
-}
-
-variable "github_org" {
-  description = "GitHub organization name"
-  type        = string
-}
-
 variable "github_repository" {
-  description = "GitHub repository name"
+  description = "GitHub repository pattern to allow access from (e.g., 'repo:organization/repository:ref:refs/heads/main')"
   type        = string
+  default     = "repo:organization/repository:*"
 }
 
 variable "environment" {
-  description = "Environment name"
+  description = "Environment name for tagging"
   type        = string
   default     = "dev"
 }

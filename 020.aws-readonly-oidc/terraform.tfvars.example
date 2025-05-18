@@ -1,4 +1,10 @@
-aws_region       = "us-east-1"
-github_org       = "your-github-org"
-github_repository = "your-repository-name"
-environment      = "dev"
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and modify as needed
+
+# GitHub repository pattern to allow access from
+# Format: repo:organization/repository:ref:refs/heads/main
+# Use wildcards as needed: repo:organization/repository:*
+github_repository = "repo:your-organization/your-repository:*"
+
+# Environment name for tagging
+environment = "dev"
