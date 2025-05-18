@@ -31,7 +31,7 @@ Resources:
               StringLike:
                 token.actions.githubusercontent.com:sub: !Sub ${GitHubRepository}
       ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/ReadOnlyAccess
+        - arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
 
 Outputs:
   RoleARN:
