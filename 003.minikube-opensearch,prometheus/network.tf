@@ -7,11 +7,27 @@ locals {
 
 resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr_block
+  
+  tags = merge(
+    var.aws_tags,
+    {
+      Environment = "dev",
+      Terraform   = "true"
+    }
+  )
 }
 resource "aws_subnet" "subnet" {
   vpc_id                  = aws_vpc.vpc.id
   map_public_ip_on_launch = true
   cidr_block              = var.subnet_cidr_block
+  
+  tags = merge(
+    var.aws_tags,
+    {
+      Environment = "dev",
+      Terraform   = "true"
+    }
+  )
 }
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id

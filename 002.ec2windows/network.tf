@@ -6,14 +6,38 @@ locals {
 }
 resource "aws_vpc" "test_vpc" {
   cidr_block = "10.0.0.0/16"
+  
+  tags = merge(
+    var.aws_tags,
+    {
+      Environment = "dev",
+      Terraform   = "true"
+    }
+  )
 }
 resource "aws_subnet" "test_subnet" {
   vpc_id                  = aws_vpc.test_vpc.id
   map_public_ip_on_launch = true
   cidr_block              = "10.0.0.0/24"
+  
+  tags = merge(
+    var.aws_tags,
+    {
+      Environment = "dev",
+      Terraform   = "true"
+    }
+  )
 }
 resource "aws_internet_gateway" "test_igw" {
   vpc_id = aws_vpc.test_vpc.id
+  
+  tags = merge(
+    var.aws_tags,
+    {
+      Environment = "dev",
+      Terraform   = "true"
+    }
+  )
 }
 resource "aws_route_table" "test_rt" {
   vpc_id = aws_vpc.test_vpc.id
@@ -21,6 +45,14 @@ resource "aws_route_table" "test_rt" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.test_igw.id
   }
+  
+  tags = merge(
+    var.aws_tags,
+    {
+      Environment = "dev",
+      Terraform   = "true"
+    }
+  )
 }
 resource "aws_route_table_association" "test_rta" {
   subnet_id      = aws_subnet.test_subnet.id
@@ -41,4 +73,12 @@ resource "aws_security_group" "test_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  
+  tags = merge(
+    var.aws_tags,
+    {
+      Environment = "dev",
+      Terraform   = "true"
+    }
+  )
 }
