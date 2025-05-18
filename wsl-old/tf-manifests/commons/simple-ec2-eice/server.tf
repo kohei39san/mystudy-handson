@@ -1,3 +1,4 @@
+# tflint-ignore-file: terraform_required_providers
 data "aws_ssm_parameter" "ami" {
   name = var.ami_name
 }

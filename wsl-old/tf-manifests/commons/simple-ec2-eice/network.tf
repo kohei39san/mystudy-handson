@@ -1,3 +1,4 @@
+# tflint-ignore-file: terraform_required_providers
 data "http" "client_global_ip" {
   url = "https://inet-ip.info"
 }
