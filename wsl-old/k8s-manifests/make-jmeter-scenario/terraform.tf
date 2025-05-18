@@ -1,4 +1,5 @@
 terraform {
+  required_version = ">= 1.0.0"
   required_providers {
     helm = {
       source  = "hashicorp/helm"
@@ -11,6 +12,10 @@ terraform {
     docker = {
       source  = "kreuzwerker/docker"
       version = "3.5.0"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.2"
     }
   }
 }
