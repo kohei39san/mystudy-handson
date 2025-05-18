@@ -4,29 +4,24 @@ Resources:
   MyEC2Instance:
     Type: 'AWS::EC2::Instance'
     Properties:
-      ImageId: !GetAtt 'MyAmi.AmazonLinux2'
+      ImageId: 'ami-0c55b159cbfafe1f0'  # Using a direct AMI ID instead of !GetAtt
       InstanceType: 't2.micro'
-      KeyName: !Sub 'my-key-pair'
-      SecurityGroups: [!Ref MySecurityGroup]
+      KeyName: 'my-key-pair'  # Fixed: Removed unnecessary !Sub
+      SecurityGroupIds: [!Ref MySecurityGroup]  # Fixed: Using SecurityGroupIds instead of SecurityGroups
 
-  MyAmi:
-    Type: 'AWS::EC2::Image'
-    Properties:
-      Name: 'my-ami'
-      Description: 'My Amazon Linux 2 AMI'
-      ImageType: 'public'
+  # Removed AWS::EC2::Image resource as it's not a valid CloudFormation resource type
 
   MyKeyPair:
     Type: 'AWS::EC2::KeyPair'
     Properties:
-      KeyName: !Sub 'my-key-pair'
+      KeyName: 'my-key-pair'  # Fixed: Removed unnecessary !Sub
 
   MySecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: 'My security group'
-      VpcId: !GetAtt 'MyVPC.VpcId'
-      SecurityGroupIngressRules:
+      VpcId: !Ref 'MyVPC'  # Fixed: Using !Ref instead of !GetAtt
+      SecurityGroupIngress:  # Fixed: Using SecurityGroupIngress instead of SecurityGroupIngressRules
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
