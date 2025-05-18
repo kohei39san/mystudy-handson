@@ -1,0 +1,4 @@
+aws_region       = "us-east-1"
+github_org       = "your-github-org"
+github_repository = "your-repository-name"
+environment      = "dev"

@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 jobs:
   terraform-fmt:
@@ -32,14 +33,29 @@ jobs:
       name: Cache plugin dir for TFLint
       with:
         path: ~/.tflint.d/plugins
-        key: ubuntu-latest-tflint-${{ hashFiles('.tflint.hcl') }}
+        key: ubuntu-latest-tflint-${{ hashFiles('.github/.tflint.hcl') }}
 
     - uses: terraform-linters/setup-tflint@v4
       name: Setup TFLint
       with:
         tflint_version: "latest"
 
-    - name: Run TFLint to fix
+    - name: Configure AWS credentials
+      id: aws-credentials
+      if: ${{ secrets.AWS_ROLE_ARN != '' }}
+      uses: aws-actions/configure-aws-credentials@v4
+      continue-on-error: true
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: us-east-1
+        role-session-name: GithubActionsSession
+
+    - name: Run TFLint with AWS plugin
+      if: steps.aws-credentials.outcome == 'success' && steps.aws-credentials.conclusion == 'success'
+      run: tflint --recursive -f compact --fix --minimum-failure-severity=warning --config=.github/.tflint.hcl
+
+    - name: Run TFLint without AWS plugin
+      if: steps.aws-credentials.outcome != 'success' || steps.aws-credentials.conclusion != 'success'
       run: tflint --recursive -f compact --fix --minimum-failure-severity=warning
 
     - name: Check for changes

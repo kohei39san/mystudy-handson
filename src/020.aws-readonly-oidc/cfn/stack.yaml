@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'GitHub OIDC for TFLint AWS Plugin with ViewOnlyAccess'
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: GitHub organization name
+    Default: "your-github-org"
+  
+  GitHubRepository:
+    Type: String
+    Description: GitHub repository name
+    Default: "your-repository-name"
+
+Resources:
+  # GitHub OIDC Provider
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+  # IAM Role for GitHub Actions
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "github-actions-tflint-readonly-${GitHubRepository}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !GetAtt GitHubOIDCProvider.Arn
+            Action: 'sts:AssumeRoleWithWebIdentity'
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrg}/${GitHubRepository}:*"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+      Description: "Role for GitHub Actions to use with TFLint AWS plugin"
+
+Outputs:
+  GitHubActionsRoleARN:
+    Description: ARN of the IAM Role for GitHub Actions
+    Value: !GetAtt GitHubActionsRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-GitHubActionsRoleARN"
+  
+  OIDCProviderARN:
+    Description: ARN of the GitHub OIDC Provider
+    Value: !GetAtt GitHubOIDCProvider.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-OIDCProviderARN"
