@@ -42,8 +42,9 @@ jobs:
 
     - name: Run TFLint to fix
       id: run_linter
+      continue-on-error: true
       run: |
-        out=$(tflint --recursive -f compact --fix --minimum-failure-severity=error)
+        out=$(tflint --recursive -f compact --fix --minimum-failure-severity=warning || true)
         if [ -n "${out}" ];then
           echo "${out}" | grep -E '\.tf:' | tee /tmp/tflint-gen-output.txt
           echo "linted=linted" >> $GITHUB_OUTPUT
