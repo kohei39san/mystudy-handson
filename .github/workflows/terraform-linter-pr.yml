@@ -49,7 +49,7 @@ jobs:
         git diff --exit-code && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
 
     - name: Create Pull Request
-      if: steps.git_diff.outputs.changes == 'changes'
+      if: steps.git_diff.outputs.changes == 'changes' && ${{ !cancelled() }}
       uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
