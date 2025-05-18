@@ -1,3 +1,5 @@
+[![CodeQL Advanced](https://github.com/kohei39san/mystudy-handson/actions/workflows/codeql.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/codeql.yml)
+
 # 概要
 
 勉強で使った基盤はEC2とTerraformで作りました。
