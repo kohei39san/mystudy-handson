@@ -40,7 +40,8 @@ jobs:
         tflint_version: "latest"
 
     - name: Run TFLint to fix
-      run: tflint --recursive -f compact --fix --minimum-failure-severity=error
+      run: tflint --recursive -f compact --fix --minimum-failure-severity=warning
+      continue-on-error: true
 
     - name: Check for changes
       id: git_diff
