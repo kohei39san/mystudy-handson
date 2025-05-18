@@ -3,7 +3,7 @@ name: Create Pull Request From OpenHands Resolver
 on: create
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
