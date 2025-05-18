@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 jobs:
   terraform-fmt:
@@ -32,14 +33,35 @@ jobs:
       name: Cache plugin dir for TFLint
       with:
         path: ~/.tflint.d/plugins
-        key: ubuntu-latest-tflint-${{ hashFiles('.tflint.hcl') }}
+        key: ubuntu-latest-tflint-${{ hashFiles('.github/.tflint.hcl') }}
 
     - uses: terraform-linters/setup-tflint@v4
       name: Setup TFLint
       with:
         tflint_version: "latest"
 
-    - name: Run TFLint to fix
+    - name: Check if AWS Role ARN is available
+      id: check_role
+      run: |
+        if [ -n "${{ secrets.AWS_ROLE_ARN }}" ]; then
+          echo "aws_role_available=true" >> $GITHUB_OUTPUT
+        else
+          echo "aws_role_available=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Configure AWS Credentials
+      if: steps.check_role.outputs.aws_role_available == 'true'
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: ap-northeast-1
+
+    - name: Run TFLint with AWS plugin
+      if: steps.check_role.outputs.aws_role_available == 'true'
+      run: tflint --recursive -f compact --fix --minimum-failure-severity=warning --config=.github/.tflint.hcl
+
+    - name: Run TFLint without AWS plugin
+      if: steps.check_role.outputs.aws_role_available == 'false'
       run: tflint --recursive -f compact --fix --minimum-failure-severity=warning
 
     - name: Check for changes
