@@ -41,9 +41,9 @@ jobs:
 
     - name: Run TFLint to fix
       run: tflint --recursive -f compact --fix --minimum-failure-severity=warning
-      continue-on-error: true
 
     - name: Check for changes
+      if: ${{ !cancelled() }}
       id: git_diff
       run: |
         git diff --exit-code && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT

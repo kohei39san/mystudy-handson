@@ -44,7 +44,7 @@ jobs:
       id: run_linter
       continue-on-error: true
       run: |
-        out=$(tflint --recursive -f compact --fix --minimum-failure-severity=warning || true)
+        out=$(tflint --recursive -f compact --fix --minimum-failure-severity=warning)
         if [ -n "${out}" ];then
           echo "${out}" | grep -E '\.tf:' | tee /tmp/tflint-gen-output.txt
           echo "linted=linted" >> $GITHUB_OUTPUT
