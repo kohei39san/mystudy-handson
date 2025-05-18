@@ -14,7 +14,6 @@ resource "aws_cloudformation_stack" "game_info_discord_stack" {
   capabilities = ["CAPABILITY_IAM"]
 }
 
-# tflint-ignore: terraform_required_providers
 # Create a zip file of the Lambda code
 data "archive_file" "lambda_zip" {
   type        = "zip"
@@ -23,7 +22,6 @@ data "archive_file" "lambda_zip" {
   excludes    = ["local_test.py", "__pycache__", "*.pyc"]
 }
 
-# tflint-ignore: terraform_required_providers
 # Update Lambda function code
 resource "null_resource" "upload_lambda_code" {
   triggers = {

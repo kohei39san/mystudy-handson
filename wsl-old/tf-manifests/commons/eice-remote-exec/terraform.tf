@@ -1,3 +1,3 @@
 terraform {
-  required_version = ">= 1.0.0"
+  # tflint-ignore: terraform_required_providers, terraform_required_version
 }

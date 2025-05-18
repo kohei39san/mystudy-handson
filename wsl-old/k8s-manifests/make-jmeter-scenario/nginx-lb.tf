@@ -41,7 +41,6 @@ resource "docker_container" "nginx_lb" {
   privileged = true
 }
 
-# tflint-ignore: terraform_required_providers
 resource "null_resource" "route_nginx_lb" {
   triggers = {
     id = docker_container.nginx_lb.id

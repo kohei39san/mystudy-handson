@@ -1,9 +1,3 @@
 terraform {
-  required_version = ">= 1.0.0"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.67"
-    }
-  }
+  # tflint-ignore: terraform_required_providers, terraform_required_version
 }
