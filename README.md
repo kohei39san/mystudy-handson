@@ -1,4 +1,5 @@
 [![CodeQL Advanced](https://github.com/kohei39san/mystudy-handson/actions/workflows/codeql.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/codeql.yml)
+[![Terraform linter and PR](https://github.com/kohei39san/mystudy-handson/actions/workflows/terraform-linter-pr.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/terraform-linter-pr.yml)
 
 # 概要
 
