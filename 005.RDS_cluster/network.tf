@@ -1,13 +1,11 @@
 resource "aws_vpc" "example_vpc" {
   cidr_block = "10.0.0.0/16"
   
-  tags = merge(
-    var.aws_tags,
-    {
-      Environment = "dev",
-      Terraform   = "true"
-    }
-  )
+  tags = {
+    Name        = "rds-vpc"
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
 
 resource "aws_subnet" "example_subnet1" {
@@ -15,13 +13,11 @@ resource "aws_subnet" "example_subnet1" {
   cidr_block        = "10.0.1.0/24"
   availability_zone = "ap-northeast-1c"
   
-  tags = merge(
-    var.aws_tags,
-    {
-      Environment = "dev",
-      Terraform   = "true"
-    }
-  )
+  tags = {
+    Name        = "rds-subnet-1"
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
 
 resource "aws_subnet" "example_subnet2" {
@@ -29,11 +25,9 @@ resource "aws_subnet" "example_subnet2" {
   cidr_block        = "10.0.2.0/24"
   availability_zone = "ap-northeast-1a"
   
-  tags = merge(
-    var.aws_tags,
-    {
-      Environment = "dev",
-      Terraform   = "true"
-    }
-  )
+  tags = {
+    Name        = "rds-subnet-2"
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }

@@ -6,13 +6,11 @@ resource "aws_db_subnet_group" "example" {
   name       = "db-subnet-group${var.aws_tags["Name"]}"
   subnet_ids = [aws_subnet.example_subnet1.id, aws_subnet.example_subnet2.id]
   
-  tags = merge(
-    var.aws_tags,
-    {
-      Environment = "dev",
-      Terraform   = "true"
-    }
-  )
+  tags = {
+    Name        = "db-subnet-group"
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
 
 resource "aws_rds_cluster" "rds_cluster" {
@@ -27,13 +25,11 @@ resource "aws_rds_cluster" "rds_cluster" {
   preferred_backup_window = "07:00-09:00"
   skip_final_snapshot     = true
   
-  tags = merge(
-    var.aws_tags,
-    {
-      Environment = "dev",
-      Terraform   = "true"
-    }
-  )
+  tags = {
+    Name        = "rds-cluster"
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
 
 resource "aws_rds_cluster_instance" "cluster_instances" {
@@ -45,11 +41,9 @@ resource "aws_rds_cluster_instance" "cluster_instances" {
   engine_version       = aws_rds_cluster.rds_cluster.engine_version
   db_subnet_group_name = aws_db_subnet_group.example.name
   
-  tags = merge(
-    var.aws_tags,
-    {
-      Environment = "dev",
-      Terraform   = "true"
-    }
-  )
+  tags = {
+    Name        = "rds-cluster-instance-${count.index}"
+    Environment = var.environment
+    Terraform   = "true"
+  }
 }
