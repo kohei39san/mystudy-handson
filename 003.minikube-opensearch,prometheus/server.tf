@@ -26,8 +26,8 @@ resource "aws_key_pair" "deployer" {
 resource "aws_instance" "instance" {
   ami                  = data.aws_ssm_parameter.ami.value
   instance_type        = var.instance_type
-  iam_instance_profile = var.iam_instance_profile
-  key_name             = var.key_name
+  iam_instance_profile = aws_iam_instance_profile.minikube_instance_profile.name
+  key_name             = aws_key_pair.deployer.key_name
   network_interface {
     network_interface_id = aws_network_interface.ni.id
     device_index         = 0
