@@ -13,6 +13,12 @@ resource "aws_iam_role" "managed_node_role" {
       }
     ]
   })
+  
+  tags = {
+    Name        = "managed_node_role"
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "managed_node_policy_attachment" {
@@ -21,6 +27,12 @@ resource "aws_iam_role_policy_attachment" "managed_node_policy_attachment" {
 }
 
 resource "aws_iam_instance_profile" "managed_node_instance_profile" {
-  name = var.iam_instance_profile
+  name = "ec2-linux-latest-eice-instance-profile"
   role = aws_iam_role.managed_node_role.name
+  
+  tags = {
+    Name        = "managed_node_instance_profile"
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }

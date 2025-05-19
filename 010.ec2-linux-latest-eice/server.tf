@@ -5,7 +5,14 @@ data "aws_ssm_parameter" "ami" {
 resource "aws_network_interface" "ni" {
   subnet_id       = aws_subnet.subnet.id
   security_groups = [aws_security_group.sg.id]
+  
+  tags = {
+    Name        = "ec2-linux-latest-eice-ni"
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
+
 resource "aws_instance" "instance" {
   ami                  = data.aws_ssm_parameter.ami.value
   instance_type        = var.instance_type
@@ -17,5 +24,11 @@ resource "aws_instance" "instance" {
   }
   root_block_device {
     volume_size = var.root_block_volume_size
+  }
+  
+  tags = {
+    Name        = "ec2-linux-latest-eice-instance"
+    Environment = "dev"
+    Terraform   = "true"
   }
 }
