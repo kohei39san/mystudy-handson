@@ -56,3 +56,9 @@ variable "slack_webhook_url_param" {
   type    = string
   default = "/rss-summary/slack-webhook-url"
 }
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}
