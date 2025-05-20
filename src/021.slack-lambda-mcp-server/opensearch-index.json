@@ -1,0 +1,67 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": 2,
+      "number_of_replicas": 1,
+      "knn": true,
+      "knn.space_type": "cosinesimil"
+    }
+  },
+  "mappings": {
+    "properties": {
+      "vector_field": {
+        "type": "knn_vector",
+        "dimension": 1536,
+        "method": {
+          "name": "hnsw",
+          "space_type": "cosinesimil",
+          "engine": "nmslib",
+          "parameters": {
+            "ef_construction": 128,
+            "m": 16
+          }
+        }
+      },
+      "text_content": {
+        "type": "text"
+      },
+      "metadata": {
+        "properties": {
+          "source": {
+            "type": "keyword"
+          },
+          "title": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "last_updated": {
+            "type": "date"
+          },
+          "author": {
+            "type": "keyword"
+          },
+          "category": {
+            "type": "keyword"
+          },
+          "tags": {
+            "type": "keyword"
+          },
+          "file_path": {
+            "type": "keyword"
+          },
+          "file_type": {
+            "type": "keyword"
+          },
+          "chunk_id": {
+            "type": "keyword"
+          }
+        }
+      }
+    }
+  }
+}
