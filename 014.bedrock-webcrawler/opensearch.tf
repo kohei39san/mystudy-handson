@@ -1,6 +1,6 @@
 resource "aws_opensearch_domain" "vector_store" {
   domain_name    = "${var.project_name}-vectors"
-  engine_version = "OpenSearch_2.9"
+  engine_version = "OpenSearch_2.19"
 
   cluster_config {
     instance_type          = var.opensearch_instance_type
