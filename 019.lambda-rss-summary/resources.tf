@@ -11,6 +11,11 @@ resource "aws_cloudformation_stack" "rss_summary" {
     LambdaMemorySize      = var.lambda_memory_size
   }
   capabilities = ["CAPABILITY_IAM"]
+  
+  tags = {
+    "Environment" = "dev"
+    "Terraform"   = "true"
+  }
 }
 
 data "archive_file" "lambda_zip" {
