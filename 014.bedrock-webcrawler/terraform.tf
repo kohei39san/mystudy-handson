@@ -18,10 +18,10 @@ terraform {
 }
 
 provider "opensearch" {
-  url                 = aws_opensearch_domain.vector_store.endpoint
+  url                 = "https://${aws_opensearch_domain.vector_store.endpoint}"
   aws_region          = var.aws_region
   sign_aws_requests   = true
-  aws_assume_role_arn = aws_iam_role.opensearch_provider.arn
+  aws_assume_role_arn = aws_iam_role.bedrock_opensearch.arn
   insecure            = false
 }
 

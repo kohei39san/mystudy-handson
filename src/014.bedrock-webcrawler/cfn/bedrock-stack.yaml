@@ -59,23 +59,23 @@ Resources:
           FieldMapping:
             MetadataField: metadata
             TextField: text
-            VectorField: vector
+            VectorField: blog-vector
 
-  BedrockDataSource:
-    Type: AWS::Bedrock::DataSource
-    Properties:
-      Name: !Sub "${ProjectName}-web-crawler"
-      DataDeletionPolicy: RETAIN
-      DataSourceConfiguration:
-        Type: WEB
-        WebConfiguration:
-          SourceConfiguration:
-            UrlConfiguration:
-              SeedUrls:
-                - Url: !Ref CrawlingUrl
-          CrawlerConfiguration:
-            Scope: !Ref CrawlerScope
-      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+#  BedrockDataSource:
+#    Type: AWS::Bedrock::DataSource
+#    Properties:
+#      Name: !Sub "${ProjectName}-web-crawler"
+#      DataDeletionPolicy: RETAIN
+#      DataSourceConfiguration:
+#        Type: WEB
+#        WebConfiguration:
+#          SourceConfiguration:
+#            UrlConfiguration:
+#              SeedUrls:
+#                - Url: !Ref CrawlingUrl
+#          CrawlerConfiguration:
+#            Scope: !Ref CrawlerScope
+#      KnowledgeBaseId: !Ref BedrockKnowledgeBase
 
 Outputs:
   KnowledgeBaseId:
@@ -84,4 +84,5 @@ Outputs:
 
   DataSourceId:
     Description: Bedrock Data Source ID
-    Value: !Ref BedrockDataSource
+#    Value: !Ref BedrockDataSource
+    Value: "hoge"

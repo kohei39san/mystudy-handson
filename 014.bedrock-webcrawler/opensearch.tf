@@ -1,6 +1,6 @@
 resource "aws_opensearch_domain" "vector_store" {
   domain_name    = "${var.project_name}-vectors"
-  engine_version = "OpenSearch_2.9"
+  engine_version = "OpenSearch_2.19"
 
   cluster_config {
     instance_type          = var.opensearch_instance_type
@@ -35,7 +35,7 @@ resource "aws_opensearch_domain" "vector_store" {
     enabled                        = true
     internal_user_database_enabled = false
     master_user_options {
-      master_user_arn = aws_iam_role.opensearch_provider.arn
+      master_user_arn = aws_iam_role.bedrock_opensearch.arn
     }
   }
 

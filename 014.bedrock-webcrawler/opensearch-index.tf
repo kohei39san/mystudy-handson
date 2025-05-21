@@ -7,4 +7,7 @@ resource "opensearch_index" "blog_index" {
   depends_on = [
     aws_opensearch_domain.vector_store
   ]
+
+  number_of_replicas = "1"
+  number_of_shards = "1"
 }
