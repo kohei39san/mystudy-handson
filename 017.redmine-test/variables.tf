@@ -70,5 +70,6 @@ variable "tags" {
   default = {
     Name        = "redmine-server"
     Environment = "test"
+    Terraform   = "true"
   }
 }

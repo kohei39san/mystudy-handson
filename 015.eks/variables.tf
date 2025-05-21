@@ -4,7 +4,10 @@
 
 variable "aws_tags" {
   type    = map(string)
-  default = {}
+  default = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 variable "vpc_cidr_block" {

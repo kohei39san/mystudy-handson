@@ -1,6 +1,9 @@
 variable "aws_tags" {
   type    = map(string)
-  default = {}
+  default = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 variable "ami_name" {
@@ -14,8 +17,9 @@ variable "instance_type" {
 }
 
 variable "iam_instance_profile" {
-  type    = string
-  default = ""
+  type        = string
+  description = "IAM instance profile for the EC2 instance"
+  default     = "minikube-instance-profile"
 }
 
 variable "root_block_volume_size" {
@@ -51,4 +55,10 @@ variable "subnet_cidr_block" {
 variable "sg_name" {
   type    = string
   default = "sg_server"
+}
+
+variable "environment" {
+  type        = string
+  description = "Environment name for tagging resources"
+  default     = "dev"
 }

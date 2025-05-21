@@ -33,3 +33,9 @@ variable "lambda_memory_size" {
   type        = number
   default     = 128
 }
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}

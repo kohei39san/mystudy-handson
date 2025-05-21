@@ -30,5 +30,14 @@ variable "vpc_security_group_ids" {
 
 variable "aws_tags" {
   type    = map(string)
-  default = {}
+  default = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
+}
+
+variable "environment" {
+  type        = string
+  description = "Environment name for tagging resources"
+  default     = "dev"
 }

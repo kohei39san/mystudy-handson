@@ -1,6 +1,9 @@
 variable "aws_tags" {
   type    = map(string)
-  default = {}
+  default = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 variable "instance_type" {
@@ -20,7 +23,7 @@ variable "root_block_volume_size" {
 
 variable "key_pair" {
   type    = string
-  default = "manaaged_node_windows_key_pair"
+  default = "managed_node_windows_key_pair"
 }
 
 variable "key_pair_public" {

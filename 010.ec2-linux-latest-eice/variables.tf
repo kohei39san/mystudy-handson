@@ -5,7 +5,10 @@ variable "ami_name" {
 
 variable "aws_tags" {
   type    = map(string)
-  default = {}
+  default = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 variable "instance_type" {

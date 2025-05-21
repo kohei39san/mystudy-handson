@@ -27,3 +27,15 @@ variable "aws_tags" {
   type    = map(string)
   default = {}
 }
+
+variable "environment" {
+  type        = string
+  description = "Environment name for tagging resources"
+  default     = "dev"
+}
+
+variable "ami_id" {
+  type        = string
+  description = "AMI ID for the Windows instance"
+  default     = ""
+}

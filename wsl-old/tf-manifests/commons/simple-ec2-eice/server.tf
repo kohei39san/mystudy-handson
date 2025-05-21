@@ -9,7 +9,7 @@ resource "aws_network_interface" "ni" {
 resource "aws_instance" "instance" {
   ami                  = data.aws_ssm_parameter.ami.value
   instance_type        = var.instance_type
-  iam_instance_profile = var.iam_instance_profile
+  iam_instance_profile = var.iam_instance_profile != "" ? var.iam_instance_profile : null
   network_interface {
     network_interface_id = aws_network_interface.ni.id
     device_index         = 0
