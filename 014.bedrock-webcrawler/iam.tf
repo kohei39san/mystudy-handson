@@ -65,6 +65,7 @@ resource "aws_iam_role" "bedrock_opensearch" {
         Effect = "Allow"
         Principal = {
           Service = "bedrock.amazonaws.com"
+          AWS     = data.aws_caller_identity.current.arn
         }
       }
     ]
@@ -86,6 +87,7 @@ resource "aws_iam_policy" "bedrock_opensearch_access" {
           "es:ESHttpPut",
           "es:ESHttpPost",
           "es:ESHttpDelete",
+          "es:ESHttpHead",
           "es:DescribeDomain"
         ]
         Resource = [
@@ -102,53 +104,7 @@ resource "aws_iam_role_policy_attachment" "bedrock_opensearch" {
   policy_arn = aws_iam_policy.bedrock_opensearch_access.arn
 }
 
-# OpenSearchプロバイダー用のIAMロール
-resource "aws_iam_role" "opensearch_provider" {
-  name = "${var.project_name}-opensearch-provider-role"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        }
-      }
-    ]
-  })
-}
-
-# OpenSearchプロバイダー用のポリシー
-resource "aws_iam_policy" "opensearch_provider_access" {
-  name        = "${var.project_name}-opensearch-provider-access"
-  description = "Allow OpenSearch provider to manage indices"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "es:ESHttpGet",
-          "es:ESHttpPut",
-          "es:ESHttpPost",
-          "es:ESHttpDelete"
-        ]
-        Resource = [
-          aws_opensearch_domain.vector_store.arn,
-          "${aws_opensearch_domain.vector_store.arn}/*"
-        ]
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "opensearch_provider" {
-  role       = aws_iam_role.opensearch_provider.name
-  policy_arn = aws_iam_policy.opensearch_provider_access.arn
-}
 
 # CloudFormation実行用のIAMロール
 resource "aws_iam_role" "cloudformation" {
