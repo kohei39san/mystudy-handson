@@ -1,39 +1,32 @@
-FROM public.ecr.aws/lambda/python:3.11
+FROM public.ecr.aws/lambda/python:3.9
 
-# Install system dependencies
+# システムの依存関係をインストール
 RUN yum update -y && \
     yum install -y \
     gcc \
-    g++ \
+    gcc-c++ \
     make \
-    cmake \
-    unzip \
-    wget \
     git \
+    wget \
     tar \
     gzip \
     && yum clean all
 
-# Set working directory
+# 作業ディレクトリを設定
 WORKDIR /var/task
 
-# Copy requirements file
+# Python の依存関係をインストール
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy MCP server files
-COPY mcp_servers/ ./mcp_servers/
+# AWS Documentation MCP Server をインストール
+RUN pip install --no-cache-dir aws-documentation-mcp-server
 
-# Copy Lambda function code
+# Bedrock Knowledge Base MCP Server をインストール
+RUN pip install --no-cache-dir bedrock-kb-mcp-server
+
+# Lambda 関数コードをコピー
 COPY lambda_function.py .
 
-# Set environment variables
-ENV PYTHONPATH=/var/task
-ENV OPENROUTER_API_KEY=""
-ENV AWS_DOCS_MCP_SERVER_PORT=8080
-ENV BEDROCK_KB_MCP_SERVER_PORT=8081
-
-# Command to run the Lambda function
-CMD ["lambda_function.handler"]
+# Lambda ハンドラーを設定
+CMD ["lambda_function.lambda_handler"]

@@ -4,56 +4,86 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "environment" {
-  description = "Environment name"
+variable "project_name" {
+  description = "Project name used for resource naming"
   type        = string
-  default     = "dev"
+  default     = "slack-mcp-bot"
 }
 
 variable "s3_bucket_name" {
-  description = "Name of the S3 bucket for data source"
+  description = "Name of the S3 bucket for data storage"
   type        = string
+  default     = "slack-mcp-bot-data"
 }
 
 variable "dynamodb_table_name" {
   description = "Name of the DynamoDB table for conversation history"
   type        = string
-  default     = "slack-mcp-conversations"
+  default     = "slack-mcp-bot-conversations"
 }
 
 variable "opensearch_domain_name" {
   description = "Name of the OpenSearch domain"
   type        = string
-  default     = "slack-mcp-vector-store"
+  default     = "slack-mcp-bot-opensearch"
 }
 
-variable "opensearch_master_user" {
-  description = "Master username for OpenSearch"
+variable "opensearch_instance_type" {
+  description = "Instance type for OpenSearch"
   type        = string
-  default     = "admin"
+  default     = "t3.small.search"  # 最小コストのインスタンスタイプ
 }
 
-variable "opensearch_master_password" {
-  description = "Master password for OpenSearch"
+variable "opensearch_instance_count" {
+  description = "Number of instances in the OpenSearch cluster"
+  type        = number
+  default     = 1  # 最小構成
+}
+
+variable "opensearch_ebs_volume_size" {
+  description = "Size of the EBS volume for OpenSearch in GB"
+  type        = number
+  default     = 10  # 最小サイズ
+}
+
+variable "lambda_memory_size" {
+  description = "Memory size for Lambda functions in MB"
+  type        = number
+  default     = 1024
+}
+
+variable "lambda_timeout" {
+  description = "Timeout for Lambda functions in seconds"
+  type        = number
+  default     = 900  # 15分（最大値）
+}
+
+variable "slack_receiver_lambda_name" {
+  description = "Name of the Lambda function for receiving Slack messages"
   type        = string
-  sensitive   = true
+  default     = "slack-receiver-lambda"
 }
 
-variable "allowed_ip_range" {
-  description = "IP range allowed to access OpenSearch"
+variable "mcp_server_lambda_name" {
+  description = "Name of the Lambda function for running MCP server"
   type        = string
-  default     = "0.0.0.0/0"  # Not recommended for production
+  default     = "mcp-server-lambda"
 }
 
-variable "slack_bot_user_id" {
-  description = "Slack bot user ID"
+variable "github_sync_lambda_name" {
+  description = "Name of the Lambda function for syncing GitHub to S3"
   type        = string
+  default     = "github-to-s3-sync-lambda"
 }
 
-variable "bedrock_kb_id" {
-  description = "ID of the Bedrock Knowledge Base"
+variable "ecr_repository_name" {
+  description = "Name of the ECR repository for the MCP server container"
   type        = string
-  default     = ""
+  default     = "mcp-server-container"
 }
 
-data "aws_caller_identity" "current" {}
+variable "openrouter_model" {
+  description = "OpenRouter model to use"
+  type        = string
+  default     = "anthropic/claude-3-opus:beta"
+}

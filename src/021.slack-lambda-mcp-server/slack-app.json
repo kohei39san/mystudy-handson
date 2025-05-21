@@ -1,7 +1,7 @@
 {
   "display_information": {
     "name": "AWS MCP Assistant",
-    "description": "A chatbot that integrates with OpenRouter and AWS MCP Servers",
+    "description": "AWS Documentation and Knowledge Base Assistant powered by OpenRouter",
     "background_color": "#2c2d30"
   },
   "features": {
@@ -25,27 +25,25 @@
         "im:read",
         "im:write",
         "mpim:history",
-        "reactions:read",
-        "reactions:write",
-        "users:read"
+        "mpim:read",
+        "mpim:write"
       ]
     }
   },
   "settings": {
     "event_subscriptions": {
-      "request_url": "https://${API_GATEWAY_URL}",
+      "request_url": "${LAMBDA_FUNCTION_URL}",
       "bot_events": [
         "app_mention",
-        "message.channels",
         "message.im"
       ]
     },
     "interactivity": {
       "is_enabled": true,
-      "request_url": "https://${API_GATEWAY_URL}"
+      "request_url": "${LAMBDA_FUNCTION_URL}"
     },
     "org_deploy_enabled": false,
-    "socket_mode_enabled": false,
-    "token_rotation_enabled": true
+    "socket_mode_enabled": true,
+    "token_rotation_enabled": false
   }
 }

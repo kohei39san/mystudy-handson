@@ -1,113 +1,80 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudFormation template for Amazon Bedrock Knowledge Base'
+Description: 'Amazon Bedrock Knowledge Base with OpenSearch'
 
 Parameters:
-  KnowledgeBaseName:
+  OpenSearchDomainName:
     Type: String
-    Default: 'SlackMCPKnowledgeBase'
-    Description: 'Name of the Bedrock Knowledge Base'
+    Description: Name of the OpenSearch domain
+    Default: kb-opensearch-domain
+  
+  OpenSearchDomainArn:
+    Type: String
+    Description: ARN of the OpenSearch domain
   
   S3BucketName:
     Type: String
-    Description: 'Name of the S3 bucket containing the data source'
+    Description: Name of the S3 bucket containing the data
   
-  S3Prefix:
+  S3BucketArn:
     Type: String
-    Default: 'github-sync'
-    Description: 'Prefix for the data source in the S3 bucket'
+    Description: ARN of the S3 bucket containing the data
   
-  OpenSearchDomainName:
+  S3RoleArn:
     Type: String
-    Description: 'Name of the OpenSearch domain'
+    Description: ARN of the IAM role for S3 access
   
-  OpenSearchIndexName:
+  OpenSearchRoleArn:
     Type: String
-    Default: 'slack-mcp-kb-index'
-    Description: 'Name of the OpenSearch index'
+    Description: ARN of the IAM role for OpenSearch access
   
-  BedrockModelId:
+  KnowledgeBaseRoleArn:
     Type: String
-    Default: 'anthropic.claude-3-sonnet-20240229-v1:0'
-    Description: 'ID of the Bedrock model to use for embeddings'
+    Description: ARN of the IAM role for Knowledge Base access
 
 Resources:
-  BedrockKnowledgeBaseRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: bedrock.amazonaws.com
-            Action: 'sts:AssumeRole'
-      ManagedPolicyArns:
-        - 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
-      Policies:
-        - PolicyName: BedrockKnowledgeBasePolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - 'es:ESHttpGet'
-                  - 'es:ESHttpPut'
-                  - 'es:ESHttpPost'
-                  - 'es:ESHttpDelete'
-                Resource:
-                  - !Sub 'arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${OpenSearchDomainName}/*'
-              - Effect: Allow
-                Action:
-                  - 'bedrock:InvokeModel'
-                Resource:
-                  - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}'
-
-  BedrockKnowledgeBaseDataSource:
-    Type: 'AWS::Bedrock::DataSource'
-    Properties:
-      DataSourceConfiguration:
-        S3Configuration:
-          BucketName: !Ref S3BucketName
-          InclusionPrefixes:
-            - !Ref S3Prefix
-      Name: !Sub '${KnowledgeBaseName}-DataSource'
-      RoleArn: !GetAtt BedrockKnowledgeBaseRole.Arn
-
   BedrockKnowledgeBase:
-    Type: 'AWS::Bedrock::KnowledgeBase'
+    Type: AWS::Bedrock::KnowledgeBase
     Properties:
-      Name: !Ref KnowledgeBaseName
-      RoleArn: !GetAtt BedrockKnowledgeBaseRole.Arn
+      Name: AWSDocumentationKnowledgeBase
+      Description: Knowledge base for AWS documentation and custom content
+      RoleArn: !Ref KnowledgeBaseRoleArn
       KnowledgeBaseConfiguration:
-        Type: 'VECTOR'
+        Type: VECTOR
         VectorKnowledgeBaseConfiguration:
-          EmbeddingModelArn: !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}'
-          VectorStoreConfiguration:
-            OpenSearchServerlessConfiguration:
-              CollectionArn: !Sub 'arn:aws:aoss:${AWS::Region}:${AWS::AccountId}:collection/${OpenSearchDomainName}'
-              FieldMapping:
-                MetadataField: 'metadata'
-                TextField: 'text_content'
-                VectorField: 'vector_field'
+          EmbeddingModelArn: arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1
       StorageConfiguration:
-        Type: 'OPENSEARCH'
-        OpenSearchServerlessConfiguration:
-          CollectionArn: !Sub 'arn:aws:aoss:${AWS::Region}:${AWS::AccountId}:collection/${OpenSearchDomainName}'
+        Type: OPENSEARCH
+        OpensearchServerlessConfiguration:
+          CollectionArn: !Ref OpenSearchDomainArn
+          VectorIndexName: bedrock-kb-index
           FieldMapping:
-            MetadataField: 'metadata'
-            TextField: 'text_content'
-            VectorField: 'vector_field'
-          VectorIndexName: !Ref OpenSearchIndexName
+            VectorField: vector_field
+            TextField: text
+            MetadataField: metadata
+      DataSource:
+        Type: S3
+        DataSourceConfiguration:
+          S3Configuration:
+            BucketArn: !Ref S3BucketArn
+            InclusionPrefixes:
+              - docs/
+            RoleArn: !Ref S3RoleArn
+
+  BedrockKnowledgeBaseRetriever:
+    Type: AWS::Bedrock::Retriever
+    Properties:
+      Name: AWSDocumentationRetriever
+      Description: Retriever for AWS documentation knowledge base
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+      RetrieverConfiguration:
+        VectorSearchConfiguration:
+          NumberOfResults: 5
 
 Outputs:
   KnowledgeBaseId:
-    Description: 'ID of the created Knowledge Base'
+    Description: ID of the created Knowledge Base
     Value: !Ref BedrockKnowledgeBase
   
-  KnowledgeBaseArn:
-    Description: 'ARN of the created Knowledge Base'
-    Value: !GetAtt BedrockKnowledgeBase.Arn
-  
-  DataSourceId:
-    Description: 'ID of the created Data Source'
-    Value: !Ref BedrockKnowledgeBaseDataSource
+  RetrieverId:
+    Description: ID of the created Retriever
+    Value: !Ref BedrockKnowledgeBaseRetriever

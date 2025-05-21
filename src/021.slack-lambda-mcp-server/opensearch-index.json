@@ -1,7 +1,7 @@
 {
   "settings": {
     "index": {
-      "number_of_shards": 2,
+      "number_of_shards": 1,
       "number_of_replicas": 1,
       "knn": true,
       "knn.space_type": "cosinesimil"
@@ -22,45 +22,26 @@
           }
         }
       },
-      "text_content": {
+      "text": {
         "type": "text"
       },
-      "metadata": {
-        "properties": {
-          "source": {
-            "type": "keyword"
-          },
-          "title": {
-            "type": "text",
-            "fields": {
-              "keyword": {
-                "type": "keyword",
-                "ignore_above": 256
-              }
-            }
-          },
-          "last_updated": {
-            "type": "date"
-          },
-          "author": {
-            "type": "keyword"
-          },
-          "category": {
-            "type": "keyword"
-          },
-          "tags": {
-            "type": "keyword"
-          },
-          "file_path": {
-            "type": "keyword"
-          },
-          "file_type": {
-            "type": "keyword"
-          },
-          "chunk_id": {
-            "type": "keyword"
-          }
-        }
+      "document_id": {
+        "type": "keyword"
+      },
+      "source": {
+        "type": "keyword"
+      },
+      "title": {
+        "type": "text"
+      },
+      "url": {
+        "type": "keyword"
+      },
+      "created_at": {
+        "type": "date"
+      },
+      "updated_at": {
+        "type": "date"
       }
     }
   }

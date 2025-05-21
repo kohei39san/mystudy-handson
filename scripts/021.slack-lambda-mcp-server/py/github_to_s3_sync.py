@@ -1,177 +1,147 @@
 import os
 import json
 import boto3
-import logging
 import tempfile
-import subprocess
 import shutil
+import subprocess
+import logging
 from datetime import datetime
-from typing import Dict, Any, List
 
-# Configure logging
+# ロギングの設定
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize AWS clients
-s3 = boto3.client('s3')
-ssm = boto3.client('ssm')
+# 環境変数
+S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
+S3_PREFIX = os.environ.get('S3_PREFIX', 'docs/')
+GITHUB_REPO_URL_PARAM = '/github/repo-url'
+GITHUB_USERNAME_PARAM = '/github/username'
+GITHUB_TOKEN_PARAM = '/github/token'
 
-def get_parameter(name: str) -> str:
-    """
-    Get a parameter from SSM Parameter Store
-    """
-    response = ssm.get_parameter(
-        Name=name,
-        WithDecryption=True
-    )
-    return response['Parameter']['Value']
+# AWS クライアント
+ssm_client = boto3.client('ssm')
+s3_client = boto3.client('s3')
+bedrock_client = boto3.client('bedrock')
 
-def clone_repository(repo_url: str, github_token: str, local_path: str) -> bool:
-    """
-    Clone a GitHub repository to a local path
-    """
+def get_parameter(param_name):
+    """SSM パラメータストアから値を取得"""
     try:
-        # Format the URL with the token for authentication
-        auth_url = repo_url.replace('https://', f'https://{github_token}@')
-        
-        # Clone the repository
-        subprocess.run(
-            ['git', 'clone', '--depth', '1', auth_url, local_path],
-            check=True,
-            capture_output=True
+        response = ssm_client.get_parameter(
+            Name=param_name,
+            WithDecryption=True
         )
+        return response['Parameter']['Value']
+    except Exception as e:
+        logger.error(f"Error retrieving parameter {param_name}: {str(e)}")
+        raise
+
+def clone_github_repo(repo_url, username, token, temp_dir):
+    """GitHub リポジトリをクローン"""
+    try:
+        # 認証情報を含む URL を作成
+        auth_url = repo_url.replace('https://', f'https://{username}:{token}@')
+        
+        # Git リポジトリをクローン
+        subprocess.run(['git', 'clone', '--depth', '1', auth_url, temp_dir], check=True)
+        logger.info(f"Successfully cloned repository: {repo_url}")
         
         return True
-    
     except subprocess.CalledProcessError as e:
-        logger.error(f"Error cloning repository: {e.stderr.decode('utf-8')}")
-        return False
-    
-    except Exception as e:
-        logger.error(f"Exception cloning repository: {str(e)}")
+        logger.error(f"Error cloning repository: {str(e)}")
         return False
 
-def upload_directory_to_s3(local_path: str, bucket_name: str, prefix: str = '') -> List[Dict[str, str]]:
-    """
-    Upload a directory to S3
-    """
-    uploaded_files = []
-    
+def upload_to_s3(local_dir, bucket, prefix):
+    """ディレクトリ内のファイルを S3 にアップロード"""
     try:
-        # Walk through the directory
-        for root, dirs, files in os.walk(local_path):
+        file_count = 0
+        
+        # ディレクトリを再帰的に走査
+        for root, dirs, files in os.walk(local_dir):
             for file in files:
-                # Skip .git files
-                if '.git' in root:
+                # 隠しファイルとバイナリファイルをスキップ
+                if file.startswith('.') or is_binary_file(os.path.join(root, file)):
                     continue
                 
-                # Get the full local path
-                local_file_path = os.path.join(root, file)
+                # ローカルファイルパスと S3 キーを取得
+                local_path = os.path.join(root, file)
+                relative_path = os.path.relpath(local_path, local_dir)
+                s3_key = os.path.join(prefix, relative_path)
                 
-                # Get the relative path from the local_path
-                relative_path = os.path.relpath(local_file_path, local_path)
+                # S3 にアップロード
+                s3_client.upload_file(local_path, bucket, s3_key)
+                file_count += 1
                 
-                # Create the S3 key
-                s3_key = os.path.join(prefix, relative_path).replace('\\', '/')
-                
-                # Upload the file
-                s3.upload_file(local_file_path, bucket_name, s3_key)
-                
-                # Add to the list of uploaded files
-                uploaded_files.append({
-                    'local_path': local_file_path,
-                    's3_key': s3_key
-                })
-                
-                logger.info(f"Uploaded {local_file_path} to s3://{bucket_name}/{s3_key}")
+                logger.debug(f"Uploaded {local_path} to s3://{bucket}/{s3_key}")
         
-        return uploaded_files
-    
+        logger.info(f"Successfully uploaded {file_count} files to S3")
+        return file_count
     except Exception as e:
-        logger.error(f"Error uploading to S3: {str(e)}")
-        return []
+        logger.error(f"Error uploading files to S3: {str(e)}")
+        raise
 
-def update_metadata_file(bucket_name: str, prefix: str, uploaded_files: List[Dict[str, str]]) -> bool:
-    """
-    Update the metadata file in S3
-    """
+def is_binary_file(file_path):
+    """ファイルがバイナリかどうかを判定"""
     try:
-        # Create metadata
-        metadata = {
-            'last_updated': datetime.now().isoformat(),
-            'file_count': len(uploaded_files),
-            'files': uploaded_files
-        }
-        
-        # Convert to JSON
-        metadata_json = json.dumps(metadata, indent=2)
-        
-        # Upload to S3
-        s3.put_object(
-            Bucket=bucket_name,
-            Key=f"{prefix}/metadata.json",
-            Body=metadata_json,
-            ContentType='application/json'
-        )
-        
-        logger.info(f"Updated metadata file at s3://{bucket_name}/{prefix}/metadata.json")
+        with open(file_path, 'r', encoding='utf-8') as f:
+            f.read(1024)
+            return False
+    except UnicodeDecodeError:
         return True
-    
-    except Exception as e:
-        logger.error(f"Error updating metadata file: {str(e)}")
-        return False
 
-def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    """
-    Lambda handler function
-    """
+def start_bedrock_ingestion(knowledge_base_id):
+    """Bedrock ナレッジベースの取り込みジョブを開始"""
     try:
-        # Get parameters from environment variables or SSM
-        bucket_name = os.environ.get('S3_BUCKET_NAME')
-        prefix = os.environ.get('S3_PREFIX', 'github-sync')
-        github_repo_url = get_parameter('/slack-mcp-bot/GITHUB_REPO_URL')
-        github_token = get_parameter('/slack-mcp-bot/GITHUB_TOKEN')
+        response = bedrock_client.start_ingestion_job(
+            knowledgeBaseId=knowledge_base_id,
+            dataSourceId='s3-data-source'
+        )
+        logger.info(f"Started Bedrock ingestion job: {response['ingestionJobId']}")
+        return response['ingestionJobId']
+    except Exception as e:
+        logger.error(f"Error starting Bedrock ingestion job: {str(e)}")
+        return None
+
+def lambda_handler(event, context):
+    """Lambda ハンドラー関数"""
+    try:
+        # パラメータを取得
+        repo_url = get_parameter(GITHUB_REPO_URL_PARAM)
+        username = get_parameter(GITHUB_USERNAME_PARAM)
+        token = get_parameter(GITHUB_TOKEN_PARAM)
         
-        # Create a temporary directory
+        # 一時ディレクトリを作成
         with tempfile.TemporaryDirectory() as temp_dir:
             logger.info(f"Created temporary directory: {temp_dir}")
             
-            # Clone the repository
-            if not clone_repository(github_repo_url, github_token, temp_dir):
+            # GitHub リポジトリをクローン
+            if not clone_github_repo(repo_url, username, token, temp_dir):
                 return {
                     'statusCode': 500,
-                    'body': json.dumps({
-                        'message': 'Failed to clone repository'
-                    })
+                    'body': json.dumps('Failed to clone GitHub repository')
                 }
             
-            # Upload the directory to S3
-            uploaded_files = upload_directory_to_s3(temp_dir, bucket_name, prefix)
+            # S3 にアップロード
+            file_count = upload_to_s3(temp_dir, S3_BUCKET_NAME, S3_PREFIX)
             
-            if not uploaded_files:
-                return {
-                    'statusCode': 500,
-                    'body': json.dumps({
-                        'message': 'Failed to upload files to S3'
-                    })
-                }
+            # CloudFormation スタックから Knowledge Base ID を取得
+            # 注: 実際の環境では、CloudFormation スタックの出力から取得する必要があります
+            # ここでは簡略化のためにハードコードしています
+            knowledge_base_id = 'YOUR_KNOWLEDGE_BASE_ID'
             
-            # Update the metadata file
-            update_metadata_file(bucket_name, prefix, uploaded_files)
+            # Bedrock 取り込みジョブを開始
+            ingestion_job_id = start_bedrock_ingestion(knowledge_base_id)
             
             return {
                 'statusCode': 200,
                 'body': json.dumps({
-                    'message': f'Successfully synced {len(uploaded_files)} files to S3',
-                    'file_count': len(uploaded_files)
+                    'message': f'Successfully synced {file_count} files from GitHub to S3',
+                    'ingestionJobId': ingestion_job_id
                 })
             }
     
     except Exception as e:
-        logger.error(f"Error in Lambda handler: {str(e)}")
+        logger.error(f"Error in lambda_handler: {str(e)}")
         return {
             'statusCode': 500,
-            'body': json.dumps({
-                'message': f'Error: {str(e)}'
-            })
+            'body': json.dumps(f'Error: {str(e)}')
         }
