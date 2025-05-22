@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Amazon Bedrock Knowledge Base with OpenSearch'
+
+Parameters:
+  OpenSearchDomainName:
+    Type: String
+    Description: Name of the OpenSearch domain
+    Default: kb-opensearch-domain
+  
+  OpenSearchDomainArn:
+    Type: String
+    Description: ARN of the OpenSearch domain
+  
+  S3BucketName:
+    Type: String
+    Description: Name of the S3 bucket containing the data
+  
+  S3BucketArn:
+    Type: String
+    Description: ARN of the S3 bucket containing the data
+  
+  S3RoleArn:
+    Type: String
+    Description: ARN of the IAM role for S3 access
+  
+  OpenSearchRoleArn:
+    Type: String
+    Description: ARN of the IAM role for OpenSearch access
+  
+  KnowledgeBaseRoleArn:
+    Type: String
+    Description: ARN of the IAM role for Knowledge Base access
+
+Resources:
+  BedrockKnowledgeBase:
+    Type: AWS::Bedrock::KnowledgeBase
+    Properties:
+      Name: AWSDocumentationKnowledgeBase
+      Description: Knowledge base for AWS documentation and custom content
+      RoleArn: !Ref KnowledgeBaseRoleArn
+      KnowledgeBaseConfiguration:
+        Type: VECTOR
+        VectorKnowledgeBaseConfiguration:
+          EmbeddingModelArn: arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1
+      StorageConfiguration:
+        Type: OPENSEARCH
+        OpensearchServerlessConfiguration:
+          CollectionArn: !Ref OpenSearchDomainArn
+          VectorIndexName: bedrock-kb-index
+          FieldMapping:
+            VectorField: vector_field
+            TextField: text
+            MetadataField: metadata
+      DataSource:
+        Type: S3
+        DataSourceConfiguration:
+          S3Configuration:
+            BucketArn: !Ref S3BucketArn
+            InclusionPrefixes:
+              - docs/
+            RoleArn: !Ref S3RoleArn
+
+  BedrockKnowledgeBaseRetriever:
+    Type: AWS::Bedrock::Retriever
+    Properties:
+      Name: AWSDocumentationRetriever
+      Description: Retriever for AWS documentation knowledge base
+      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+      RetrieverConfiguration:
+        VectorSearchConfiguration:
+          NumberOfResults: 5
+
+Outputs:
+  KnowledgeBaseId:
+    Description: ID of the created Knowledge Base
+    Value: !Ref BedrockKnowledgeBase
+  
+  RetrieverId:
+    Description: ID of the created Retriever
+    Value: !Ref BedrockKnowledgeBaseRetriever
