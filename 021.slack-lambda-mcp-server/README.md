@@ -29,6 +29,17 @@ terraform apply
 2. Slack アプリを作成し、マニフェストファイルを使用して設定します
 3. 必要な環境変数を AWS Systems Manager パラメータストアに設定します
 
+## ローカルテスト
+
+Lambda 関数をローカルでテストするには、以下のコマンドを実行します：
+
+```bash
+cd scripts/021.slack-lambda-mcp-server/py
+python local_test.py
+```
+
+テストスクリプトは、Lambda ハンドラー関数または Slack メッセージ処理関数を直接テストする機能を提供します。
+
 ## 機能
 
 - Slack チャンネルでのメッセージに対して AI アシスタントが応答
@@ -41,6 +52,15 @@ terraform apply
 - IAM ロールによる最小権限の原則に基づいたアクセス制御
 - Systems Manager パラメータストアを使用した認証情報の安全な管理
 - Slack アプリは OAuth による最小限のアクセス許可のみを要求
+
+## 変更履歴
+
+- ECR コンテナイメージの代わりに Python スクリプトを直接 Lambda にアップロードするように変更
+- OpenSearch インデックスを Terraform で作成するように追加
+- CloudFormation テンプレートのエラーを修正
+  - OPENSEARCH タイプを OPENSEARCH_SERVERLESS に変更
+  - 未使用のパラメータを削除
+  - DataSource を別のリソースとして定義
 
 ## アーキテクチャ図
 

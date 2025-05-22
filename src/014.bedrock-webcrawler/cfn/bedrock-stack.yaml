@@ -21,23 +21,10 @@ Parameters:
   AwsRegion:
     Type: String
     Description: AWSリージョン
-
-  CrawlingUrl:
-    Type: String
-    Description: クロール対象のURL
     
   BedrockModelArn:
     Type: String
     Description: BedrockのEmbeddingモデルARN
-    
-  CrawlerScope:
-    Type: String
-    Description: クローラーのスコープ
-    Default: HOST_ONLY
-    AllowedValues:
-      - HOST_ONLY
-      - SUBDOMAIN
-      - WEB
 
 Resources:
   BedrockKnowledgeBase:
@@ -84,5 +71,4 @@ Outputs:
 
   DataSourceId:
     Description: Bedrock Data Source ID
-#    Value: !Ref BedrockDataSource
     Value: "hoge"
