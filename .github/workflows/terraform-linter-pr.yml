@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '**/*.tf'
 
 permissions:
   contents: write
