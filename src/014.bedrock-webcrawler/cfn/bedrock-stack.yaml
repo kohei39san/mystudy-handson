@@ -48,6 +48,22 @@ Resources:
             TextField: text
             VectorField: blog-vector
 
+#  BedrockDataSource:
+#    Type: AWS::Bedrock::DataSource
+#    Properties:
+#      Name: !Sub "${ProjectName}-web-crawler"
+#      DataDeletionPolicy: RETAIN
+#      DataSourceConfiguration:
+#        Type: WEB
+#        WebConfiguration:
+#          SourceConfiguration:
+#            UrlConfiguration:
+#              SeedUrls:
+#                - Url: !Ref CrawlingUrl
+#          CrawlerConfiguration:
+#            Scope: !Ref CrawlerScope
+#      KnowledgeBaseId: !Ref BedrockKnowledgeBase
+
 Outputs:
   KnowledgeBaseId:
     Description: Bedrock Knowledge Base ID

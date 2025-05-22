@@ -30,7 +30,7 @@ Resources:
         VectorKnowledgeBaseConfiguration:
           EmbeddingModelArn: arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1
       StorageConfiguration:
-        Type: OPENSEARCH_SERVERLESS
+        Type: OPENSEARCH_MANAGED_CLUSTER
         OpensearchServerlessConfiguration:
           CollectionArn: !Ref OpenSearchDomainArn
           VectorIndexName: bedrock-kb-index
