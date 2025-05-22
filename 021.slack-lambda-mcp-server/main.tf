@@ -10,7 +10,7 @@ resource "aws_sns_topic" "slack_messages" {
 # CloudFormationスタックの作成（Bedrock Knowledge Base用）
 resource "aws_cloudformation_stack" "bedrock_kb" {
   name = "bedrock-knowledge-base-stack"
-  template_body = file("${path.module}/../src/021.slack-lambda-mcp-server/bedrock-kb-cfn.yaml")
+  template_body = file("${path.module}/../src/021.slack-lambda-mcp-server/cfn/bedrock-kb-cfn.yaml")
   
   parameters = {
     OpenSearchDomainName = var.opensearch_domain_name
