@@ -21,23 +21,10 @@ Parameters:
   AwsRegion:
     Type: String
     Description: AWSリージョン
-
-  CrawlingUrl:
-    Type: String
-    Description: クロール対象のURL
     
   BedrockModelArn:
     Type: String
     Description: BedrockのEmbeddingモデルARN
-    
-  CrawlerScope:
-    Type: String
-    Description: クローラーのスコープ
-    Default: HOST_ONLY
-    AllowedValues:
-      - HOST_ONLY
-      - SUBDOMAIN
-      - WEB
 
 Resources:
   BedrockKnowledgeBase:
@@ -61,22 +48,6 @@ Resources:
             TextField: text
             VectorField: blog-vector
 
-#  BedrockDataSource:
-#    Type: AWS::Bedrock::DataSource
-#    Properties:
-#      Name: !Sub "${ProjectName}-web-crawler"
-#      DataDeletionPolicy: RETAIN
-#      DataSourceConfiguration:
-#        Type: WEB
-#        WebConfiguration:
-#          SourceConfiguration:
-#            UrlConfiguration:
-#              SeedUrls:
-#                - Url: !Ref CrawlingUrl
-#          CrawlerConfiguration:
-#            Scope: !Ref CrawlerScope
-#      KnowledgeBaseId: !Ref BedrockKnowledgeBase
-
 Outputs:
   KnowledgeBaseId:
     Description: Bedrock Knowledge Base ID
@@ -84,5 +55,4 @@ Outputs:
 
   DataSourceId:
     Description: Bedrock Data Source ID
-#    Value: !Ref BedrockDataSource
     Value: "hoge"

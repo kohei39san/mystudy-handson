@@ -228,12 +228,49 @@ resource "aws_lambda_function_url" "slack_receiver_url" {
   }
 }
 
+# MCP サーバーを実行する Lambda 関数のデプロイパッケージ
+data "archive_file" "mcp_server_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/../scripts/021.slack-lambda-mcp-server/py"
+  output_path = "${path.module}/../../mcp_server_lambda.zip"
+  
+  # 依存関係のインストールを含める
+  depends_on = [
+    null_resource.install_dependencies
+  ]
+}
+
+# Lambda 関数の依存関係をインストール
+resource "null_resource" "install_dependencies" {
+  triggers = {
+    lambda_function_hash = filemd5("${path.module}/../scripts/021.slack-lambda-mcp-server/py/lambda_function.py")
+  }
+
+  provisioner "local-exec" {
+    command = <<EOF
+      # 一時ディレクトリを作成
+      mkdir -p ${path.module}/../scripts/021.slack-lambda-mcp-server/py/package
+      
+      # 依存関係をインストール
+      pip install boto3==1.28.38 requests==2.31.0 python-dotenv==1.0.0 -t ${path.module}/../scripts/021.slack-lambda-mcp-server/py/package
+      
+      # インストールしたパッケージをLambda関数のディレクトリにコピー
+      cp -r ${path.module}/../scripts/021.slack-lambda-mcp-server/py/package/* ${path.module}/../scripts/021.slack-lambda-mcp-server/py/
+      
+      # 一時ディレクトリを削除
+      rm -rf ${path.module}/../scripts/021.slack-lambda-mcp-server/py/package
+    EOF
+  }
+}
+
 # MCP サーバーを実行する Lambda 関数
 resource "aws_lambda_function" "mcp_server" {
   function_name    = var.mcp_server_lambda_name
+  filename         = data.archive_file.mcp_server_zip.output_path
+  source_code_hash = data.archive_file.mcp_server_zip.output_base64sha256
   role             = aws_iam_role.mcp_server_role.arn
-  package_type     = "Image"
-  image_uri        = "${aws_ecr_repository.mcp_server_repo.repository_url}:latest"
+  handler          = "lambda_function.lambda_handler"
+  runtime          = "python3.9"
   timeout          = var.lambda_timeout
   memory_size      = var.lambda_memory_size
 
@@ -250,10 +287,6 @@ resource "aws_lambda_function" "mcp_server" {
     Environment = "production"
     Project     = var.project_name
   }
-
-  depends_on = [
-    null_resource.docker_build_push
-  ]
 }
 
 # SNS サブスクリプション
