@@ -52,7 +52,6 @@ Resources:
           BucketArn: !Ref S3BucketArn
           InclusionPrefixes:
             - docs/
-          RoleArn: !Ref S3RoleArn
 
 Outputs:
   KnowledgeBaseId:
