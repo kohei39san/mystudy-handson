@@ -10,10 +10,6 @@ Parameters:
     Type: String
     Description: ARN of the S3 bucket containing the data
   
-  S3RoleArn:
-    Type: String
-    Description: ARN of the IAM role for S3 access
-  
   KnowledgeBaseRoleArn:
     Type: String
     Description: ARN of the IAM role for Knowledge Base access
@@ -24,13 +20,12 @@ Resources:
     Properties:
       Name: AWSDocumentationKnowledgeBase
       Description: Knowledge base for AWS documentation and custom content
-      RoleArn: !Ref KnowledgeBaseRoleArn
       KnowledgeBaseConfiguration:
         Type: VECTOR
         VectorKnowledgeBaseConfiguration:
           EmbeddingModelArn: arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1
       StorageConfiguration:
-        Type: OPENSEARCH_MANAGED_CLUSTER
+        Type: OPENSEARCH_SERVERLESS
         OpensearchServerlessConfiguration:
           CollectionArn: !Ref OpenSearchDomainArn
           VectorIndexName: bedrock-kb-index
@@ -38,6 +33,7 @@ Resources:
             VectorField: vector_field
             TextField: text
             MetadataField: metadata
+      RoleArn: !Ref KnowledgeBaseRoleArn
 
   # S3 データソースは別のリソースとして定義
   BedrockDataSource:

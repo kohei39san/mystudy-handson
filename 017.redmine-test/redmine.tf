@@ -18,6 +18,12 @@ data "aws_ami" "redmine_ami" {
 resource "aws_network_interface" "redmine_ni" {
   subnet_id       = aws_subnet.redmine_subnet.id
   security_groups = [aws_security_group.redmine_sg.id]
+  
+  tags = {
+    Name        = "redmine-network-interface"
+    Environment = var.tags["Environment"]
+    Terraform   = "true"
+  }
 }
 
 # Create EC2 instance
@@ -34,6 +40,12 @@ resource "aws_instance" "redmine_instance" {
   root_block_device {
     volume_size = var.root_volume_size
     volume_type = "gp2"
+    
+    tags = {
+      Name        = "redmine-root-volume"
+      Environment = var.tags["Environment"]
+      Terraform   = "true"
+    }
   }
 
   # Enable EC2 Instance Connect
@@ -49,6 +61,12 @@ resource "aws_instance" "redmine_instance" {
 
 # Key pair for SSH access
 resource "aws_key_pair" "redmine_key" {
-  key_name   = "redmine-key"
+  key_name   = "redmine-key-${var.tags["Environment"]}"
   public_key = file(var.public_key_path)
+  
+  tags = {
+    Name        = "redmine-key"
+    Environment = var.tags["Environment"]
+    Terraform   = "true"
+  }
 }

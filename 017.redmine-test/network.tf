@@ -54,6 +54,12 @@ resource "aws_vpc_security_group_ingress_rule" "redmine_sg_ingress80" {
   ip_protocol = "tcp"
   from_port   = 80
   to_port     = 80
+  
+  tags = {
+    Name        = "redmine-sg-ingress-http"
+    Environment = var.tags["Environment"]
+    Terraform   = "true"
+  }
 }
 
 resource "aws_vpc_security_group_ingress_rule" "redmine_sg_ingress443" {
@@ -63,6 +69,12 @@ resource "aws_vpc_security_group_ingress_rule" "redmine_sg_ingress443" {
   ip_protocol = "tcp"
   from_port   = 443
   to_port     = 443
+  
+  tags = {
+    Name        = "redmine-sg-ingress-https"
+    Environment = var.tags["Environment"]
+    Terraform   = "true"
+  }
 }
 
 resource "aws_vpc_security_group_egress_rule" "redmine_sg_egress" {
@@ -72,4 +84,10 @@ resource "aws_vpc_security_group_egress_rule" "redmine_sg_egress" {
   ip_protocol = "-1"
   from_port   = 0
   to_port     = 0
+  
+  tags = {
+    Name        = "redmine-sg-egress-all"
+    Environment = var.tags["Environment"]
+    Terraform   = "true"
+  }
 }
