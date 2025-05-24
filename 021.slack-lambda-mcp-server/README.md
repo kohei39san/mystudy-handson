@@ -19,22 +19,30 @@
 
 ## デプロイ方法
 
-1. Terraform を使用してインフラストラクチャをデプロイします
+1. 依存関係をインストールします
 ```bash
-cd 021.slack-lambda-mcp-server
+cd ../021.slack-lambda-mcp-server
+mkdir -p ../scripts/021.slack-lambda-mcp-server/py/package
+pip install -r ../scripts/021.slack-lambda-mcp-server/py/requirements.txt -t ../scripts/021.slack-lambda-mcp-server/py/package
+cp -r ../scripts/021.slack-lambda-mcp-server/py/package/* ../scripts/021.slack-lambda-mcp-server/py/
+rm -rf ../scripts/021.slack-lambda-mcp-server/py/package
+```
+
+2. Terraform を使用してインフラストラクチャをデプロイします
+```bash
+cd ../021.slack-lambda-mcp-server
 terraform init
 terraform apply
 ```
 
-2. Slack アプリを作成し、マニフェストファイルを使用して設定します
-3. 必要な環境変数を AWS Systems Manager パラメータストアに設定します
+3. Slack アプリを作成し、マニフェストファイルを使用して設定します
 
 ## ローカルテスト
 
 Lambda 関数をローカルでテストするには、以下のコマンドを実行します：
 
 ```bash
-cd scripts/021.slack-lambda-mcp-server/py
+cd ../scripts/021.slack-lambda-mcp-server/py
 python local_test.py
 ```
 
@@ -61,6 +69,10 @@ python local_test.py
   - OPENSEARCH タイプを OPENSEARCH_SERVERLESS に変更
   - 未使用のパラメータを削除
   - DataSource を別のリソースとして定義
+- パラメータストアのキーを変数化
+- GitHub パラメータを環境変数として設定可能に変更
+- ローカルテスト用の設定ファイルを追加
+- Bedrock ナレッジベースへのアクセス権限を追加
 
 ## アーキテクチャ図
 

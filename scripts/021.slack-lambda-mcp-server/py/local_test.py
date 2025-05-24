@@ -12,8 +12,26 @@ from lambda_function import lambda_handler, process_slack_message
 # .env ファイルから環境変数を読み込む
 dotenv.load_dotenv()
 
+def load_config():
+    """設定ファイルから環境変数を読み込む"""
+    try:
+        with open('/workspace/src/021.slack-lambda-mcp-server/config-for-local-test.json', 'r') as f:
+            config = json.load(f)
+        return config
+    except Exception as e:
+        print(f"設定ファイルの読み込みに失敗しました: {str(e)}")
+        return {}
+
 def setup_local_environment():
     """ローカルテスト用の環境変数を設定"""
+    # 設定ファイルから環境変数を読み込む
+    config = load_config()
+    
+    # 環境変数を設定
+    for key, value in config.items():
+        if key not in ['userId', 'channelId', 'responseTs', 'text']:
+            os.environ[key] = value
+    
     # 必要な環境変数が設定されていない場合はデフォルト値を設定
     if 'OPENROUTER_API_KEY_PARAM' not in os.environ:
         os.environ['OPENROUTER_API_KEY_PARAM'] = '/openrouter/api-key'
@@ -28,18 +46,22 @@ def setup_local_environment():
 
 def test_lambda_handler():
     """Lambda ハンドラー関数をテスト"""
+    # 設定ファイルからメッセージデータを読み込む
+    config = load_config()
+    message_data = {
+        'userId': config.get('userId', 'U12345678'),
+        'channelId': config.get('channelId', 'C12345678'),
+        'responseTs': config.get('responseTs', '1234567890.123456'),
+        'text': config.get('text', 'AWS Lambda について教えてください')
+    }
+    
     # SNSイベントをシミュレート
     event = {
         'Records': [
             {
                 'EventSource': 'aws:sns',
                 'Sns': {
-                    'Message': json.dumps({
-                        'userId': 'U12345678',
-                        'channelId': 'C12345678',
-                        'responseTs': '1234567890.123456',
-                        'text': 'AWS Lambda について教えてください'
-                    }),
+                    'Message': json.dumps(message_data),
                     'MessageAttributes': {
                         'messageType': {
                             'Value': 'slack_message'
@@ -59,12 +81,13 @@ def test_lambda_handler():
 
 def test_direct_message_processing():
     """Slack メッセージ処理関数を直接テスト"""
-    # メッセージデータ
+    # 設定ファイルからメッセージデータを読み込む
+    config = load_config()
     message_data = {
-        'userId': 'U12345678',
-        'channelId': 'C12345678',
-        'responseTs': '1234567890.123456',
-        'text': 'AWS Lambda について教えてください'
+        'userId': config.get('userId', 'U12345678'),
+        'channelId': config.get('channelId', 'C12345678'),
+        'responseTs': config.get('responseTs', '1234567890.123456'),
+        'text': config.get('text', 'AWS Lambda について教えてください')
     }
     
     # メッセージ処理関数を呼び出し

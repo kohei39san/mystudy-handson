@@ -1,7 +1,3 @@
-provider "aws" {
-  region = var.aws_region
-}
-
 # SNSトピックの作成
 resource "aws_sns_topic" "slack_messages" {
   name = "slack-messages-topic"
@@ -98,7 +94,7 @@ resource "aws_lambda_permission" "allow_eventbridge" {
 
 # SSM パラメータの作成
 resource "aws_ssm_parameter" "slack_bot_token" {
-  name        = "/slack-bot/token"
+  name        = var.slack_bot_token_param
   description = "Slack Bot Token"
   type        = "SecureString"
   value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する
@@ -109,7 +105,7 @@ resource "aws_ssm_parameter" "slack_bot_token" {
 }
 
 resource "aws_ssm_parameter" "slack_signing_secret" {
-  name        = "/slack-bot/signing-secret"
+  name        = var.slack_signing_secret_param
   description = "Slack Signing Secret"
   type        = "SecureString"
   value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する
@@ -120,7 +116,7 @@ resource "aws_ssm_parameter" "slack_signing_secret" {
 }
 
 resource "aws_ssm_parameter" "slack_app_token" {
-  name        = "/slack-bot/app-token"
+  name        = var.slack_app_token_param
   description = "Slack App Token"
   type        = "SecureString"
   value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する
@@ -131,7 +127,7 @@ resource "aws_ssm_parameter" "slack_app_token" {
 }
 
 resource "aws_ssm_parameter" "openrouter_api_key" {
-  name        = "/openrouter/api-key"
+  name        = var.openrouter_api_key_param
   description = "OpenRouter API Key"
   type        = "SecureString"
   value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する
@@ -142,7 +138,7 @@ resource "aws_ssm_parameter" "openrouter_api_key" {
 }
 
 resource "aws_ssm_parameter" "github_repo_url" {
-  name        = "/github/repo-url"
+  name        = var.github_repo_url_param
   description = "GitHub Repository URL"
   type        = "String"
   value       = "https://github.com/username/repo.git"  # デプロイ後に実際の値に更新する
@@ -153,7 +149,7 @@ resource "aws_ssm_parameter" "github_repo_url" {
 }
 
 resource "aws_ssm_parameter" "github_username" {
-  name        = "/github/username"
+  name        = var.github_username_param
   description = "GitHub Username"
   type        = "String"
   value       = "username"  # デプロイ後に実際の値に更新する
@@ -164,7 +160,7 @@ resource "aws_ssm_parameter" "github_username" {
 }
 
 resource "aws_ssm_parameter" "github_token" {
-  name        = "/github/token"
+  name        = var.github_token_param
   description = "GitHub Personal Access Token"
   type        = "SecureString"
   value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する

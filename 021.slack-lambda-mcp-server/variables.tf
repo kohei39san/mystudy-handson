@@ -87,3 +87,45 @@ variable "openrouter_model" {
   type        = string
   default     = "anthropic/claude-3-opus:beta"
 }
+
+variable "github_repo_url_param" {
+  description = "SSM Parameter Store key for GitHub repository URL"
+  type        = string
+  default     = "/github/repo-url"
+}
+
+variable "github_username_param" {
+  description = "SSM Parameter Store key for GitHub username"
+  type        = string
+  default     = "/github/username"
+}
+
+variable "github_token_param" {
+  description = "SSM Parameter Store key for GitHub token"
+  type        = string
+  default     = "/github/token"
+}
+
+variable "slack_bot_token_param" {
+  description = "SSM Parameter Store key for Slack bot token"
+  type        = string
+  default     = "/slack-bot/token"
+}
+
+variable "slack_signing_secret_param" {
+  description = "SSM Parameter Store key for Slack signing secret"
+  type        = string
+  default     = "/slack-bot/signing-secret"
+}
+
+variable "slack_app_token_param" {
+  description = "SSM Parameter Store key for Slack app token"
+  type        = string
+  default     = "/slack-bot/app-token"
+}
+
+variable "openrouter_api_key_param" {
+  description = "SSM Parameter Store key for OpenRouter API key"
+  type        = string
+  default     = "/openrouter/api-key"
+}
