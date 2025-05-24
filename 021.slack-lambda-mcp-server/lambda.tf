@@ -43,7 +43,7 @@ resource "aws_iam_policy" "slack_receiver_policy" {
           "ssm:GetParameter",
           "ssm:GetParameters"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           "arn:aws:ssm:${var.aws_region}:${local.account_id}:parameter/slack-bot/*"
         ]
@@ -52,7 +52,7 @@ resource "aws_iam_policy" "slack_receiver_policy" {
         Action = [
           "sns:Publish"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           aws_sns_topic.slack_messages.arn
         ]
@@ -118,7 +118,7 @@ resource "aws_iam_policy" "mcp_server_policy" {
           "ssm:GetParameter",
           "ssm:GetParameters"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           "arn:aws:ssm:${var.aws_region}:${local.account_id}:parameter/slack-bot/*",
           "arn:aws:ssm:${var.aws_region}:${local.account_id}:parameter/openrouter/*"
@@ -132,7 +132,7 @@ resource "aws_iam_policy" "mcp_server_policy" {
           "dynamodb:DeleteItem",
           "dynamodb:Query"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           aws_dynamodb_table.conversation_history.arn
         ]
@@ -143,7 +143,7 @@ resource "aws_iam_policy" "mcp_server_policy" {
           "es:ESHttpPost",
           "es:ESHttpPut"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           "${aws_opensearch_domain.kb_opensearch.arn}/*"
         ]
@@ -167,7 +167,7 @@ resource "aws_iam_policy" "mcp_server_policy" {
           "sns:Subscribe",
           "sns:Receive"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           aws_sns_topic.slack_messages.arn
         ]
@@ -208,10 +208,10 @@ resource "aws_lambda_function" "slack_receiver" {
 
   environment {
     variables = {
-      SLACK_BOT_TOKEN_PARAM       = var.slack_bot_token_param
-      SLACK_SIGNING_SECRET_PARAM  = var.slack_signing_secret_param
-      SLACK_APP_TOKEN_PARAM       = var.slack_app_token_param
-      SNS_TOPIC_ARN               = aws_sns_topic.slack_messages.arn
+      SLACK_BOT_TOKEN_PARAM      = var.slack_bot_token_param
+      SLACK_SIGNING_SECRET_PARAM = var.slack_signing_secret_param
+      SLACK_APP_TOKEN_PARAM      = var.slack_app_token_param
+      SNS_TOPIC_ARN              = aws_sns_topic.slack_messages.arn
     }
   }
 
@@ -328,7 +328,7 @@ resource "aws_iam_policy" "github_sync_policy" {
           "ssm:GetParameter",
           "ssm:GetParameters"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           "arn:aws:ssm:${var.aws_region}:${local.account_id}:parameter/github/*"
         ]
@@ -340,7 +340,7 @@ resource "aws_iam_policy" "github_sync_policy" {
           "s3:ListBucket",
           "s3:DeleteObject"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           aws_s3_bucket.data_bucket.arn,
           "${aws_s3_bucket.data_bucket.arn}/*"

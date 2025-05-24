@@ -13,7 +13,7 @@ resource "aws_iam_role" "minikube_role" {
       }
     ]
   })
-  
+
   tags = {
     Name        = "minikube_role"
     Environment = var.environment
@@ -29,7 +29,7 @@ resource "aws_iam_role_policy_attachment" "minikube_policy_attachment" {
 resource "aws_iam_instance_profile" "minikube_instance_profile" {
   name = var.iam_instance_profile
   role = aws_iam_role.minikube_role.name
-  
+
   tags = {
     Name        = "minikube_instance_profile"
     Environment = var.environment
