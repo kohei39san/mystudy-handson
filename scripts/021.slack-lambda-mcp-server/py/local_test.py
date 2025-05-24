@@ -12,52 +12,48 @@ from lambda_function import lambda_handler, process_slack_message
 # .env ファイルから環境変数を読み込む
 dotenv.load_dotenv()
 
-# 設定ファイルを読み込む
 def load_config():
-    """設定ファイルを読み込む"""
+    """設定ファイルから環境変数を読み込む"""
     try:
-        with open('config.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print("config.json ファイルが見つかりません。デフォルト設定を使用します。")
-        return {
-            "slack": {
-                "userId": "U12345678",
-                "channelId": "C12345678",
-                "responseTs": "1234567890.123456",
-                "text": "AWS Lambda について教えてください"
-            },
-            "openrouter": {
-                "api_key_param": "/openrouter/api-key",
-                "model": "anthropic/claude-3-opus:beta"
-            },
-            "dynamodb": {
-                "table": "slack-mcp-bot-conversations"
-            }
-        }
+        with open('/workspace/src/021.slack-lambda-mcp-server/config-for-local-test.json', 'r') as f:
+            config = json.load(f)
+        return config
+    except Exception as e:
+        print(f"設定ファイルの読み込みに失敗しました: {str(e)}")
+        return {}
 
 def setup_local_environment():
     """ローカルテスト用の環境変数を設定"""
-    # 設定ファイルを読み込む
+    # 設定ファイルから環境変数を読み込む
     config = load_config()
     
-    # 必要な環境変数が設定されていない場合は設定ファイルから読み込む
+    # 環境変数を設定
+    for key, value in config.items():
+        if key not in ['userId', 'channelId', 'responseTs', 'text']:
+            os.environ[key] = value
+    
+    # 必要な環境変数が設定されていない場合はデフォルト値を設定
     if 'OPENROUTER_API_KEY_PARAM' not in os.environ:
-        os.environ['OPENROUTER_API_KEY_PARAM'] = config['openrouter']['api_key_param']
+        os.environ['OPENROUTER_API_KEY_PARAM'] = '/openrouter/api-key'
     
     if 'OPENROUTER_MODEL' not in os.environ:
-        os.environ['OPENROUTER_MODEL'] = config['openrouter']['model']
+        os.environ['OPENROUTER_MODEL'] = 'anthropic/claude-3-opus:beta'
     
     if 'DYNAMODB_TABLE' not in os.environ:
-        os.environ['DYNAMODB_TABLE'] = config['dynamodb']['table']
+        os.environ['DYNAMODB_TABLE'] = 'slack-mcp-bot-conversations'
     
     print("環境変数の設定が完了しました")
 
 def test_lambda_handler():
     """Lambda ハンドラー関数をテスト"""
-    # 設定ファイルを読み込む
+    # 設定ファイルからメッセージデータを読み込む
     config = load_config()
-    slack_config = config['slack']
+    message_data = {
+        'userId': config.get('userId', 'U12345678'),
+        'channelId': config.get('channelId', 'C12345678'),
+        'responseTs': config.get('responseTs', '1234567890.123456'),
+        'text': config.get('text', 'AWS Lambda について教えてください')
+    }
     
     # SNSイベントをシミュレート
     event = {
@@ -65,12 +61,7 @@ def test_lambda_handler():
             {
                 'EventSource': 'aws:sns',
                 'Sns': {
-                    'Message': json.dumps({
-                        'userId': slack_config['userId'],
-                        'channelId': slack_config['channelId'],
-                        'responseTs': slack_config['responseTs'],
-                        'text': slack_config['text']
-                    }),
+                    'Message': json.dumps(message_data),
                     'MessageAttributes': {
                         'messageType': {
                             'Value': 'slack_message'
@@ -90,16 +81,13 @@ def test_lambda_handler():
 
 def test_direct_message_processing():
     """Slack メッセージ処理関数を直接テスト"""
-    # 設定ファイルを読み込む
+    # 設定ファイルからメッセージデータを読み込む
     config = load_config()
-    slack_config = config['slack']
-    
-    # メッセージデータ
     message_data = {
-        'userId': slack_config['userId'],
-        'channelId': slack_config['channelId'],
-        'responseTs': slack_config['responseTs'],
-        'text': slack_config['text']
+        'userId': config.get('userId', 'U12345678'),
+        'channelId': config.get('channelId', 'C12345678'),
+        'responseTs': config.get('responseTs', '1234567890.123456'),
+        'text': config.get('text', 'AWS Lambda について教えてください')
     }
     
     # メッセージ処理関数を呼び出し
