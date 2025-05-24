@@ -151,7 +151,13 @@ resource "aws_iam_policy" "mcp_server_policy" {
       {
         Action = [
           "bedrock:InvokeModel",
-          "bedrock:RetrieveAndGenerate"
+          "bedrock:RetrieveAndGenerate",
+          "bedrock:GetKnowledgeBase",
+          "bedrock:Retrieve",
+          "bedrock:ListDataSources",
+          "bedrock:ListTagsForResource",
+          "bedrock:ListKnowledgeBases",
+          "bedrock:Rerank"
         ]
         Effect   = "Allow"
         Resource = "*"
@@ -202,9 +208,9 @@ resource "aws_lambda_function" "slack_receiver" {
 
   environment {
     variables = {
-      SLACK_BOT_TOKEN_PARAM       = "/slack-bot/token"
-      SLACK_SIGNING_SECRET_PARAM  = "/slack-bot/signing-secret"
-      SLACK_APP_TOKEN_PARAM       = "/slack-bot/app-token"
+      SLACK_BOT_TOKEN_PARAM       = var.slack_bot_token_param
+      SLACK_SIGNING_SECRET_PARAM  = var.slack_signing_secret_param
+      SLACK_APP_TOKEN_PARAM       = var.slack_app_token_param
       SNS_TOPIC_ARN               = aws_sns_topic.slack_messages.arn
     }
   }
@@ -233,34 +239,6 @@ data "archive_file" "mcp_server_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../scripts/021.slack-lambda-mcp-server/py"
   output_path = "${path.module}/../../mcp_server_lambda.zip"
-  
-  # 依存関係のインストールを含める
-  depends_on = [
-    null_resource.install_dependencies
-  ]
-}
-
-# Lambda 関数の依存関係をインストール
-resource "null_resource" "install_dependencies" {
-  triggers = {
-    lambda_function_hash = filemd5("${path.module}/../scripts/021.slack-lambda-mcp-server/py/lambda_function.py")
-  }
-
-  provisioner "local-exec" {
-    command = <<EOF
-      # 一時ディレクトリを作成
-      mkdir -p ${path.module}/../scripts/021.slack-lambda-mcp-server/py/package
-      
-      # 依存関係をインストール
-      pip install boto3==1.28.38 requests==2.31.0 python-dotenv==1.0.0 -t ${path.module}/../scripts/021.slack-lambda-mcp-server/py/package
-      
-      # インストールしたパッケージをLambda関数のディレクトリにコピー
-      cp -r ${path.module}/../scripts/021.slack-lambda-mcp-server/py/package/* ${path.module}/../scripts/021.slack-lambda-mcp-server/py/
-      
-      # 一時ディレクトリを削除
-      rm -rf ${path.module}/../scripts/021.slack-lambda-mcp-server/py/package
-    EOF
-  }
 }
 
 # MCP サーバーを実行する Lambda 関数
@@ -276,7 +254,7 @@ resource "aws_lambda_function" "mcp_server" {
 
   environment {
     variables = {
-      OPENROUTER_API_KEY_PARAM = "/openrouter/api-key"
+      OPENROUTER_API_KEY_PARAM = var.openrouter_api_key_param
       OPENROUTER_MODEL         = var.openrouter_model
       DYNAMODB_TABLE           = aws_dynamodb_table.conversation_history.name
     }
@@ -411,8 +389,11 @@ resource "aws_lambda_function" "github_to_s3_sync" {
 
   environment {
     variables = {
-      S3_BUCKET_NAME = aws_s3_bucket.data_bucket.id
-      S3_PREFIX      = "docs/"
+      S3_BUCKET_NAME        = aws_s3_bucket.data_bucket.id
+      S3_PREFIX             = "docs/"
+      GITHUB_REPO_URL_PARAM = var.github_repo_url_param
+      GITHUB_USERNAME_PARAM = var.github_username_param
+      GITHUB_TOKEN_PARAM    = var.github_token_param
     }
   }
 

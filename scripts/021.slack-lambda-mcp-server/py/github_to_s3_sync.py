@@ -14,9 +14,9 @@ logger.setLevel(logging.INFO)
 # 環境変数
 S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
 S3_PREFIX = os.environ.get('S3_PREFIX', 'docs/')
-GITHUB_REPO_URL_PARAM = '/github/repo-url'
-GITHUB_USERNAME_PARAM = '/github/username'
-GITHUB_TOKEN_PARAM = '/github/token'
+GITHUB_REPO_URL_PARAM = os.environ.get('GITHUB_REPO_URL_PARAM', '/github/repo-url')
+GITHUB_USERNAME_PARAM = os.environ.get('GITHUB_USERNAME_PARAM', '/github/username')
+GITHUB_TOKEN_PARAM = os.environ.get('GITHUB_TOKEN_PARAM', '/github/token')
 
 # AWS クライアント
 ssm_client = boto3.client('ssm')

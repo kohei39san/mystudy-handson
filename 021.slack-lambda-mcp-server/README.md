@@ -19,15 +19,30 @@
 
 ## デプロイ方法
 
-1. Terraform を使用してインフラストラクチャをデプロイします
+1. 依存関係をインストールします
+```bash
+# 依存関係をインストールするディレクトリを作成
+mkdir -p scripts/021.slack-lambda-mcp-server/py/package
+
+# 依存関係をインストール
+pip install boto3==1.28.38 requests==2.31.0 python-dotenv==1.0.0 -t scripts/021.slack-lambda-mcp-server/py/package
+
+# インストールしたパッケージをLambda関数のディレクトリにコピー
+cp -r scripts/021.slack-lambda-mcp-server/py/package/* scripts/021.slack-lambda-mcp-server/py/
+
+# 一時ディレクトリを削除
+rm -rf scripts/021.slack-lambda-mcp-server/py/package
+```
+
+2. Terraform を使用してインフラストラクチャをデプロイします
 ```bash
 cd 021.slack-lambda-mcp-server
 terraform init
 terraform apply
 ```
 
-2. Slack アプリを作成し、マニフェストファイルを使用して設定します
-3. 必要な環境変数を AWS Systems Manager パラメータストアに設定します
+3. Slack アプリを作成し、マニフェストファイルを使用して設定します
+4. 必要な環境変数を AWS Systems Manager パラメータストアに設定します
 
 ## ローカルテスト
 
