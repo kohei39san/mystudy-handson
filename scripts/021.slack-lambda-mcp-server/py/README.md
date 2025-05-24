@@ -33,9 +33,10 @@ aws ssm put-parameter --name "/slack-mcp-server/test/responseTs" --value "123456
 aws ssm put-parameter --name "/slack-mcp-server/test/text" --value "AWS Lambda について教えてください" --type String --tier Standard --overwrite
 
 # 環境変数
-aws ssm put-parameter --name "/slack-mcp-server/openrouter/api-key-param" --value "/openrouter/api-key" --type SecureString --tier Standard --overwrite
+aws ssm put-parameter --name "/openrouter/api-key" --value "/openrouter/api-key" --type SecureString --tier Standard --overwrite
 aws ssm put-parameter --name "/slack-mcp-server/openrouter/model" --value "anthropic/claude-3-opus:beta" --type String --tier Standard --overwrite
 aws ssm put-parameter --name "/slack-mcp-server/dynamodb/table" --value "slack-mcp-bot-conversations" --type String --tier Standard --overwrite
+aws ssm put-parameter --name "/slack-bot/token" --value "slack-oauth-tokens" --type SecureString --tier Standard --overwrite
 ```
 
 ## スクリプトの実行方法

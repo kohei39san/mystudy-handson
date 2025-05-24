@@ -17,7 +17,7 @@ logger.setLevel(logging.INFO)
 
 # 環境変数
 OPENROUTER_API_KEY_PARAM = os.environ.get('OPENROUTER_API_KEY_PARAM', '/openrouter/api-key')
-OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'anthropic/claude-3-opus:beta')
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'deepseek/deepseek-chat-v3-0324:free')
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 DYNAMODB_TABLE = os.environ.get('DYNAMODB_TABLE')
 AWS_DOCS_MCP_PORT = 8080
@@ -274,7 +274,7 @@ def call_openrouter_with_mcp(user_message, history, user_id):
         
         # ストリーミングリクエスト
         response = requests.post(
-            OPENROUTER_API_URL,
+            url=OPENROUTER_API_URL,
             headers=headers,
             json=data,
             stream=True
