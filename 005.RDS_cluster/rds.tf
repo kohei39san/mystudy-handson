@@ -5,7 +5,7 @@ locals {
 resource "aws_db_subnet_group" "example" {
   name       = "db-subnet-group${var.aws_tags["Name"]}"
   subnet_ids = [aws_subnet.example_subnet1.id, aws_subnet.example_subnet2.id]
-  
+
   tags = {
     Name        = "db-subnet-group"
     Environment = var.environment
@@ -24,7 +24,7 @@ resource "aws_rds_cluster" "rds_cluster" {
   backup_retention_period = 1
   preferred_backup_window = "07:00-09:00"
   skip_final_snapshot     = true
-  
+
   tags = {
     Name        = "rds-cluster"
     Environment = var.environment
@@ -40,7 +40,7 @@ resource "aws_rds_cluster_instance" "cluster_instances" {
   engine               = aws_rds_cluster.rds_cluster.engine
   engine_version       = aws_rds_cluster.rds_cluster.engine_version
   db_subnet_group_name = aws_db_subnet_group.example.name
-  
+
   tags = {
     Name        = "rds-cluster-instance-${count.index}"
     Environment = var.environment

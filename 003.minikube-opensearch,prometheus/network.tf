@@ -7,7 +7,7 @@ locals {
 
 resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr_block
-  
+
   tags = {
     Name        = "minikube_vpc"
     Environment = var.environment
@@ -18,7 +18,7 @@ resource "aws_subnet" "subnet" {
   vpc_id                  = aws_vpc.vpc.id
   map_public_ip_on_launch = true
   cidr_block              = var.subnet_cidr_block
-  
+
   tags = {
     Name        = "minikube_subnet"
     Environment = var.environment
@@ -27,7 +27,7 @@ resource "aws_subnet" "subnet" {
 }
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
-  
+
   tags = {
     Name        = "minikube_igw"
     Environment = var.environment
@@ -40,7 +40,7 @@ resource "aws_route_table" "rt" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
   }
-  
+
   tags = {
     Name        = "minikube_rt"
     Environment = var.environment
@@ -54,7 +54,7 @@ resource "aws_route_table_association" "rta" {
 resource "aws_security_group" "sg" {
   name   = var.sg_name
   vpc_id = aws_vpc.vpc.id
-  
+
   tags = {
     Name        = "minikube_sg"
     Environment = var.environment
@@ -69,7 +69,7 @@ resource "aws_vpc_security_group_egress_rule" "sg_egress" {
   ip_protocol = "-1"
   from_port   = -1
   to_port     = -1
-  
+
   tags = {
     Name        = "minikube_sg_egress"
     Environment = var.environment
@@ -84,7 +84,7 @@ resource "aws_vpc_security_group_ingress_rule" "sg_ingress" {
   ip_protocol = "tcp"
   from_port   = 22
   to_port     = 22
-  
+
   tags = {
     Name        = "minikube_sg_ingress"
     Environment = var.environment

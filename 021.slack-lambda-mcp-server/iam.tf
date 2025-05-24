@@ -34,7 +34,7 @@ resource "aws_iam_policy" "bedrock_s3_policy" {
           "s3:GetObject",
           "s3:ListBucket"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           aws_s3_bucket.data_bucket.arn,
           "${aws_s3_bucket.data_bucket.arn}/*"
@@ -88,7 +88,7 @@ resource "aws_iam_policy" "bedrock_opensearch_policy" {
           "es:ESHttpPut",
           "es:ESHttpDelete"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           "${aws_opensearch_domain.kb_opensearch.arn}/*"
         ]
@@ -139,7 +139,7 @@ resource "aws_iam_policy" "bedrock_kb_policy" {
           "s3:GetObject",
           "s3:ListBucket"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           aws_s3_bucket.data_bucket.arn,
           "${aws_s3_bucket.data_bucket.arn}/*"
@@ -152,7 +152,7 @@ resource "aws_iam_policy" "bedrock_kb_policy" {
           "es:ESHttpPut",
           "es:ESHttpDelete"
         ]
-        Effect   = "Allow"
+        Effect = "Allow"
         Resource = [
           "${aws_opensearch_domain.kb_opensearch.arn}/*"
         ]

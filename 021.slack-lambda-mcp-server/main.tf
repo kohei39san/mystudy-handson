@@ -5,9 +5,9 @@ resource "aws_sns_topic" "slack_messages" {
 
 # CloudFormationスタックの作成（Bedrock Knowledge Base用）
 resource "aws_cloudformation_stack" "bedrock_kb" {
-  name = "bedrock-knowledge-base-stack"
+  name          = "bedrock-knowledge-base-stack"
   template_body = file("${path.module}/../src/021.slack-lambda-mcp-server/cfn/bedrock-kb-cfn.yaml")
-  
+
   parameters = {
     OpenSearchDomainName = var.opensearch_domain_name
     OpenSearchDomainArn  = aws_opensearch_domain.kb_opensearch.arn
@@ -17,7 +17,7 @@ resource "aws_cloudformation_stack" "bedrock_kb" {
     OpenSearchRoleArn    = aws_iam_role.bedrock_opensearch_role.arn
     KnowledgeBaseRoleArn = aws_iam_role.bedrock_kb_role.arn
   }
-  
+
   depends_on = [
     aws_opensearch_domain.kb_opensearch,
     aws_s3_bucket.data_bucket,
@@ -29,9 +29,9 @@ resource "aws_cloudformation_stack" "bedrock_kb" {
 
 # EventBridge スケジュールルールの作成
 resource "aws_scheduler_schedule" "github_sync_schedule" {
-  name       = "github-sync-schedule"
+  name                = "github-sync-schedule"
   schedule_expression = "rate(1 day)"
-  
+
   target {
     arn      = aws_lambda_function.github_to_s3_sync.arn
     role_arn = aws_iam_role.eventbridge_invoke_lambda_role.arn
@@ -45,7 +45,7 @@ resource "aws_scheduler_schedule" "github_sync_schedule" {
 # EventBridge が Lambda を呼び出すための IAM ロール
 resource "aws_iam_role" "eventbridge_invoke_lambda_role" {
   name = "eventbridge-invoke-lambda-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -64,7 +64,7 @@ resource "aws_iam_role" "eventbridge_invoke_lambda_role" {
 resource "aws_iam_policy" "eventbridge_invoke_lambda_policy" {
   name        = "eventbridge-invoke-lambda-policy"
   description = "Policy for EventBridge to invoke Lambda functions"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -97,8 +97,8 @@ resource "aws_ssm_parameter" "slack_bot_token" {
   name        = var.slack_bot_token_param
   description = "Slack Bot Token"
   type        = "SecureString"
-  value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する
-  
+  value       = "dummy-value-replace-me" # デプロイ後に実際の値に更新する
+
   lifecycle {
     ignore_changes = [value]
   }
@@ -108,8 +108,8 @@ resource "aws_ssm_parameter" "slack_signing_secret" {
   name        = var.slack_signing_secret_param
   description = "Slack Signing Secret"
   type        = "SecureString"
-  value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する
-  
+  value       = "dummy-value-replace-me" # デプロイ後に実際の値に更新する
+
   lifecycle {
     ignore_changes = [value]
   }
@@ -119,8 +119,8 @@ resource "aws_ssm_parameter" "slack_app_token" {
   name        = var.slack_app_token_param
   description = "Slack App Token"
   type        = "SecureString"
-  value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する
-  
+  value       = "dummy-value-replace-me" # デプロイ後に実際の値に更新する
+
   lifecycle {
     ignore_changes = [value]
   }
@@ -130,8 +130,8 @@ resource "aws_ssm_parameter" "openrouter_api_key" {
   name        = var.openrouter_api_key_param
   description = "OpenRouter API Key"
   type        = "SecureString"
-  value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する
-  
+  value       = "dummy-value-replace-me" # デプロイ後に実際の値に更新する
+
   lifecycle {
     ignore_changes = [value]
   }
@@ -141,8 +141,8 @@ resource "aws_ssm_parameter" "github_repo_url" {
   name        = var.github_repo_url_param
   description = "GitHub Repository URL"
   type        = "String"
-  value       = "https://github.com/username/repo.git"  # デプロイ後に実際の値に更新する
-  
+  value       = "https://github.com/username/repo.git" # デプロイ後に実際の値に更新する
+
   lifecycle {
     ignore_changes = [value]
   }
@@ -152,8 +152,8 @@ resource "aws_ssm_parameter" "github_username" {
   name        = var.github_username_param
   description = "GitHub Username"
   type        = "String"
-  value       = "username"  # デプロイ後に実際の値に更新する
-  
+  value       = "username" # デプロイ後に実際の値に更新する
+
   lifecycle {
     ignore_changes = [value]
   }
@@ -163,8 +163,8 @@ resource "aws_ssm_parameter" "github_token" {
   name        = var.github_token_param
   description = "GitHub Personal Access Token"
   type        = "SecureString"
-  value       = "dummy-value-replace-me"  # デプロイ後に実際の値に更新する
-  
+  value       = "dummy-value-replace-me" # デプロイ後に実際の値に更新する
+
   lifecycle {
     ignore_changes = [value]
   }

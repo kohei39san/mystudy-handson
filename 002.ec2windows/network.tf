@@ -6,7 +6,7 @@ locals {
 }
 resource "aws_vpc" "test_vpc" {
   cidr_block = "10.0.0.0/16"
-  
+
   tags = {
     Name        = "test_vpc"
     Environment = var.environment
@@ -17,7 +17,7 @@ resource "aws_subnet" "test_subnet" {
   vpc_id                  = aws_vpc.test_vpc.id
   map_public_ip_on_launch = true
   cidr_block              = "10.0.0.0/24"
-  
+
   tags = {
     Name        = "test_subnet"
     Environment = var.environment
@@ -26,7 +26,7 @@ resource "aws_subnet" "test_subnet" {
 }
 resource "aws_internet_gateway" "test_igw" {
   vpc_id = aws_vpc.test_vpc.id
-  
+
   tags = {
     Name        = "test_igw"
     Environment = var.environment
@@ -39,7 +39,7 @@ resource "aws_route_table" "test_rt" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.test_igw.id
   }
-  
+
   tags = {
     Name        = "test_rt"
     Environment = var.environment
@@ -65,7 +65,7 @@ resource "aws_security_group" "test_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
   tags = {
     Name        = "test_sg"
     Environment = var.environment
