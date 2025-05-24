@@ -12,42 +12,57 @@ from lambda_function import lambda_handler, process_slack_message
 # .env ファイルから環境変数を読み込む
 dotenv.load_dotenv()
 
-def load_config():
-    """設定ファイルから環境変数を読み込む"""
+def get_ssm_parameter(param_name):
+    """SSM パラメータストアから値を取得"""
     try:
-        with open('/workspace/src/021.slack-lambda-mcp-server/config-for-local-test.json', 'r') as f:
-            config = json.load(f)
+        ssm_client = boto3.client('ssm')
+        response = ssm_client.get_parameter(
+            Name=param_name,
+            WithDecryption=True
+        )
+        return response['Parameter']['Value']
+    except Exception as e:
+        print(f"SSM パラメータの取得に失敗しました: {str(e)}")
+        return None
+
+def load_config_from_ssm():
+    """SSM パラメータストアから設定を読み込む"""
+    try:
+        # SSM パラメータストアから設定を取得
+        config = {}
+        
+        # テスト用のメッセージデータを取得
+        config['userId'] = get_ssm_parameter('/slack-mcp-server/test/userId') or 'U12345678'
+        config['channelId'] = get_ssm_parameter('/slack-mcp-server/test/channelId') or 'C12345678'
+        config['responseTs'] = get_ssm_parameter('/slack-mcp-server/test/responseTs') or '1234567890.123456'
+        config['text'] = get_ssm_parameter('/slack-mcp-server/test/text') or 'AWS Lambda について教えてください'
+        
+        # 環境変数の設定値を取得
+        config['OPENROUTER_API_KEY_PARAM'] = get_ssm_parameter('/slack-mcp-server/openrouter/api-key-param') or '/openrouter/api-key'
+        config['OPENROUTER_MODEL'] = get_ssm_parameter('/slack-mcp-server/openrouter/model') or 'anthropic/claude-3-opus:beta'
+        config['DYNAMODB_TABLE'] = get_ssm_parameter('/slack-mcp-server/dynamodb/table') or 'slack-mcp-bot-conversations'
+        
         return config
     except Exception as e:
-        print(f"設定ファイルの読み込みに失敗しました: {str(e)}")
+        print(f"SSM パラメータストアからの設定読み込みに失敗しました: {str(e)}")
         return {}
 
 def setup_local_environment():
     """ローカルテスト用の環境変数を設定"""
-    # 設定ファイルから環境変数を読み込む
-    config = load_config()
+    # SSM パラメータストアから環境変数を読み込む
+    config = load_config_from_ssm()
     
     # 環境変数を設定
     for key, value in config.items():
         if key not in ['userId', 'channelId', 'responseTs', 'text']:
             os.environ[key] = value
     
-    # 必要な環境変数が設定されていない場合はデフォルト値を設定
-    if 'OPENROUTER_API_KEY_PARAM' not in os.environ:
-        os.environ['OPENROUTER_API_KEY_PARAM'] = '/openrouter/api-key'
-    
-    if 'OPENROUTER_MODEL' not in os.environ:
-        os.environ['OPENROUTER_MODEL'] = 'anthropic/claude-3-opus:beta'
-    
-    if 'DYNAMODB_TABLE' not in os.environ:
-        os.environ['DYNAMODB_TABLE'] = 'slack-mcp-bot-conversations'
-    
     print("環境変数の設定が完了しました")
 
 def test_lambda_handler():
     """Lambda ハンドラー関数をテスト"""
-    # 設定ファイルからメッセージデータを読み込む
-    config = load_config()
+    # SSM パラメータストアからメッセージデータを読み込む
+    config = load_config_from_ssm()
     message_data = {
         'userId': config.get('userId', 'U12345678'),
         'channelId': config.get('channelId', 'C12345678'),
@@ -81,8 +96,8 @@ def test_lambda_handler():
 
 def test_direct_message_processing():
     """Slack メッセージ処理関数を直接テスト"""
-    # 設定ファイルからメッセージデータを読み込む
-    config = load_config()
+    # SSM パラメータストアからメッセージデータを読み込む
+    config = load_config_from_ssm()
     message_data = {
         'userId': config.get('userId', 'U12345678'),
         'channelId': config.get('channelId', 'C12345678'),
