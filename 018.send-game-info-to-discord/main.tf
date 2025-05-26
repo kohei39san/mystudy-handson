@@ -12,7 +12,7 @@ resource "aws_cloudformation_stack" "game_info_discord_stack" {
   }
 
   capabilities = ["CAPABILITY_IAM"]
-  
+
   tags = {
     "Environment" = "dev"
     "Terraform"   = "true"

@@ -1,5 +1,5 @@
 variable "aws_tags" {
-  type    = map(string)
+  type = map(string)
   default = {
     Environment = "dev"
     Terraform   = "true"
@@ -25,11 +25,6 @@ variable "iam_instance_profile" {
 variable "root_block_volume_size" {
   type    = number
   default = 50
-}
-
-variable "key_name" {
-  type    = string
-  default = "key_server"
 }
 
 variable "instance_public_key" {
