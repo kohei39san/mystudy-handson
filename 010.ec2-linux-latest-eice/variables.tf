@@ -16,11 +16,6 @@ variable "instance_type" {
   default = "t2.micro"
 }
 
-variable "iam_instance_profile" {
-  type    = string
-  default = "managed_node_instance_profile"
-}
-
 variable "root_block_volume_size" {
   type    = number
   default = 8
@@ -39,11 +34,6 @@ variable "subnet_cidr_block" {
 variable "sg_eice_name" {
   type    = string
   default = "sg_eice"
-}
-
-variable "key_pair" {
-  type    = string
-  default = "managed_node_linux_key_pair"
 }
 
 variable "key_pair_public" {
