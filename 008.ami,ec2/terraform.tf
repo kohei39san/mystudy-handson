@@ -15,7 +15,10 @@ terraform {
 provider "aws" {
   region = "ap-northeast-1"
   default_tags {
-    tags = var.aws_tags
+    tags = merge(var.aws_tags, {
+      Environment = "Development"
+      Terraform = "true"
+    })
   }
 }
 

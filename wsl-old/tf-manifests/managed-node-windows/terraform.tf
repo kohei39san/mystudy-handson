@@ -14,7 +14,10 @@ terraform {
 
 provider "aws" {
   default_tags {
-    tags = var.aws_tags
+    tags = merge(var.aws_tags, {
+      Environment = "Development"
+      Terraform = "true"
+    })
   }
 }
 
