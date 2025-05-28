@@ -2,7 +2,7 @@ resource "aws_network_interface" "test_ni" {
   subnet_id       = aws_subnet.test_subnet.id
   security_groups = concat([aws_security_group.test_sg.id], var.vpc_security_group_ids)
   private_ips     = ["10.0.0.10"]
-  
+
   tags = {
     Name        = "test_ni"
     Environment = var.environment
@@ -35,7 +35,7 @@ resource "aws_instance" "test_instance" {
   root_block_device {
     volume_size = var.root_block_volume_size
   }
-  
+
   tags = {
     Name        = "test_instance"
     Environment = var.environment

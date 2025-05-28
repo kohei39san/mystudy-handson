@@ -1,9 +1,9 @@
 # 会話履歴を保存するDynamoDBテーブル
 resource "aws_dynamodb_table" "conversation_history" {
-  name           = var.dynamodb_table_name
-  billing_mode   = "PAY_PER_REQUEST"  # オンデマンドキャパシティモード（最小コスト）
-  hash_key       = "userId"
-  range_key      = "channelId"
+  name         = var.dynamodb_table_name
+  billing_mode = "PAY_PER_REQUEST" # オンデマンドキャパシティモード（最小コスト）
+  hash_key     = "userId"
+  range_key    = "channelId"
 
   attribute {
     name = "userId"

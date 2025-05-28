@@ -4,7 +4,7 @@ data "aws_ssm_parameter" "ami" {
 resource "aws_network_interface" "ni" {
   subnet_id       = aws_subnet.subnet.id
   security_groups = [aws_security_group.sg.id]
-  
+
   tags = {
     Name        = "minikube_ni"
     Environment = var.environment
@@ -15,7 +15,7 @@ resource "aws_network_interface" "ni" {
 resource "aws_key_pair" "deployer" {
   key_name   = "minikube-key-pair"
   public_key = file(var.instance_public_key)
-  
+
   tags = {
     Name        = "minikube_key_pair"
     Environment = var.environment
@@ -30,7 +30,7 @@ resource "aws_iam_instance_profile" "instance_profile" {
 
 resource "aws_iam_role" "instance_role" {
   name = "minikube-instance-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -43,7 +43,7 @@ resource "aws_iam_role" "instance_role" {
       }
     ]
   })
-  
+
   tags = {
     Name        = "minikube_instance_role"
     Environment = var.environment
@@ -63,7 +63,7 @@ resource "aws_instance" "instance" {
   root_block_device {
     volume_size = var.root_block_volume_size
   }
-  
+
   tags = {
     Name        = "minikube_instance"
     Environment = var.environment
