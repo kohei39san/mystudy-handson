@@ -2,8 +2,6 @@ name: Terraform linter and PR
 
 on:
   push:
-    branches:
-      - main
     paths:
       - '**/*.tf'
 
@@ -74,12 +72,18 @@ jobs:
       id: git_diff
       run: |
         git diff --exit-code && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+        
+    - name: Get current branch name
+      if: steps.git_diff.outputs.changes == 'changes' && ${{ !cancelled() }}
+      id: get_branch
+      run: |
+        echo "branch_name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
 
     - name: Create Pull Request
       if: steps.git_diff.outputs.changes == 'changes' && ${{ !cancelled() }}
       uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        base: main
-        branch: tflint-pr
+        base: ${{ steps.get_branch.outputs.branch_name }}
+        branch: tflint-pr-${{ steps.get_branch.outputs.branch_name }}
         title: "Changes by tflint actions"
