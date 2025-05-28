@@ -8,7 +8,7 @@ locals {
 
 resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr_block
-  
+
   tags = merge(var.aws_tags, {
     Name = "managed_node_linux_vpc"
   })
