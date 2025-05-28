@@ -76,12 +76,6 @@ variable "github_sync_lambda_name" {
   default     = "github-to-s3-sync-lambda"
 }
 
-variable "ecr_repository_name" {
-  description = "Name of the ECR repository for the MCP server container"
-  type        = string
-  default     = "mcp-server-container"
-}
-
 variable "openrouter_model" {
   description = "OpenRouter model to use"
   type        = string
