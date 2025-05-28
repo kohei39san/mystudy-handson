@@ -8,10 +8,10 @@ locals {
 
 resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr_block
-
-  tags = {
+  
+  tags = merge(var.aws_tags, {
     Name = "managed_node_linux_vpc"
-  }
+  })
 }
 resource "aws_subnet" "subnet" {
   vpc_id                  = aws_vpc.vpc.id
@@ -25,9 +25,9 @@ resource "aws_subnet" "subnet" {
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
 
-  tags = {
+  tags = merge(var.aws_tags, {
     Name = "managed_node_linux_igw"
-  }
+  })
 }
 resource "aws_route_table" "rt" {
   vpc_id = aws_vpc.vpc.id
@@ -36,9 +36,9 @@ resource "aws_route_table" "rt" {
     gateway_id = aws_internet_gateway.igw.id
   }
 
-  tags = {
+  tags = merge(var.aws_tags, {
     Name = "managed_node_linux_rt"
-  }
+  })
 }
 resource "aws_route_table_association" "rta" {
   subnet_id      = aws_subnet.subnet.id
@@ -51,9 +51,9 @@ resource "aws_security_group" "sg" {
   name   = "sg"
   vpc_id = aws_vpc.vpc.id
 
-  tags = {
+  tags = merge(var.aws_tags, {
     Name = "managed_node_linux_sg"
-  }
+  })
 }
 
 resource "aws_vpc_security_group_ingress_rule" "sg_ingress" {

@@ -14,9 +14,9 @@ resource "aws_iam_role" "managed_node_role" {
     ]
   })
 
-  tags = {
+  tags = merge(var.aws_tags, {
     Name = "managed_node_linux_role"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "managed_node_policy_attachment" {
@@ -30,7 +30,7 @@ resource "aws_iam_instance_profile" "managed_node_instance_profile" {
   name = var.iam_instance_profile
   role = aws_iam_role.managed_node_role.name
 
-  tags = {
+  tags = merge(var.aws_tags, {
     Name = "managed_node_linux_instance_profile"
-  }
+  })
 }
