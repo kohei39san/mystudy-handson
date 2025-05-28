@@ -20,7 +20,7 @@ variable "iam_role_name" {
 
 variable "iam_instance_profile" {
   type    = string
-  default = "ami_ec2_managed_node_instance_profile"
+  default = "managed_node_instance_profile"
 }
 
 variable "root_block_volume_size" {
@@ -40,7 +40,7 @@ variable "subnet_cidr_block" {
 
 variable "key_pair" {
   type    = string
-  default = "manaaged_node_linux_key_pair"
+  default = "managed_node_linux_key_pair"
 }
 
 variable "lambda_cfnstack_name" {

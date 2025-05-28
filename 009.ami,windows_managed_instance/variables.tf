@@ -5,7 +5,7 @@ variable "aws_tags" {
 
 variable "ami" {
   type    = string
-  default = "ami-0529e165c6694e490" #Windows_Server-2016-Japanese-Full-Base
+  default = "/aws/service/ami-windows-latest/Windows_Server-2016-Japanese-Full-Base"
 }
 
 variable "instance_type" {
@@ -45,7 +45,7 @@ variable "rdp_port" {
 
 variable "key_pair" {
   type    = string
-  default = "manaaged_node_windows_key_pair"
+  default = "managed_node_windows_key_pair"
 }
 
 variable "key_pair_public" {

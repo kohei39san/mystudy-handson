@@ -9,8 +9,9 @@ variable "instance_type" {
 }
 
 variable "iam_instance_profile" {
-  type    = string
-  default = ""
+  type        = string
+  default     = "simple_ec2_instance_profile"
+  description = "IAM instance profile for EC2 instance"
 }
 
 variable "root_block_volume_size" {
@@ -24,8 +25,9 @@ variable "vpc_security_group_ids" {
 }
 
 variable "key_pair" {
-  type    = string
-  default = ""
+  type        = string
+  default     = "simple_ec2_key"
+  description = "SSH key name for EC2 instance"
 }
 
 variable "vpc_cidr_block" {
