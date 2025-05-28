@@ -1,7 +1,7 @@
 # データソース用のS3バケット
 resource "aws_s3_bucket" "data_bucket" {
   bucket = var.s3_bucket_name
-  
+
   tags = {
     Name        = var.s3_bucket_name
     Environment = "production"
@@ -62,16 +62,16 @@ resource "aws_s3_bucket_policy" "data_bucket_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowBedrockAccess"
-        Effect    = "Allow"
+        Sid    = "AllowBedrockAccess"
+        Effect = "Allow"
         Principal = {
           AWS = aws_iam_role.bedrock_s3_role.arn
         }
-        Action    = [
+        Action = [
           "s3:GetObject",
           "s3:ListBucket"
         ]
-        Resource  = [
+        Resource = [
           aws_s3_bucket.data_bucket.arn,
           "${aws_s3_bucket.data_bucket.arn}/*"
         ]
