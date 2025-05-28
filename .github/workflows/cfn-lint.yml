@@ -2,8 +2,6 @@ name: CloudFormation Linter
 
 on:
   push:
-    branches:
-      - main
     paths:
       - '**/cfn/**/*.yaml'
 
