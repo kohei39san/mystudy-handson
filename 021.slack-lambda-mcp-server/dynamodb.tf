@@ -30,5 +30,6 @@ resource "aws_dynamodb_table" "conversation_history" {
     Name        = var.dynamodb_table_name
     Environment = "production"
     Project     = var.project_name
+    Terraform   = "true"
   }
 }

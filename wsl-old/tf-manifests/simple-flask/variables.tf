@@ -1,4 +1,7 @@
 variable "aws_tags" {
-  type    = map(string)
-  default = {}
+  type = map(string)
+  default = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }

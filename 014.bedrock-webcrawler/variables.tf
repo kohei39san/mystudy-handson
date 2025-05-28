@@ -35,6 +35,7 @@ variable "default_tags" {
     Environment = "Production"
     Project     = "BedrockWebCrawler"
     ManagedBy   = "Terraform"
+    Terraform   = "true"
   }
 }
 
