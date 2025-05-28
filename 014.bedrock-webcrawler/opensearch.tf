@@ -40,6 +40,7 @@ resource "aws_opensearch_domain" "vector_store" {
   }
 
   tags = {
-    Name = "${var.project_name}-vectors"
+    Name      = "${var.project_name}-vectors"
+    Terraform = "true"
   }
 }
