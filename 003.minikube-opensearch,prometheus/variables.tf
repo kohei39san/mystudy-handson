@@ -27,10 +27,7 @@ variable "root_block_volume_size" {
   default = 50
 }
 
-variable "key_name" {
-  type    = string
-  default = "key_server"
-}
+# Removed unused variable key_name
 
 variable "instance_public_key" {
   type    = string

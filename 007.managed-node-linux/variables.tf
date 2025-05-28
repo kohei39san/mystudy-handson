@@ -1,6 +1,9 @@
 variable "aws_tags" {
   type    = map(string)
-  default = {}
+  default = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 variable "ami" {
@@ -15,7 +18,7 @@ variable "instance_type" {
 
 variable "iam_instance_profile" {
   type    = string
-  default = "managed_node_instance_profile"
+  default = "managed_node_linux_instance_profile"
 }
 
 variable "root_block_volume_size" {

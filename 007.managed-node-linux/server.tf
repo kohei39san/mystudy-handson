@@ -1,6 +1,10 @@
 resource "aws_network_interface" "ni" {
   subnet_id       = aws_subnet.subnet.id
   security_groups = [aws_security_group.sg.id]
+  
+  tags = {
+    Name = "managed_node_linux_ni"
+  }
 }
 resource "aws_instance" "instance" {
   ami                  = var.ami
@@ -13,5 +17,9 @@ resource "aws_instance" "instance" {
   }
   root_block_device {
     volume_size = var.root_block_volume_size
+  }
+  
+  tags = {
+    Name = "managed_node_linux_instance"
   }
 }

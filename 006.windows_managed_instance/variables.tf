@@ -8,7 +8,7 @@ variable "aws_tags" {
 
 variable "ami" {
   type    = string
-  default = "ami-0529e165c6694e490" #Windows_Server-2016-Japanese-Full-Base
+  default = "" # Will use the data source for the latest Windows AMI
 }
 
 variable "instance_type" {
@@ -23,7 +23,7 @@ variable "iam_role_name" {
 
 variable "iam_instance_profile" {
   type    = string
-  default = "windows_managed_instance_managed_node_instance_profile"
+  default = "windows_managed_instance_profile"
 }
 
 variable "root_block_volume_size" {
@@ -48,7 +48,7 @@ variable "rdp_port" {
 
 variable "key_pair" {
   type    = string
-  default = "manaaged_node_windows_key_pair"
+  default = "windows_managed_instance_key_pair"
 }
 
 variable "key_pair_public" {
