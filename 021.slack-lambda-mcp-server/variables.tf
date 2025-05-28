@@ -31,19 +31,19 @@ variable "opensearch_domain_name" {
 variable "opensearch_instance_type" {
   description = "Instance type for OpenSearch"
   type        = string
-  default     = "t3.small.search"  # 最小コストのインスタンスタイプ
+  default     = "t3.small.search" # 最小コストのインスタンスタイプ
 }
 
 variable "opensearch_instance_count" {
   description = "Number of instances in the OpenSearch cluster"
   type        = number
-  default     = 1  # 最小構成
+  default     = 1 # 最小構成
 }
 
 variable "opensearch_ebs_volume_size" {
   description = "Size of the EBS volume for OpenSearch in GB"
   type        = number
-  default     = 10  # 最小サイズ
+  default     = 10 # 最小サイズ
 }
 
 variable "lambda_memory_size" {
@@ -55,7 +55,7 @@ variable "lambda_memory_size" {
 variable "lambda_timeout" {
   description = "Timeout for Lambda functions in seconds"
   type        = number
-  default     = 900  # 15分（最大値）
+  default     = 900 # 15分（最大値）
 }
 
 variable "slack_receiver_lambda_name" {
@@ -74,12 +74,6 @@ variable "github_sync_lambda_name" {
   description = "Name of the Lambda function for syncing GitHub to S3"
   type        = string
   default     = "github-to-s3-sync-lambda"
-}
-
-variable "ecr_repository_name" {
-  description = "Name of the ECR repository for the MCP server container"
-  type        = string
-  default     = "mcp-server-container"
 }
 
 variable "openrouter_model" {
