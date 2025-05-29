@@ -13,6 +13,15 @@ terraform {
 }
 
 provider "aws" {
+  default_tags {
+    tags = {
+      Environment = "Development"
+      Terraform   = "true"
+    }
+  }
+}
+
+provider "aws" {
   region = "ap-northeast-1"
   default_tags {
     tags = merge(var.aws_tags, {
