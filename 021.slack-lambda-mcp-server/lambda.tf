@@ -202,7 +202,7 @@ resource "aws_lambda_function" "slack_receiver" {
   source_code_hash = data.archive_file.slack_receiver_zip.output_base64sha256
   role             = aws_iam_role.slack_receiver_role.arn
   handler          = "slack-receiver.handler"
-  runtime          = "nodejs16.x"
+  runtime          = "nodejs20.x"
   timeout          = 30
   memory_size      = 256
 

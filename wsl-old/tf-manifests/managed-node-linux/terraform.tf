@@ -1,5 +1,6 @@
 terraform {
   required_version = ">= 1.0.0"
+
   required_providers {
     aws = {
       source  = "registry.terraform.io/hashicorp/aws"
@@ -10,7 +11,10 @@ terraform {
 
 provider "aws" {
   default_tags {
-    tags = var.aws_tags
+    tags = merge(var.aws_tags, {
+      Environment = "Development"
+      Terraform   = "true"
+    })
   }
 }
 

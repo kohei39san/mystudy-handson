@@ -1,5 +1,5 @@
 resource "aws_iam_role" "managed_node_role" {
-  name = "managed_node_role"
+  name = "managed-node-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -21,6 +21,6 @@ resource "aws_iam_role_policy_attachment" "managed_node_policy_attachment" {
 }
 
 resource "aws_iam_instance_profile" "managed_node_instance_profile" {
-  name = "managed_node_instance_profile"
+  name = "managed-node-instance-profile"
   role = aws_iam_role.managed_node_role.name
 }

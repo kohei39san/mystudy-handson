@@ -45,7 +45,7 @@ variable "rdp_port" {
 
 variable "key_pair" {
   type    = string
-  default = "managed_node_windows_key_pair"
+  default = "managed-node-windows-key-pair"
 }
 
 variable "key_pair_public" {

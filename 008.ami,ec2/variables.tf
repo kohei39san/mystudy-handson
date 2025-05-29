@@ -40,7 +40,7 @@ variable "subnet_cidr_block" {
 
 variable "key_pair" {
   type    = string
-  default = "managed_node_linux_key_pair"
+  default = "managed-node-linux-key-pair"
 }
 
 variable "lambda_cfnstack_name" {

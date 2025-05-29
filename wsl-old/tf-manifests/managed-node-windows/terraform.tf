@@ -30,5 +30,5 @@ module "common" {
   instance_type          = var.instance_type
   root_block_volume_size = var.root_block_volume_size
   vpc_security_group_ids = [aws_security_group.sg.id]
-  key_pair               = var.key_pair
+  key_pair               = aws_key_pair.kp.key_name
 }
