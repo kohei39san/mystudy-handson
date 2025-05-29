@@ -14,7 +14,7 @@ resource "aws_key_pair" "deployer" {
 
 # Add IAM role and instance profile
 resource "aws_iam_role" "eice_tunnel_role" {
-  name = "eice_tunnel_role"
+  name = "eice-tunnel-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",

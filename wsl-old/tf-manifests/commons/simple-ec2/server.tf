@@ -15,7 +15,7 @@ resource "aws_key_pair" "simple_ec2_key" {
 
 # Add IAM role and instance profile
 resource "aws_iam_role" "simple_ec2_role" {
-  name = "simple_ec2_role"
+  name = "simple-ec2-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",

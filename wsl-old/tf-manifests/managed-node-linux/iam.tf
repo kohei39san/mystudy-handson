@@ -1,4 +1,5 @@
 resource "aws_iam_role" "managed_node_role" {
+  name = "managed-node-role"
   name = var.iam_role_name
 
   assume_role_policy = jsonencode({

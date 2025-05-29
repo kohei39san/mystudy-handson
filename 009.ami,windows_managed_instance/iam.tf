@@ -1,5 +1,5 @@
 resource "aws_iam_role" "managed_node_role" {
-  name = "managed_node_role"
+  name = "managed-node-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
