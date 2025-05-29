@@ -10,9 +10,7 @@ Parameters:
     Type: String
     Description: ARN of the S3 bucket containing the data
   
-  S3RoleArn:
-    Type: String
-    Description: ARN of the IAM role for S3 access
+  
   
   KnowledgeBaseRoleArn:
     Type: String
@@ -52,7 +50,6 @@ Resources:
           BucketArn: !Ref S3BucketArn
           InclusionPrefixes:
             - docs/
-          RoleArn: !Ref S3RoleArn
 
 Outputs:
   KnowledgeBaseId:
