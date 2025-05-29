@@ -18,8 +18,8 @@ logger.setLevel(logging.INFO)
 # 環境変数
 OPENROUTER_API_KEY_PARAM = os.environ.get('OPENROUTER_API_KEY_PARAM', '/openrouter/api-key')
 OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'deepseek/deepseek-chat-v3-0324:free')
-OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
-DYNAMODB_TABLE = os.environ.get('DYNAMODB_TABLE')
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1"
+DYNAMODB_TABLE = os.environ.get('DYNAMODB_TABLE', 'slack-mcp-bot-conversations')
 AWS_DOCS_MCP_PORT = 8080
 BEDROCK_KB_MCP_PORT = 8081
 MAX_HISTORY_LENGTH = 10
