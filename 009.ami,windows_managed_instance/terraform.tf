@@ -5,26 +5,14 @@ terraform {
       source  = "registry.terraform.io/hashicorp/aws"
       version = "5.98.0"
     }
-    http = {
-      source  = "hashicorp/http"
-      version = "3.5.0"
-    }
   }
 }
 
 provider "aws" {
-  region = "ap-northeast-1"
   default_tags {
-    tags = var.aws_tags
+    tags = merge(var.aws_tags, {
+      Environment = "Development"
+      Terraform   = "true"
+    })
   }
 }
-
-provider "aws" {
-  region = "ap-northeast-3"
-  alias  = "osaka"
-  default_tags {
-    tags = var.aws_tags
-  }
-}
-
-provider "http" {}

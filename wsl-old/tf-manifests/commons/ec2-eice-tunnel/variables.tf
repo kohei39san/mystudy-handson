@@ -9,8 +9,9 @@ variable "instance_type" {
 }
 
 variable "iam_instance_profile" {
-  type    = string
-  default = ""
+  type        = string
+  default     = "eice_tunnel_instance_profile"
+  description = "IAM instance profile for EC2 instance"
 }
 
 variable "root_block_volume_size" {
@@ -19,8 +20,9 @@ variable "root_block_volume_size" {
 }
 
 variable "key_name" {
-  type    = string
-  default = "key_server"
+  type        = string
+  default     = "eice_tunnel_key"
+  description = "SSH key name for EC2 instance"
 }
 
 variable "instance_public_key" {
