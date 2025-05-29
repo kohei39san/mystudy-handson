@@ -1,9 +1,13 @@
+data "aws_ssm_parameter" "ami" {
+  name = var.ami
+}
+
 resource "aws_network_interface" "ni" {
   subnet_id       = aws_subnet.subnet.id
   security_groups = [aws_security_group.sg.id]
 }
 resource "aws_instance" "instance" {
-  ami                  = var.ami
+  ami                  = data.aws_ssm_parameter.ami.value
   instance_type        = var.instance_type
   key_name             = var.key_pair
   iam_instance_profile = var.iam_instance_profile
