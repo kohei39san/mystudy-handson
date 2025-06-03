@@ -66,8 +66,7 @@ function Set-RepositorySecrets {
         @{Name="PAT_TOKEN"; Prompt="Enter GitHub PAT Token"}, #allow specific repositories to use the PAT token
         @{Name="PAT_USERNAME"; Prompt="Enter GitHub PAT Username"},
         @{Name="TARGET_REPO_PAT"; Prompt="Enter GitHub PAT for target repository"},
-        @{Name="TARGET_REPO_OWNER"; Prompt="Enter target repository owner (username or organization)"},
-        @{Name="TARGET_REPO_NAME"; Prompt="Enter target repository name"}
+        @{Name="TARGET_REPO"; Prompt="Enter target repository in format 'owner/repo-name'"}
     )
 
     foreach ($secret in $secretsToSet) {

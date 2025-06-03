@@ -62,13 +62,12 @@ output = json
 
 1. GitHub Secretsに以下の値を設定してください：
    - `TARGET_REPO_PAT`: プッシュ先リポジトリにアクセスするためのPersonal Access Token
-   - `TARGET_REPO`: (オプション) プッシュ先リポジトリ名（例: `owner/repo-name`）
+   - `TARGET_REPO`: プッシュ先リポジトリ名（例: `owner/repo-name`）
 
 ### 使用方法
 
 1. GitHubのActionsタブから「Push to Another Repository」ワークフローを選択します
 2. 「Run workflow」をクリックし、以下の情報を入力します：
-   - `Target repository name`: プッシュ先リポジトリ名（Secretsに設定していない場合）
    - `Branch name to create in target repository`: 作成するブランチ名
    - `Commit message`: コミットメッセージ
    - `Pull request title`: プルリクエストのタイトル
