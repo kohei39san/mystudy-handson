@@ -47,6 +47,40 @@ output = json
 
 # GitHub Actionsによる実行方法
 
+## 所有する別リポジトリへプッシュするワークフロー
+
+このリポジトリには、コンテンツを別のリポジトリにプッシュするためのGitHub Actionsワークフローが含まれています。
+
+### 機能概要
+
+- メインブランチの内容を指定した別リポジトリにプッシュします
+- プッシュ先リポジトリに新しいブランチを作成します
+- プッシュ後、プッシュ先リポジトリのmainブランチに対するプルリクエストを自動作成します
+- セキュリティのため、プッシュ先リポジトリは同じ所有者のリポジトリに限定されます
+
+### 必要な設定
+
+1. GitHub Secretsに以下の値を設定してください：
+   - `TARGET_REPO_PAT`: プッシュ先リポジトリにアクセスするためのPersonal Access Token
+   - `TARGET_REPO`: (オプション) プッシュ先リポジトリ名（例: `owner/repo-name`）
+
+### 使用方法
+
+1. GitHubのActionsタブから「Push to Another Repository」ワークフローを選択します
+2. 「Run workflow」をクリックし、以下の情報を入力します：
+   - `Target repository name`: プッシュ先リポジトリ名（Secretsに設定していない場合）
+   - `Branch name to create in target repository`: 作成するブランチ名
+   - `Commit message`: コミットメッセージ
+   - `Pull request title`: プルリクエストのタイトル
+   - `Pull request body`: プルリクエストの説明文
+3. 「Run workflow」をクリックして実行を開始します
+
+### 注意事項
+
+- プッシュ先リポジトリは同じGitHubアカウント/組織が所有している必要があります
+- 適切な権限を持つPersonal Access Tokenが必要です（repo権限を推奨）
+- ワークフローは手動実行のみ可能です
+
 ## 前提条件
 
 GitHub Actionsを使用するには、先にAWS側でOIDC認証のための設定が必要です。以下の手順で設定してください：
@@ -81,8 +115,6 @@ scripts\setup-repository-for-github-actions.ps1
 
 ## 実行手順
 
-### Terraformワークフロー
-
 リポジトリにはTerraformを実行するためのGitHub Actionsワークフローが用意されています。
 以下の手順で実行できます：
 
@@ -108,27 +140,3 @@ scripts\setup-repository-for-github-actions.ps1
 * initまたはplanが失敗した場合、以降の処理は実行されません
 * applyが失敗した場合でもdestroyは実行されます（ただしワークフロー自体は失敗として終了）
 * 手動実行のみ可能です
-
-### 別リポジトリへのプッシュワークフロー
-
-このリポジトリには、コンテンツを別のリポジトリにプッシュし、プルリクエストを作成するためのワークフローも含まれています。
-
-#### 必要な設定
-
-このワークフローを使用するには、以下のシークレットをリポジトリに設定する必要があります：
-
-1. `TARGET_REPO_PAT`: ターゲットリポジトリにプッシュするためのGitHub Personal Access Token
-2. `TARGET_REPO_OWNER`: ターゲットリポジトリの所有者（ユーザー名または組織名）
-3. `TARGET_REPO_NAME`: ターゲットリポジトリの名前
-
-#### 使用方法
-
-1. GitHubのActionsタブから「Push to Another Repository」ワークフローを選択します。
-2. 「Run workflow」をクリックし、以下の情報を入力します：
-   * `Branch name`: ターゲットリポジトリに作成するブランチ名
-   * `Commit message`: コミットメッセージ
-   * `PR title`: プルリクエストのタイトル
-   * `PR body`: プルリクエストの説明
-3. 「Run workflow」をクリックして実行を開始します。
-
-詳細な設定方法と使用方法については、[プッシュワークフローのドキュメント](docs/push-to-another-repo-workflow.md)を参照してください。

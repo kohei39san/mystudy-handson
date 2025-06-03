@@ -1,13 +1,13 @@
 name: Push to Another Repository
 
-permissions:
-  contents: read
-
 on:
   workflow_dispatch:
     inputs:
+      target_repo:
+        description: 'Target repository name'
+        required: true
       branch_name:
-        description: 'Name of the branch to create in the target repository'
+        description: 'Branch name to create in target repository'
         required: true
         default: 'update-from-source-repo'
       commit_message:
@@ -19,9 +19,9 @@ on:
         required: true
         default: 'Update from source repository'
       pr_body:
-        description: 'Pull request description'
+        description: 'Pull request body'
         required: false
-        default: 'This PR contains updates from the source repository'
+        default: 'This PR contains updates from the source repository.'
 
 jobs:
   push-to-another-repo:
@@ -32,53 +32,103 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Git
+      - name: Get repository owner
+        id: get_owner
         run: |
-          git config --global user.name 'GitHub Actions'
-          git config --global user.email 'actions@github.com'
+          # Get the owner of the current repository
+          REPO_OWNER=$(echo "${{ github.repository }}" | cut -d '/' -f 1)
+          echo "REPO_OWNER=$REPO_OWNER" >> $GITHUB_ENV
+          echo "repo_owner=$REPO_OWNER" >> $GITHUB_OUTPUT
 
-      - name: Clone target repository
+      - name: Validate target repository owner
+        id: validate_target_owner
         run: |
-          echo "Cloning target repository..."
-          git clone https://${{ secrets.TARGET_REPO_PAT }}@github.com/${{ secrets.TARGET_REPO_OWNER }}/${{ secrets.TARGET_REPO_NAME }}.git target_repo
+          # Get the owner of the target repository
+          TARGET_REPO_OWNER=$(echo "${{ secrets.TARGET_REPO }}" | cut -d '/' -f 1 || echo "${{ inputs.target_repo }}" | cut -d '/' -f 1)
           
-          # Verify the owner of the target repository matches the expected owner
-          REPO_OWNER=$(curl -s -H "Authorization: token ${{ secrets.TARGET_REPO_PAT }}" \
-            https://api.github.com/repos/${{ secrets.TARGET_REPO_OWNER }}/${{ secrets.TARGET_REPO_NAME }} | jq -r '.owner.login')
+          if [ -z "$TARGET_REPO_OWNER" ]; then
+            TARGET_REPO_OWNER=$(echo "${{ inputs.target_repo }}" | cut -d '/' -f 1 || echo "")
+          fi
           
-          if [ "$REPO_OWNER" != "${{ secrets.TARGET_REPO_OWNER }}" ]; then
-            echo "Error: Target repository owner does not match the expected owner"
+          echo "TARGET_REPO_OWNER=$TARGET_REPO_OWNER" >> $GITHUB_ENV
+          echo "target_repo_owner=$TARGET_REPO_OWNER" >> $GITHUB_OUTPUT
+          
+          # Validate that the target repository is owned by the same owner
+          if [ "$REPO_OWNER" != "$TARGET_REPO_OWNER" ]; then
+            echo "Error: Target repository must be owned by the same owner ($REPO_OWNER)"
             exit 1
           fi
 
-      - name: Create new branch in target repository
+      - name: Set target repository name
+        id: set_target_repo
         run: |
-          cd target_repo
-          git checkout -b ${{ github.event.inputs.branch_name }}
-
-      - name: Copy content from source to target
-        run: |
-          # Remove everything except .git directory from target repo
-          find target_repo -mindepth 1 -not -path "target_repo/.git*" -delete
+          if [ -n "${{ secrets.TARGET_REPO }}" ]; then
+            TARGET_REPO="${{ secrets.TARGET_REPO }}"
+          else
+            TARGET_REPO="${{ inputs.target_repo }}"
+          fi
           
-          # Copy everything except .git directory from source repo to target repo
-          rsync -av --exclude='.git/' --exclude='target_repo/' . target_repo/
+          # Extract just the repo name without owner
+          TARGET_REPO_NAME=$(echo "$TARGET_REPO" | cut -d '/' -f 2 || echo "$TARGET_REPO")
+          
+          echo "TARGET_REPO=$TARGET_REPO" >> $GITHUB_ENV
+          echo "TARGET_REPO_NAME=$TARGET_REPO_NAME" >> $GITHUB_ENV
+          echo "target_repo=$TARGET_REPO" >> $GITHUB_OUTPUT
+          echo "target_repo_name=$TARGET_REPO_NAME" >> $GITHUB_OUTPUT
+
+      - name: Clone target repository
+        run: |
+          # Clone the target repository
+          git clone "https://x-access-token:${{ secrets.TARGET_REPO_PAT }}@github.com/${{ env.REPO_OWNER }}/${{ env.TARGET_REPO_NAME }}.git" target_repo
+          
+          # Create and checkout a new branch in the target repository
+          cd target_repo
+          git checkout -b "${{ inputs.branch_name }}"
+
+      - name: Copy content to target repository
+        run: |
+          # Copy all files from source repository to target repository
+          # excluding the .git directory and the target_repo directory
+          rsync -av --exclude='.git/' --exclude='target_repo/' ./ target_repo/
 
       - name: Commit and push changes to target repository
         run: |
           cd target_repo
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # Add all changes
           git add .
-          git commit -m "${{ github.event.inputs.commit_message }}"
-          git push origin ${{ github.event.inputs.branch_name }}
+          
+          # Commit changes
+          git commit -m "${{ inputs.commit_message }}"
+          
+          # Push changes to the new branch
+          git push origin "${{ inputs.branch_name }}"
 
-      - name: Create pull request in target repository
-        env:
-          GH_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
-        run: |
-          cd target_repo
-          gh pr create \
-            --repo ${{ secrets.TARGET_REPO_OWNER }}/${{ secrets.TARGET_REPO_NAME }} \
-            --base main \
-            --head ${{ github.event.inputs.branch_name }} \
-            --title "${{ github.event.inputs.pr_title }}" \
-            --body "${{ github.event.inputs.pr_body }}"
+      - name: Create pull request
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.TARGET_REPO_PAT }}
+          script: |
+            const owner = process.env.REPO_OWNER;
+            const repo = process.env.TARGET_REPO_NAME;
+            const branch = '${{ inputs.branch_name }}';
+            const title = '${{ inputs.pr_title }}';
+            const body = '${{ inputs.pr_body }}';
+            
+            try {
+              const response = await github.rest.pulls.create({
+                owner: owner,
+                repo: repo,
+                head: branch,
+                base: 'main',
+                title: title,
+                body: body
+              });
+              
+              console.log(`Pull request created: ${response.data.html_url}`);
+            } catch (error) {
+              console.error('Error creating pull request:', error);
+              core.setFailed('Failed to create pull request');
+            }
