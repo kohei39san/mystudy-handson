@@ -3,9 +3,6 @@ name: Push to Another Repository
 on:
   workflow_dispatch:
     inputs:
-      target_repo:
-        description: 'Target repository name'
-        required: true
       branch_name:
         description: 'Branch name to create in target repository'
         required: true
@@ -47,10 +44,11 @@ jobs:
         id: validate_target_owner
         run: |
           # Get the owner of the target repository
-          TARGET_REPO_OWNER=$(echo "${{ secrets.TARGET_REPO }}" | cut -d '/' -f 1 || echo "${{ inputs.target_repo }}" | cut -d '/' -f 1)
+          TARGET_REPO_OWNER=$(echo "${{ secrets.TARGET_REPO }}" | cut -d '/' -f 1)
           
           if [ -z "$TARGET_REPO_OWNER" ]; then
-            TARGET_REPO_OWNER=$(echo "${{ inputs.target_repo }}" | cut -d '/' -f 1 || echo "")
+            echo "Error: TARGET_REPO secret is not set or does not contain a valid repository path"
+            exit 1
           fi
           
           echo "TARGET_REPO_OWNER=$TARGET_REPO_OWNER" >> $GITHUB_ENV
@@ -65,14 +63,20 @@ jobs:
       - name: Set target repository name
         id: set_target_repo
         run: |
-          if [ -n "${{ secrets.TARGET_REPO }}" ]; then
-            TARGET_REPO="${{ secrets.TARGET_REPO }}"
-          else
-            TARGET_REPO="${{ inputs.target_repo }}"
+          TARGET_REPO="${{ secrets.TARGET_REPO }}"
+          
+          if [ -z "$TARGET_REPO" ]; then
+            echo "Error: TARGET_REPO secret is not set"
+            exit 1
           fi
           
           # Extract just the repo name without owner
-          TARGET_REPO_NAME=$(echo "$TARGET_REPO" | cut -d '/' -f 2 || echo "$TARGET_REPO")
+          TARGET_REPO_NAME=$(echo "$TARGET_REPO" | cut -d '/' -f 2)
+          
+          if [ -z "$TARGET_REPO_NAME" ]; then
+            echo "Error: Could not extract repository name from TARGET_REPO secret"
+            exit 1
+          fi
           
           echo "TARGET_REPO=$TARGET_REPO" >> $GITHUB_ENV
           echo "TARGET_REPO_NAME=$TARGET_REPO_NAME" >> $GITHUB_ENV
