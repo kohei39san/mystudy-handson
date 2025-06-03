@@ -47,6 +47,40 @@ output = json
 
 # GitHub Actionsによる実行方法
 
+## 所有する別リポジトリへプッシュするワークフロー
+
+このリポジトリには、コンテンツを別のリポジトリにプッシュするためのGitHub Actionsワークフローが含まれています。
+
+### 機能概要
+
+- メインブランチの内容を指定した別リポジトリにプッシュします
+- プッシュ先リポジトリに新しいブランチを作成します
+- プッシュ後、プッシュ先リポジトリのmainブランチに対するプルリクエストを自動作成します
+- セキュリティのため、プッシュ先リポジトリは同じ所有者のリポジトリに限定されます
+
+### 必要な設定
+
+1. GitHub Secretsに以下の値を設定してください：
+   - `TARGET_REPO_PAT`: プッシュ先リポジトリにアクセスするためのPersonal Access Token
+   - `TARGET_REPO`: (オプション) プッシュ先リポジトリ名（例: `owner/repo-name`）
+
+### 使用方法
+
+1. GitHubのActionsタブから「Push to Another Repository」ワークフローを選択します
+2. 「Run workflow」をクリックし、以下の情報を入力します：
+   - `Target repository name`: プッシュ先リポジトリ名（Secretsに設定していない場合）
+   - `Branch name to create in target repository`: 作成するブランチ名
+   - `Commit message`: コミットメッセージ
+   - `Pull request title`: プルリクエストのタイトル
+   - `Pull request body`: プルリクエストの説明文
+3. 「Run workflow」をクリックして実行を開始します
+
+### 注意事項
+
+- プッシュ先リポジトリは同じGitHubアカウント/組織が所有している必要があります
+- 適切な権限を持つPersonal Access Tokenが必要です（repo権限を推奨）
+- ワークフローは手動実行のみ可能です
+
 ## 前提条件
 
 GitHub Actionsを使用するには、先にAWS側でOIDC認証のための設定が必要です。以下の手順で設定してください：
