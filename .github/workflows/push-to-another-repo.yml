@@ -23,6 +23,9 @@ on:
         required: false
         default: 'This PR contains updates from the source repository.'
 
+permissions:
+  contents: read
+
 jobs:
   push-to-another-repo:
     runs-on: ubuntu-latest
