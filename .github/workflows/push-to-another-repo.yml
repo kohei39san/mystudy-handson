@@ -1,5 +1,8 @@
 name: Push to Another Repository
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:
