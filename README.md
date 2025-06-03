@@ -81,6 +81,8 @@ scripts\setup-repository-for-github-actions.ps1
 
 ## 実行手順
 
+### Terraformワークフロー
+
 リポジトリにはTerraformを実行するためのGitHub Actionsワークフローが用意されています。
 以下の手順で実行できます：
 
@@ -106,3 +108,27 @@ scripts\setup-repository-for-github-actions.ps1
 * initまたはplanが失敗した場合、以降の処理は実行されません
 * applyが失敗した場合でもdestroyは実行されます（ただしワークフロー自体は失敗として終了）
 * 手動実行のみ可能です
+
+### 別リポジトリへのプッシュワークフロー
+
+このリポジトリには、コンテンツを別のリポジトリにプッシュし、プルリクエストを作成するためのワークフローも含まれています。
+
+#### 必要な設定
+
+このワークフローを使用するには、以下のシークレットをリポジトリに設定する必要があります：
+
+1. `TARGET_REPO_PAT`: ターゲットリポジトリにプッシュするためのGitHub Personal Access Token
+2. `TARGET_REPO_OWNER`: ターゲットリポジトリの所有者（ユーザー名または組織名）
+3. `TARGET_REPO_NAME`: ターゲットリポジトリの名前
+
+#### 使用方法
+
+1. GitHubのActionsタブから「Push to Another Repository」ワークフローを選択します。
+2. 「Run workflow」をクリックし、以下の情報を入力します：
+   * `Branch name`: ターゲットリポジトリに作成するブランチ名
+   * `Commit message`: コミットメッセージ
+   * `PR title`: プルリクエストのタイトル
+   * `PR body`: プルリクエストの説明
+3. 「Run workflow」をクリックして実行を開始します。
+
+詳細な設定方法と使用方法については、[プッシュワークフローのドキュメント](docs/push-to-another-repo-workflow.md)を参照してください。

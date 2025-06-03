@@ -1,0 +1,81 @@
+name: Push to Another Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: 'Name of the branch to create in the target repository'
+        required: true
+        default: 'update-from-source-repo'
+      commit_message:
+        description: 'Commit message'
+        required: true
+        default: 'Update from source repository'
+      pr_title:
+        description: 'Pull request title'
+        required: true
+        default: 'Update from source repository'
+      pr_body:
+        description: 'Pull request description'
+        required: false
+        default: 'This PR contains updates from the source repository'
+
+jobs:
+  push-to-another-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+
+      - name: Clone target repository
+        run: |
+          echo "Cloning target repository..."
+          git clone https://${{ secrets.TARGET_REPO_PAT }}@github.com/${{ secrets.TARGET_REPO_OWNER }}/${{ secrets.TARGET_REPO_NAME }}.git target_repo
+          
+          # Verify the owner of the target repository matches the expected owner
+          REPO_OWNER=$(curl -s -H "Authorization: token ${{ secrets.TARGET_REPO_PAT }}" \
+            https://api.github.com/repos/${{ secrets.TARGET_REPO_OWNER }}/${{ secrets.TARGET_REPO_NAME }} | jq -r '.owner.login')
+          
+          if [ "$REPO_OWNER" != "${{ secrets.TARGET_REPO_OWNER }}" ]; then
+            echo "Error: Target repository owner does not match the expected owner"
+            exit 1
+          fi
+
+      - name: Create new branch in target repository
+        run: |
+          cd target_repo
+          git checkout -b ${{ github.event.inputs.branch_name }}
+
+      - name: Copy content from source to target
+        run: |
+          # Remove everything except .git directory from target repo
+          find target_repo -mindepth 1 -not -path "target_repo/.git*" -delete
+          
+          # Copy everything except .git directory from source repo to target repo
+          rsync -av --exclude='.git/' --exclude='target_repo/' . target_repo/
+
+      - name: Commit and push changes to target repository
+        run: |
+          cd target_repo
+          git add .
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push origin ${{ github.event.inputs.branch_name }}
+
+      - name: Create pull request in target repository
+        env:
+          GH_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
+        run: |
+          cd target_repo
+          gh pr create \
+            --repo ${{ secrets.TARGET_REPO_OWNER }}/${{ secrets.TARGET_REPO_NAME }} \
+            --base main \
+            --head ${{ github.event.inputs.branch_name }} \
+            --title "${{ github.event.inputs.pr_title }}" \
+            --body "${{ github.event.inputs.pr_body }}"

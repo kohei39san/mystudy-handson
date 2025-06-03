@@ -64,7 +64,10 @@ function Set-RepositorySecrets {
         @{Name="LLM_API_KEY"; Prompt="Enter LLM API Key"},
         @{Name="LLM_BASE_URL"; Prompt="Enter LLM Base URL"},
         @{Name="PAT_TOKEN"; Prompt="Enter GitHub PAT Token"}, #allow specific repositories to use the PAT token
-        @{Name="PAT_USERNAME"; Prompt="Enter GitHub PAT Username"}
+        @{Name="PAT_USERNAME"; Prompt="Enter GitHub PAT Username"},
+        @{Name="TARGET_REPO_PAT"; Prompt="Enter GitHub PAT for target repository"},
+        @{Name="TARGET_REPO_OWNER"; Prompt="Enter target repository owner (username or organization)"},
+        @{Name="TARGET_REPO_NAME"; Prompt="Enter target repository name"}
     )
 
     foreach ($secret in $secretsToSet) {
@@ -144,3 +147,5 @@ Write-Host "Required configurations:"
 Write-Host "1. Ensure AWS OIDC provider is configured for GitHub Actions"
 Write-Host "2. Verify the IAM role permissions are correctly set"
 Write-Host "3. Check workflow files in .github/workflows/ for any specific requirements"
+Write-Host "4. For the 'Push to Another Repository' workflow, ensure TARGET_REPO_PAT has appropriate permissions"
+Write-Host "   (repo scope for private repositories and workflow scope if needed)"
