@@ -1,0 +1,7 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and modify as needed
+
+slack_workspace_id = "T0123456789"
+slack_channel_id   = "C0123456789"
+slack_channel_name = "amazon-q-developer"
+environment        = "dev"
