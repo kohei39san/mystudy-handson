@@ -1,0 +1,10 @@
+[default]
+sso_session = my-session
+sso_account_id = <sso_account_id>
+sso_role_name = <sso_role_name>
+region = ap-northeast-1
+output = json
+[sso-session my-session]
+sso_start_url = <sso_start_url>
+sso_region = ap-northeast-1
+sso_registration_scopes = sso:account:access
