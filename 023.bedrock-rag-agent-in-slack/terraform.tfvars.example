@@ -1,0 +1,22 @@
+aws_region = "us-east-1"
+project_name = "bedrock-slack-chat"
+environment = "dev"
+
+# Slack configuration
+slack_workspace_id = "T0123456789"
+slack_channel_id = "C0123456789"
+slack_channel_name = "bedrock-chat"
+
+# OpenSearch configuration
+opensearch_instance_type = "t3.small.search"
+
+# Bedrock configuration
+bedrock_model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+embedding_model_id = "amazon.titan-embed-text-v1"
+
+# GitHub configuration
+github_repository_url = "https://github.com/username/repository.git"
+github_pat = "ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Schedule configuration
+schedule_expression = "rate(1 hour)"
