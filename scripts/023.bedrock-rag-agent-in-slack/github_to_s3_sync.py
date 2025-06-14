@@ -19,11 +19,13 @@ S3_PREFIX = os.environ.get('S3_PREFIX', 'docs/')
 GITHUB_REPO_URL_PARAM = os.environ.get('GITHUB_REPO_URL_PARAM', '/github/repo-url')
 GITHUB_USERNAME_PARAM = os.environ.get('GITHUB_USERNAME_PARAM', '/github/username')
 GITHUB_TOKEN_PARAM = os.environ.get('GITHUB_TOKEN_PARAM', '/github/token')
+KNOWLEDGE_BASE_ID = os.environ.get('KNOWLEDGE_BASE_ID')
+DATA_SOURCE_ID = os.environ.get('DATA_SOURCE_ID', 's3-data-source')
 
 # AWS クライアント
 ssm_client = boto3.client('ssm')
 s3_client = boto3.client('s3')
-bedrock_client = boto3.client('bedrock')
+bedrock_client = boto3.client('bedrock-agent')
 
 def get_parameter(param_name):
     """SSM パラメータストアから値を取得"""
@@ -138,7 +140,7 @@ def start_bedrock_ingestion(knowledge_base_id):
     try:
         response = bedrock_client.start_ingestion_job(
             knowledgeBaseId=knowledge_base_id,
-            dataSourceId='s3-data-source'
+            dataSourceId=DATA_SOURCE_ID
         )
         logger.info(f"Started Bedrock ingestion job: {response['ingestionJobId']}")
         return response['ingestionJobId']
@@ -168,13 +170,8 @@ def lambda_handler(event, context):
             # S3 にアップロード
             file_count = upload_to_s3(temp_dir, S3_BUCKET_NAME, S3_PREFIX)
             
-            # CloudFormation スタックから Knowledge Base ID を取得
-            # 注: 実際の環境では、CloudFormation スタックの出力から取得する必要があります
-            # ここでは簡略化のためにハードコードしています
-            knowledge_base_id = 'YOUR_KNOWLEDGE_BASE_ID'
-            
             # Bedrock 取り込みジョブを開始
-            ingestion_job_id = start_bedrock_ingestion(knowledge_base_id)
+            ingestion_job_id = start_bedrock_ingestion(KNOWLEDGE_BASE_ID)
             
             return {
                 'statusCode': 200,
