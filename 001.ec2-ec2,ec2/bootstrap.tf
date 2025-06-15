@@ -10,6 +10,6 @@ resource "terraform_data" "bootstrap" {
     private_key = file(var.instance_private_key)
   }
   provisioner "remote-exec" {
-    script = "../scripts/001.ec2-ec2,ec2/bootstrap.sh"
+    script = "./scripts/bootstrap.sh"
   }
 }

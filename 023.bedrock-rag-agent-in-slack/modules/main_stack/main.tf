@@ -13,7 +13,7 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_cloudformation_stack" "main_stack" {
   name          = "${var.project_name}-main-stack"
-  template_body = file("${path.module}/../../../src/023.bedrock-rag-agent-in-slack/cfn/template.yaml")
+  template_body = file("${path.module}/../../src/cfn/template.yaml")
   capabilities  = ["CAPABILITY_NAMED_IAM"]
 
   parameters = {

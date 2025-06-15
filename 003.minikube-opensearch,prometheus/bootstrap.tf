@@ -10,9 +10,9 @@ resource "terraform_data" "bootstrap" {
     private_key = file(var.instance_private_key)
   }
   provisioner "remote-exec" {
-    script = "../scripts/003.minikube-opensearch,prometheus/install-docker.sh"
+    script = "./scripts/install-docker.sh"
   }
   provisioner "remote-exec" {
-    script = "../scripts/003.minikube-opensearch,prometheus/install-minikube.sh"
+    script = "./scripts/install-minikube.sh"
   }
 }

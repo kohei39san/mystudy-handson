@@ -115,7 +115,7 @@ resource "aws_cloudformation_stack" "bedrock" {}
 
 ## ローカルテスト
 
-`scripts/014.bedrock-webcrawler/local_test.py`を使用して、ローカル環境からBedrockウェブクローラーをテストできます：
+`scripts/local_test.py`を使用して、ローカル環境からBedrockウェブクローラーをテストできます：
 
 ```bash
 # データソースIDを指定してクロールを開始

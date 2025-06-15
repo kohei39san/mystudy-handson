@@ -1,0 +1,25 @@
+{
+    "properties": {
+        "bedrock-vector": {
+            "type": "knn_vector",
+            "dimension": 1536,
+            "space_type": "l2",
+            "method": {
+                "name": "hnsw",
+                "engine": "faiss",
+                "parameters": {
+                    "ef_construction": 128,
+                    "m": 24
+                }
+            }
+        },
+        "AMAZON_BEDROCK_METADATA": {
+            "type": "text",
+            "index": false
+        },
+        "AMAZON_BEDROCK_TEXT_CHUNK": {
+            "type": "text",
+            "index": true
+        }
+    }
+}

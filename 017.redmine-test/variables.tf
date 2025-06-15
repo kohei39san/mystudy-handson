@@ -7,7 +7,7 @@ variable "allowed_ip" {
 variable "public_key_path" {
   description = "Path to the public key file to use for SSH access"
   type        = string
-  default     = "../src/017.redmine-test/id_rsa.dummy.pub" # Added default value
+  default     = "./src/id_rsa.dummy.pub" # Updated path
 }
 
 variable "private_key_path" {
@@ -55,7 +55,7 @@ variable "security_group_name" {
 variable "user_data_path" {
   description = "redmine user data path"
   type        = string
-  default     = "../scripts/017.redmine-test/userdata.sh"
+  default     = "./scripts/userdata.sh"
 }
 
 variable "sg_eice_name" {

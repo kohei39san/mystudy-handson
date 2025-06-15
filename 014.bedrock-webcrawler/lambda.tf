@@ -19,8 +19,8 @@ resource "aws_lambda_function" "crawler" {
 
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  output_path = "${path.module}/../scripts/014.bedrock-webcrawler/lambda.zip"
-  source_dir  = "${path.module}/../scripts/014.bedrock-webcrawler"
+  output_path = "${path.module}/scripts/lambda.zip"
+  source_dir  = "${path.module}/scripts"
 }
 
 resource "aws_cloudwatch_event_rule" "crawler_schedule" {
