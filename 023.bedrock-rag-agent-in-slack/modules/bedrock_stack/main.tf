@@ -11,7 +11,7 @@ terraform {
 
 resource "aws_cloudformation_stack" "bedrock_stack" {
   name          = "${var.main_stack_name}-bedrock-stack"
-  template_body = file("${path.module}/../../../src/023.bedrock-rag-agent-in-slack/cfn/bedrock-template.yaml")
+  template_body = file("${path.module}/../../src/cfn/bedrock-template.yaml")
   capabilities  = ["CAPABILITY_NAMED_IAM"]
 
   parameters = {

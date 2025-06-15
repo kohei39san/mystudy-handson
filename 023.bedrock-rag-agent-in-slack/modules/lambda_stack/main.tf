@@ -26,7 +26,7 @@ data "archive_file" "lambda_zip" {
 
 resource "aws_cloudformation_stack" "lambda_stack" {
   name          = "${var.main_stack_name}-lambda-stack"
-  template_body = file("${path.module}/../../../src/023.bedrock-rag-agent-in-slack/cfn/lambda-template.yaml")
+  template_body = file("${path.module}/../../src/cfn/lambda-template.yaml")
   capabilities  = ["CAPABILITY_NAMED_IAM"]
 
   parameters = {

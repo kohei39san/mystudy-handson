@@ -1,7 +1,7 @@
 resource "aws_cloudformation_stack" "tflint_readonly_oidc" {
   name = "tflint-aws-readonly-oidc"
 
-  template_body = file("${path.module}/../src/020.aws-readonly-oidc/cfn/stack.yaml")
+  template_body = file("${path.module}/src/cfn/stack.yaml")
 
   parameters = {
     GitHubRepository = var.github_repository

@@ -1,0 +1,15 @@
+{
+  "slack": {
+    "userId": "U12345678",
+    "channelId": "C12345678",
+    "responseTs": "1234567890.123456",
+    "text": "AWS Lambda について教えてください"
+  },
+  "openrouter": {
+    "api_key_param": "/openrouter/api-key",
+    "model": "anthropic/claude-3-opus:beta"
+  },
+  "dynamodb": {
+    "table": "slack-mcp-bot-conversations"
+  }
+}
