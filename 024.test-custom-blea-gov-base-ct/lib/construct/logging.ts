@@ -2,11 +2,19 @@ import * as cdk from 'aws-cdk-lib';
 import { aws_cloudtrail as trail, aws_iam as iam, aws_kms as kms, aws_logs as cwl, aws_s3 as s3 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
+export interface LoggingProps {
+  s3ExpirationDays: number;
+  s3ExpiredObjectDeleteDays: number;
+}
+
 export class Logging extends Construct {
   public readonly trailLogGroup: cwl.ILogGroup;
 
-  constructor(scope: Construct, id: string) {
+  constructor(scope: Construct, id: string, props: LoggingProps) {
     super(scope, id);
+
+    const expirationDays = props.s3ExpirationDays;
+    const expiredObjectDeleteDays = props.s3ExpiredObjectDeleteDays;
 
     // === AWS CloudTrail ===
     // Server Access Log Bucket for CloudTrail
@@ -19,13 +27,8 @@ export class Logging extends Construct {
       lifecycleRules: [
         {
           enabled: true,
-          expiration: cdk.Duration.days(2555),
-          transitions: [
-            {
-              transitionAfter: cdk.Duration.days(90),
-              storageClass: s3.StorageClass.GLACIER,
-            },
-          ],
+          expiration: cdk.Duration.days(expirationDays),
+          noncurrentVersionExpiration: cdk.Duration.days(expiredObjectDeleteDays),
         },
       ],
     });
@@ -40,6 +43,13 @@ export class Logging extends Construct {
       serverAccessLogsPrefix: 'cloudtraillogs',
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       enforceSSL: true,
+      lifecycleRules: [
+        {
+          enabled: true,
+          expiration: cdk.Duration.days(expirationDays),
+          noncurrentVersionExpiration: cdk.Duration.days(expiredObjectDeleteDays),
+        },
+      ],
     });
     cloudTrailBucket.node.addDependency();
     addBaseBucketPolicy(cloudTrailBucket);
@@ -117,7 +127,7 @@ export class Logging extends Construct {
 }
 
 // Add base BucketPolicy for CloudTrail
-function addBaseBucketPolicy(bucket: s3.Bucket): void {
+function addBaseBucketPolicy(bucket: any): void {
   bucket.addToResourcePolicy(
     new iam.PolicyStatement({
       sid: 'Restrict Delete* Actions',
