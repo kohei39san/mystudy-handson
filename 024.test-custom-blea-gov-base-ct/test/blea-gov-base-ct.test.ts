@@ -15,6 +15,8 @@ test('Snapshot test for BLEGovABaseCt Stack', () => {
     securityNotifyEmail: devParameter.securityNotifyEmail,
     securitySlackWorkspaceId: devParameter.securitySlackWorkspaceId,
     securitySlackChannelId: devParameter.securitySlackChannelId,
+    s3ExpirationDays: devParameter.s3ExpirationDays,
+    s3ExpiredObjectDeleteDays: devParameter.s3ExpiredObjectDeleteDays,
   });
 
   // test with snapshot

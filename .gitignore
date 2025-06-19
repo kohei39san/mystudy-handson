@@ -38,3 +38,21 @@ terraform.rc
 
 # Python cache
 __pycache__/
+
+# node_modules
+*.d.ts
+*.js
+!jest.config.js
+node_modules
+.DS_Store
+!.versionrc.js
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+
+# Parcel default cache directory
+.parcel-cache
+
+# CDK context
+cdk.context.json
