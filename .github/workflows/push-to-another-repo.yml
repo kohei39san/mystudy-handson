@@ -96,7 +96,7 @@ jobs:
         run: |
           # Copy all files from source repository to target repository
           # excluding the .git directory and the target_repo directory
-          rsync -av --exclude='.git/' --exclude='target_repo/' ./ target_repo/
+          rsync -av --delete --exclude='.git/' --exclude='target_repo/' ./ target_repo/
 
       - name: Commit and push changes to target repository
         run: |
