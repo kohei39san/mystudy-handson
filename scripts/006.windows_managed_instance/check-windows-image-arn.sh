@@ -1,1 +1,0 @@
-aws ec2 describe-images --region ap-northeast-1 --owners amazon --filters "Name=name,Values=Windows_Server-2016-Japanese-Full-Base*" --query 'Images[*].{ID:ImageId,Name:Name,ARN:ImageLocation}' --output table
