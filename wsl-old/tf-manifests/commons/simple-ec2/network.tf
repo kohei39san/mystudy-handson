@@ -1,3 +1,4 @@
+# tflint-ignore-file: terraform_required_providers
 resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr_block
 }
