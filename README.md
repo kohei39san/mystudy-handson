@@ -12,6 +12,9 @@
 
 * xxx(数字).yyy: 検証に応じたTerraformファイルが入っています。
 * scripts: 検証で使用したスクリプトを格納しています。
+  * update_markdown_files.py: リポジトリ内のMarkdownファイルを自動更新するPythonスクリプト
+  * update_markdown_files.sh: Linuxユーザー向けのMarkdown更新スクリプト実行用シェルスクリプト
+  * update_markdown_files.ps1: Windowsユーザー向けのMarkdown更新スクリプト実行用PowerShellスクリプト
 * docs: 検証のメモを格納しています。
 * src: terraform以外のマニフェストファイルを格納しています。
 * wsl-old: 過去WSL環境で使用したソースファイルを格納しています
@@ -44,6 +47,60 @@ output = json
 # terraform plan
 # terraform apply
 ```
+
+# Markdownファイルの更新
+
+リポジトリ内のMarkdownファイル（.md）を自動的に更新するスクリプトを用意しています。このスクリプトは、各ディレクトリの内容を分析し、対応するMarkdownファイルの説明を最新の状態に保ちます。
+
+## Linuxユーザーの場合
+
+```bash
+# リポジトリのルートディレクトリで実行
+chmod +x scripts/update_markdown_files.sh
+./scripts/update_markdown_files.sh
+```
+
+## Windowsユーザーの場合
+
+```powershell
+# リポジトリのルートディレクトリで実行
+PowerShell -ExecutionPolicy RemoteSigned '.\scripts\update_markdown_files.ps1'
+```
+
+## ユニットテストの実行
+
+スクリプトの動作を確認するためのユニットテストも用意しています：
+
+```bash
+# Linuxの場合
+cd /path/to/repository
+python -m unittest scripts/test_update_markdown_files.py
+
+# Windowsの場合
+cd C:\path\to\repository
+python -m unittest scripts\test_update_markdown_files.py
+```
+
+このスクリプトは以下の処理を行います：
+1. リポジトリ内のすべての.mdファイルを検索
+2. 各Markdownファイルが配置されているディレクトリの内容を分析
+3. ファイル構成セクションを更新または追加
+4. 古い情報や誤った記載を修正
+
+## GitHub Actionsによる自動更新
+
+リポジトリには、Markdownファイルを自動的に更新するGitHub Actionsワークフローも含まれています。このワークフローは以下のタイミングで実行されます：
+
+1. mainブランチへのプッシュ時（Markdownファイル自体の変更を除く）
+2. 手動実行時（GitHub Actionsタブから「Update Markdown Files」ワークフローを実行）
+
+ワークフローが実行されると、以下の処理が行われます：
+1. リポジトリのチェックアウト
+2. Pythonのセットアップ
+3. Markdown更新スクリプトの実行
+4. 変更があった場合、自動的にコミットとプッシュ
+
+これにより、リポジトリのMarkdownファイルが常に最新の状態に保たれます。
 
 # GitHub Actionsによる実行方法
 
