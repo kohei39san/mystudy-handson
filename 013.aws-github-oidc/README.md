@@ -2,7 +2,7 @@
 
 このCloudFormationテンプレートは以下のリソースを作成します：
 - GitHub Actions用のOIDCプロバイダー
-- 指定したGitHubリポジトリからのみ利用可能なPowerUserAccessポリシーを持つIAMロール
+- 指定したGitHubリポジトリからのみ利用可能なIAMロール（PowerUserAccessとIAMFullAccessポリシーを持つ）
 
 ## デプロイ方法
 
