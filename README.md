@@ -47,6 +47,28 @@ output = json
 
 # GitHub Actionsによる実行方法
 
+## 週次README更新ワークフロー
+
+このリポジトリには、README.mdファイルを週次で自動更新するためのGitHub Actionsワークフローが含まれています。
+
+### 機能概要
+
+- 毎週月曜日に自動実行され、README.mdファイルの更新を促すIssueを作成します
+- 作成されたIssueには「Amazon Q development agent」ラベルが付与され、Amazon Q開発エージェントが自動的に対応します
+- リポジトリ内の各ディレクトリにあるREADME.mdファイルとリソース構成の整合性を確認し、必要に応じて更新します
+
+### 必要な設定
+
+1. リポジトリ変数に以下の値を設定してください：
+   - `README_UPDATE_PROMPT`: README更新用のプロンプト
+
+### 使用方法
+
+1. ワークフローは毎週月曜日の午前9時（UTC）に自動実行されます
+2. 手動で実行する場合は、GitHubのActionsタブから「Weekly README Update」ワークフローを選択し、「Run workflow」をクリックします
+
+詳細な設定方法や使用方法については、[週次README更新ワークフローのドキュメント](docs/weekly-readme-update-workflow.md)を参照してください。
+
 ## 所有する別リポジトリへプッシュするワークフロー
 
 このリポジトリには、コンテンツを別のリポジトリにプッシュするためのGitHub Actionsワークフローが含まれています。
