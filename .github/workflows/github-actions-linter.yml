@@ -1,5 +1,8 @@
 name: GitHub Actions Linter
 
+permissions:
+  contents: read
+
 on:
   push:
     paths:
