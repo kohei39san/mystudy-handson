@@ -1,0 +1,43 @@
+name: Weekly README Update
+
+on:
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  # Allow manual triggering for testing
+  workflow_dispatch:
+
+jobs:
+  create-update-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Issue
+        uses: actions/github-script@v7
+        env:
+          README_UPDATE_PROMPT: ${{ vars.README_UPDATE_PROMPT }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Use environment variable if defined, otherwise use default prompt
+            const prompt = process.env.README_UPDATE_PROMPT || `
+            リポジトリにあるREADME.mdをリストアップしてください。
+            それぞれのREADME.mdには同一ディレクトリで定義されたリソース構成の説明が書かれています。
+            同一ディレクトリのリソース構成を読み取り、それぞれのREADME.mdと内容が異なっていた場合、README.mdを修正してください。
+            README.mdへの記載は基本的に日本語でお願いします。
+            `;
+            
+            // Create the issue
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '週次README更新',
+              body: prompt,
+              labels: ['Amazon Q development agent']
+            });
+            
+            console.log(`Issue created: ${issue.data.html_url}`);
