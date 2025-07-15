@@ -2,6 +2,7 @@
 [![Terraform linter and PR](https://github.com/kohei39san/mystudy-handson/actions/workflows/terraform-linter-pr.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/terraform-linter-pr.yml)
 [![Dependabot Updates](https://github.com/kohei39san/mystudy-handson/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/dependabot/dependabot-updates)
 [![CloudFormation Linter](https://github.com/kohei39san/mystudy-handson/actions/workflows/cfn-lint.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/cfn-lint.yml)
+[![GitHub Actions Linter](https://github.com/kohei39san/mystudy-handson/actions/workflows/github-actions-linter.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/github-actions-linter.yml)
 
 # 概要
 
@@ -46,6 +47,27 @@ output = json
 ```
 
 # GitHub Actionsによる実行方法
+
+## GitHub Actions YAMLファイルのLinter
+
+このリポジトリには、GitHub ActionsのYAMLファイルを自動的にlintするためのワークフローが含まれています。
+
+### 機能概要
+
+- リポジトリ内のGitHub Actions YAMLファイル（`.github/workflows/*.yml`）の構文チェックを行います
+- すべてのブランチへのプッシュ時に自動的に実行されます
+- GitHub Actions YAMLファイル以外はlintの対象外です
+
+### 使用されているツール
+
+- [github/super-linter](https://github.com/github/super-linter): GitHubが提供する多言語対応のlintツール
+  - YAML構文チェック
+  - GitHub Actionsワークフロー構文チェック
+
+### 注意事項
+
+- このlinterはGitHub Actions YAMLファイルのみを対象としています
+- 他のYAMLファイルはチェック対象外です
 
 ## 所有する別リポジトリへプッシュするワークフロー
 
