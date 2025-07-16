@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,7 +22,7 @@ jobs:
         env:
           README_UPDATE_PROMPT: ${{ vars.README_UPDATE_PROMPT }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
           script: |
             // Use environment variable if defined, otherwise use default prompt
             const prompt = process.env.README_UPDATE_PROMPT || `
@@ -31,11 +32,16 @@ jobs:
             README.mdへの記載は基本的に日本語でお願いします。
             `;
             
+            // Get current date in JST
+            const now = new Date();
+            const jstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+            const dateStr = jstDate.toISOString().split('T')[0];
+            
             // Create the issue
             const issue = await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: '週次README更新',
+              title: `週次README更新 (${dateStr})`,
               body: prompt,
               labels: ['Amazon Q development agent']
             });
