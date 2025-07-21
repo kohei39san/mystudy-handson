@@ -21,8 +21,8 @@
 - OpenSearchデプロイ構成：
   - OpenSearchリーダーノード（Prometheusエクスポータープラグイン付き）
   - OpenSearchデータノード（Prometheusエクスポータープラグイン付き）
-  - スナップショットリポジトリ登録
-  - SLM（Snapshot Lifecycle Management）構成
+  - スナップショットリポジトリ登録（YAMLファイルでは「elasticsearch」サービス名を使用）
+  - SLM（Snapshot Lifecycle Management）構成（YAMLファイルでは「elasticsearch」サービス名を使用）
 
 ### IAMリソース
 - EC2インスタンス用のIAMロールとポリシー
