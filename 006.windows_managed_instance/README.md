@@ -1,29 +1,29 @@
-# Windows Managed Instance Setup
+# Windows マネージドインスタンスのセットアップ
 
-This Terraform configuration creates a Windows Server 2022 EC2 instance managed by AWS Systems Manager, with the following resources:
+このTerraform構成は、AWS Systems Managerで管理されるWindows Server 2022 EC2インスタンスを作成します。以下のリソースが含まれています：
 
-## Resource Configuration
+## リソース構成
 
-### Network Resources
+### ネットワークリソース
 - VPC
-- Public subnet
-- Internet Gateway
-- Route Table with routes to the Internet Gateway
-- Security Group for the Windows instance
+- パブリックサブネット
+- インターネットゲートウェイ
+- インターネットゲートウェイへのルートを持つルートテーブル
+- Windowsインスタンス用のセキュリティグループ（クライアントIPからのRDPアクセスを許可）
 
-### Compute Resources
-- Windows Server EC2 instance:
-  - Windows Server 2022 AMI (latest version from AWS)
-  - IAM instance profile for Systems Manager management
-  - Key pair for direct access if needed
+### コンピューティングリソース
+- Windows ServerのEC2インスタンス：
+  - Windows Server 2022 AMI（AWSから最新バージョン）
+  - Systems Manager管理用のIAMインスタンスプロファイル
+  - 必要に応じた直接アクセス用のキーペア
 
-### IAM Resources
-- IAM role with EC2 trust relationship
-- IAM policy attachment for AmazonSSMManagedInstanceCore
-- IAM instance profile for the EC2 instance
+### IAMリソース
+- EC2信頼関係を持つIAMロール
+- AmazonSSMManagedInstanceCoreポリシーのアタッチメント
+- EC2インスタンス用のIAMインスタンスプロファイル
 
-## Usage
+## 使用方法
 
-Follow the instructions in the main README.md file to deploy this configuration.
+このコンフィギュレーションをデプロイするには、メインのREADME.mdファイルの指示に従ってください。
 
-After deployment, you can manage this Windows instance through AWS Systems Manager without needing direct RDP access, although RDP is still available using the key pair if required.
+デプロイ後、このWindowsインスタンスは直接のRDPアクセスを必要とせずにAWS Systems Managerを通じて管理できますが、必要に応じてキーペアを使用したRDPアクセスも可能です。

@@ -19,8 +19,8 @@
 
 ### Kubernetesリソース
 - OpenSearchデプロイ構成：
-  - OpenSearchリーダーノード（Prometheusエクスポータープラグイン付き）
-  - OpenSearchデータノード（Prometheusエクスポータープラグイン付き）
+  - OpenSearchリーダーノード（バージョン2.17.1、Prometheusエクスポータープラグイン付き）
+  - OpenSearchデータノード（バージョン2.17.1、Prometheusエクスポータープラグイン付き）
   - スナップショットリポジトリ登録
   - SLM（Snapshot Lifecycle Management）構成
 
