@@ -1,26 +1,26 @@
-# Windows EC2 Instance Setup
+# Windows EC2インスタンスのセットアップ
 
-This Terraform configuration creates a Windows Server EC2 instance in AWS, with the following resources:
+このTerraform構成は、AWSにWindows ServerのEC2インスタンスを作成します。以下のリソースが含まれています：
 
-## Resource Configuration
+## リソース構成
 
-### Network Resources
-- VPC with CIDR block 10.0.0.0/16
-- Public subnet (10.0.0.0/24)
-- Internet Gateway
-- Route Table with routes to the Internet Gateway
-- Security Group for the Windows instance
+### ネットワークリソース
+- VPC（CIDR: 10.0.0.0/16）
+- パブリックサブネット（10.0.0.0/24）
+- インターネットゲートウェイ
+- インターネットゲートウェイへのルートを持つルートテーブル
+- Windowsインスタンス用のセキュリティグループ
 
-### Compute Resources
-- Windows Server EC2 instance:
-  - Windows Server 2019 AMI (latest version from AWS)
-  - Network interface with private IP 10.0.0.10
-  - Public IP address
-  - RDP access (port 3389)
+### コンピュートリソース
+- Windows Server EC2インスタンス:
+  - Windows Server 2019 AMI（AWSの最新バージョン）
+  - プライベートIP 10.0.0.10を持つネットワークインターフェース
+  - パブリックIPアドレス
+  - RDPアクセス（ポート3389）
 
-### Access Management
-- Key pair for access to the Windows instance
+### アクセス管理
+- Windowsインスタンスへのアクセス用のキーペア
 
-## Usage
+## 使用方法
 
-Follow the instructions in the main README.md file to deploy this configuration.
+この構成をデプロイするには、メインのREADME.mdファイルに記載されている手順に従ってください。

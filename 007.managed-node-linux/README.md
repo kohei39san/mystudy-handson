@@ -1,38 +1,38 @@
-# Linux Managed Node Setup
+# Linux マネージドノードのセットアップ
 
-This Terraform configuration creates a Linux EC2 instance managed by AWS Systems Manager with monitoring capabilities, with the following resources:
+このTerraform構成は、AWS Systems Managerで管理され、モニタリング機能を備えたLinux EC2インスタンスを作成します。以下のリソースが含まれています：
 
-## Resource Configuration
+## リソース構成
 
-### Network Resources
+### ネットワークリソース
 - VPC
-- Public subnet
-- Internet Gateway
-- Route Table with routes to the Internet Gateway
-- Security Group for the Linux instance
+- パブリックサブネット
+- インターネットゲートウェイ
+- インターネットゲートウェイへのルートを持つルートテーブル
+- Linuxインスタンス用のセキュリティグループ
 
-### Compute Resources
-- Linux EC2 instance:
-  - Amazon Linux AMI (specified via variable)
-  - IAM instance profile for Systems Manager management
-  - Key pair for SSH access if needed
+### コンピュートリソース
+- Linux EC2インスタンス:
+  - Amazon Linux AMI（変数で指定）
+  - Systems Manager管理用のIAMインスタンスプロファイル
+  - 必要に応じてSSHアクセスするためのキーペア
 
-### IAM Resources
-- IAM role with EC2 trust relationship
-- IAM policy attachment for AmazonSSMManagedInstanceCore
-- IAM instance profile for the EC2 instance
+### IAMリソース
+- EC2信頼関係を持つIAMロール
+- AmazonSSMManagedInstanceCoreのIAMポリシーアタッチメント
+- EC2インスタンス用のIAMインスタンスプロファイル
 
-### Monitoring Resources
-- Installation scripts for:
-  - Amazon CloudWatch Agent
-  - Zabbix Agent 6.0
+### モニタリングリソース
+- 以下のインストールスクリプト:
+  - Amazon CloudWatchエージェント
+  - Zabbixエージェント6.0
 
-## Usage
+## 使用方法
 
-Follow the instructions in the main README.md file to deploy this configuration.
+この構成をデプロイするには、メインのREADME.mdファイルに記載されている手順に従ってください。
 
-After deployment, you can:
-1. Manage this Linux instance through AWS Systems Manager
-2. Monitor the instance using Amazon CloudWatch
-3. Monitor the instance using Zabbix (requires a Zabbix server configuration)
-4. Access the instance via SSH using the key pair if required
+デプロイ後、以下のことができます：
+1. AWS Systems Managerを通じてこのLinuxインスタンスを管理する
+2. Amazon CloudWatchを使用してインスタンスをモニタリングする
+3. Zabbixを使用してインスタンスをモニタリングする（Zabbixサーバーの構成が必要）
+4. 必要に応じてキーペアを使用してSSH経由でインスタンスにアクセスする
