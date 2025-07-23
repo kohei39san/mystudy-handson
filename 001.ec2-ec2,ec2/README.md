@@ -1,33 +1,34 @@
-# EC2 Bastion and Private Server Setup
+# EC2 踏み台サーバーとプライベートサーバーのセットアップ
 
-This Terraform configuration creates a bastion host and a private server in AWS, with the following resources:
+このTerraform構成は、AWSに踏み台ホストとプライベートサーバーを作成します。以下のリソースが含まれています：
 
-## Resource Configuration
+## リソース構成
 
-### Network Resources
-- VPC with CIDR block 10.0.0.0/16
-- Public subnet for the bastion host (10.0.0.0/24)
-- Private subnet for the private server (10.0.1.0/24)
-- Internet Gateway
-- Route Table with routes to the Internet Gateway
-- Security Groups for both instances
+### ネットワークリソース
+- CIDR ブロック 10.0.0.0/16 の VPC
+- 踏み台ホスト用のパブリックサブネット (10.0.0.0/24)
+- プライベートサーバー用のプライベートサブネット (10.0.1.0/24)
+- インターネットゲートウェイ
+- インターネットゲートウェイへのルートを持つルートテーブル
+- 両インスタンス用のセキュリティグループ
 
-### Compute Resources
-- Bastion Host EC2 instance:
-  - Amazon Linux 2 AMI (from SSM Parameter Store)
-  - Network interface with private IP 10.0.0.10
-  - Public IP address
-  - SSH access
+### コンピューティングリソース
+- 踏み台ホスト EC2 インスタンス:
+  - Amazon Linux 2 AMI (SSM パラメータストアから取得)
+  - プライベート IP 10.0.0.10 のネットワークインターフェース
+  - パブリック IP アドレス
+  - SSH アクセス (クライアントのグローバル IP からのみ許可)
 
-- Private Server EC2 instance:
-  - Amazon Linux 2 AMI (from SSM Parameter Store)
-  - Network interface with private IP 10.0.1.10
-  - SSH access only from the bastion host
-  - Bootstrap script for initial configuration
+- プライベートサーバー EC2 インスタンス:
+  - Amazon Linux 2 AMI (SSM パラメータストアから取得)
+  - プライベート IP 10.0.1.10 のネットワークインターフェース
+  - 踏み台ホストからの SSH アクセスのみ許可
+  - 初期設定用のブートストラップスクリプト
+  - 踏み台ホストと同じセキュリティグループも適用
 
-### Access Management
-- Key pair for SSH access to both instances
+### アクセス管理
+- 両インスタンスへの SSH アクセス用のキーペア
 
-## Usage
+## 使用方法
 
-Follow the instructions in the main README.md file to deploy this configuration.
+このリソース構成をデプロイするには、メインの README.md ファイルの手順に従ってください。
