@@ -1,0 +1,5 @@
+---
+- name: Configure Ping Settings
+  import_playbook: ping.yml
+- name: Configure AWS Infrastructure
+  import_playbook: aws.yml

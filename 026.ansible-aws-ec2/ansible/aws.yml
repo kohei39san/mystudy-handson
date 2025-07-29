@@ -1,0 +1,6 @@
+---
+- name: Create AWS resources (VPC and EC2)
+  hosts: local
+  roles:
+    - vpc
+    - ec2

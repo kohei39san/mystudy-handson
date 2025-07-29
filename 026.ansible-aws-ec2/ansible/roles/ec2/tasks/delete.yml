@@ -1,0 +1,35 @@
+---
+# EC2インスタンス削除
+- name: Delete EC2 instances
+  amazon.aws.ec2_instance:
+    name: "{{ item.name }}"
+    region: "{{ aws.common.region }}"
+    state: absent
+  loop: "{{ aws.ec2.instances }}"
+  failed_when: false
+
+# セキュリティグループ削除
+- name: Delete security group for EC2
+  amazon.aws.ec2_security_group:
+    name: "{{ aws.ec2.security_group.name }}"
+    region: "{{ aws.common.region }}"
+    state: absent
+  failed_when: false
+
+# Route Table削除（パブリックサブネット用）
+- name: Delete public route table
+  amazon.aws.ec2_vpc_route_table:
+    vpc_id: "{{ vpc_ec2_vpc_net.vpc.id }}"
+    region: "{{ aws.common.region }}"
+    tags:
+      Name: "{{ aws.ec2.route_table.public.name }}"
+    state: absent
+  failed_when: false
+
+# Internet Gateway削除
+- name: Delete Internet Gateway
+  amazon.aws.ec2_vpc_igw:
+    vpc_id: "{{ vpc_ec2_vpc_net.vpc.id }}"
+    region: "{{ aws.common.region }}"
+    state: absent
+  failed_when: false

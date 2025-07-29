@@ -1,0 +1,6 @@
+---
+- name: Delete AWS resources (EC2 and VPC)
+  hosts: delete
+  roles:
+    - ec2
+    - vpc

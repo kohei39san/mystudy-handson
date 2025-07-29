@@ -71,7 +71,8 @@ jobs:
       if: ${{ !cancelled() }}
       id: git_diff
       run: |
-        git diff --exit-code && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+          git add .
+          git diff --cached --quiet && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
         
     - name: Get current branch name
       if: steps.git_diff.outputs.changes == 'changes' && ${{ !cancelled() }}

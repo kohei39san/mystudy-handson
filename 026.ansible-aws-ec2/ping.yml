@@ -1,4 +1,0 @@
----
-- hosts: pings
-  roles:
-  - ping

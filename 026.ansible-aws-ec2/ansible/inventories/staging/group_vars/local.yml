@@ -1,0 +1,31 @@
+---
+aws:
+  common:
+    region: ap-northeast-1
+  vpc:
+    name: "my-vpc"
+    cidr_block: 10.0.0.0/16
+    tags:
+      Name: "MyVPC"
+  ec2:
+    igw:
+      name: "my-igw"
+    route_table:
+      public:
+        name: "my-public-rt"
+    security_group:
+      name: "my-ec2-sg"
+      description: "Security group for EC2 instances"
+    instance_type: "t3.micro" # Cost-optimized instance type
+    key_name: "my-key-pair" # Replace with your actual key pair name
+    volume:
+      type: "gp3" # Cost-optimized storage type
+      size: 8 # Minimum size for cost optimization
+    instances:
+      - name: "my-web-server"
+        tags:
+          Name: "MyWebServer"
+          Environment: "staging"
+          Purpose: "web-server"
+
+aws_resource_state: present

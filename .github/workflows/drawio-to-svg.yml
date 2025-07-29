@@ -1,0 +1,100 @@
+name: Convert Draw.io to SVG
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  push:
+    paths:
+      - '**/*.drawio'
+
+jobs:
+  convert-drawio-to-svg:
+    name: Convert Draw.io files to SVG
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Draw.io Desktop
+        run: |
+          # Download and install draw.io desktop AppImage
+          sudo apt-get install -y xvfb libasound2t64
+          wget -O /tmp/drawio.deb https://github.com/jgraph/drawio-desktop/releases/download/v28.0.6/drawio-amd64-28.0.6.deb
+          sudo apt-get install -y /tmp/drawio.deb
+
+      - name: Get changed Draw.io files
+        id: changed-files
+        run: |
+          # Get the list of changed .drawio files
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # First commit in branch, check all .drawio files
+            changed_files="$(find . -name "*.drawio" -type f | grep -v "^\./.git/" || true)"
+          else
+            # Get changed .drawio files from the diff
+            changed_files="$(git diff --name-only "${{ github.event.before }}..${{ github.sha }}" | grep "\.drawio$" || true)"
+          fi
+          
+          if [ -z "$changed_files" ]; then
+            echo "No .drawio files changed"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changed .drawio files:"
+            echo "$changed_files"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            # Save the list of files for the next step
+            echo "$changed_files" > ${{ runner.temp }}/changed_drawio_files.txt
+          fi
+
+      - name: Convert Draw.io files to SVG
+        if: steps.changed-files.outputs.has_changes == 'true'
+        run: |
+          # Read the list of changed files
+          while IFS= read -r drawio_file; do
+            if [ -f "$drawio_file" ]; then
+              # Get the directory and filename without extension
+              dir=$(dirname "$drawio_file")
+              filename=$(basename "$drawio_file" .drawio)
+              svg_file="$dir/$filename.svg"
+              
+              echo "Converting $drawio_file to $svg_file"
+              
+              # Convert .drawio to .svg using draw.io desktop
+              export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+              export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
+              if xvfb-run /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
+                echo "Successfully converted $drawio_file to $svg_file"
+              else
+                echo "Failed to convert $drawio_file"
+                exit 1
+              fi
+            else
+              echo "File $drawio_file not found, skipping"
+            fi
+          done < ${{ runner.temp }}/changed_drawio_files.txt
+
+      - name: Check for changes
+        if: ${{ !cancelled() }}
+        id: git_diff
+        run: |
+          git add .
+          git diff --cached --quiet && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+
+      - name: Get current branch name
+        if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
+        id: get_branch
+        run: |
+          echo "branch_name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+  
+      - name: Create Pull Request
+        if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ steps.get_branch.outputs.branch_name }}
+          branch: drawio-to-svg-pr-${{ steps.get_branch.outputs.branch_name }}
+          title: "Changes by drawio-to-svg actions"
