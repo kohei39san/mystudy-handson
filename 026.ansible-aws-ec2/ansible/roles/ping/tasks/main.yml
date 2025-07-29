@@ -1,3 +1,3 @@
 ---
-- name: pingモジュール実行
-  ping:
+- name: Pingモジュール実行
+  ansible.builtin.ping:
