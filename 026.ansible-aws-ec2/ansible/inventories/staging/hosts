@@ -1,0 +1,8 @@
+[local]
+localhost ansible_connection=local
+
+[local:children]
+delete
+
+[delete]
+localhost ansible_connection=local

@@ -1,0 +1,52 @@
+name: Ansible Linter
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  push:
+    paths:
+      - '**/ansible/**'
+
+jobs:
+  lint:
+    name: Lint Ansible Files
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run ansible-lint
+        uses: ansible/ansible-lint@v25.6.1
+        # optional (see below):
+        with:
+          args: "--fix **/ansible/"
+          setup_python: "true"
+          working_directory: ""
+          requirements_file: ".github/requirements.yml"
+
+      - name: Check for changes
+        if: ${{ !cancelled() }}
+        id: git_diff
+        run: |
+          git add .
+          git diff --cached --quiet && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+          
+      - name: Get current branch name
+        if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
+        id: get_branch
+        run: |
+          echo "branch_name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+  
+      - name: Create Pull Request
+        if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ steps.get_branch.outputs.branch_name }}
+          branch: ansible-lint-pr-${{ steps.get_branch.outputs.branch_name }}
+          title: "Changes by ansible-lint actions"

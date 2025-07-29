@@ -1,24 +1,24 @@
 ---
 - name: VPC作成
-  ec2_vpc_net:
+  amazon.aws.ec2_vpc_net:
     name: "{{ aws.vpc.name }}"
     cidr_block: "{{ aws.vpc.cidr_block }}"
     region: "{{ aws.common.region }}"
     tags: "{{ aws.vpc.tags }}"
     tenancy: default
-    state: present
-  register: vpc_net
+    state: "{{ aws_resource_state }}"
+  register: vpc_ec2_vpc_net
 
 - name: Create multiple subnets
   amazon.aws.ec2_vpc_subnet:
-    vpc_id: "{{ vpc_net.vpc.id }}"
+    vpc_id: "{{ vpc_ec2_vpc_net.vpc.id }}"
     cidr: "{{ item.cidr_block }}"
     region: "{{ aws.common.region }}"
     az: "{{ item.availability_zone }}"
-    state: present
+    state: "{{ aws_resource_state }}"
     tags:
       Name: "{{ item.name }}"
   loop:
     - { name: "subnet-public-1", cidr_block: "10.0.1.0/24", availability_zone: "ap-northeast-1a" }
     - { name: "subnet-public-2", cidr_block: "10.0.2.0/24", availability_zone: "ap-northeast-1c" }
-  register: subnets
+  register: vpc_subnets

@@ -1,0 +1,72 @@
+---
+# AWS Configuration Example
+# このファイルをlocal.ymlにコピーして設定を変更してください
+
+aws:
+  common:
+    region: ap-northeast-1  # 使用するAWSリージョン
+  
+  vpc:
+    name: "my-vpc"
+    cidr_block: 10.0.0.0/16
+    tags:
+      Name: "MyVPC"
+      Environment: "staging"
+      Project: "ansible-demo"
+  
+  ec2:
+    # Internet Gateway設定
+    igw:
+      name: "my-igw"
+    
+    # Route Table設定
+    route_table:
+      public:
+        name: "my-public-rt"
+    
+    # Security Group設定
+    security_group:
+      name: "my-ec2-sg"
+      description: "Security group for EC2 instances"
+    
+    # EC2インスタンス設定
+    instance_type: "t3.micro"      # コスト最適化: t3.micro (無料利用枠対象)
+    key_name: "my-key-pair"        # ★要変更: 実際のキーペア名に変更してください
+    
+    # EBSボリューム設定
+    volume:
+      type: "gp3"                  # コスト最適化: GP3ストレージ
+      size: 8                      # 最小サイズ (GB)
+    
+    # インスタンス一覧
+    instances:
+      - name: "my-web-server"
+        tags:
+          Name: "MyWebServer"
+          Environment: "staging"
+          Purpose: "web-server"
+          Owner: "your-name"
+
+# リソースの状態 (present: 作成, absent: 削除)
+aws_resource_state: present
+
+# 追加設定例:
+# 複数インスタンスを作成する場合
+# instances:
+#   - name: "web-server-1"
+#     tags:
+#       Name: "WebServer1"
+#       Environment: "staging"
+#       Purpose: "web"
+#   - name: "app-server-1"
+#     tags:
+#       Name: "AppServer1"
+#       Environment: "staging"
+#       Purpose: "application"
+
+# 異なるインスタンスタイプを使用する場合
+# instance_type: "t3.small"  # より高性能が必要な場合
+
+# 異なるリージョンを使用する場合
+# common:
+#   region: us-west-2

@@ -1,6 +1,6 @@
 variable "ami_name" {
   type    = string
-  default = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
+  default = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }
 
 variable "aws_tags" {
