@@ -34,13 +34,13 @@ jobs:
         id: git_diff
         run: |
           git add .
-          git diff --cached --quiet && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+          git diff --cached --quiet && echo 'changes=' >> "$GITHUB_OUTPUT" || echo 'changes=changes' >> "$GITHUB_OUTPUT"
           
       - name: Get current branch name
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
         id: get_branch
         run: |
-          echo "branch_name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
   
       - name: Create Pull Request
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}

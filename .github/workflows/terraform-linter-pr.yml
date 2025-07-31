@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changes: ${{ steps.git_diff.outputs.changes }}
-      branch: ${{ steps.create_branch.outputs.branch }}
 
     steps:
     - name: Checkout repository
@@ -44,9 +43,9 @@ jobs:
       id: check_role
       run: |
         if [ -n "${{ secrets.AWS_ROLE_ARN }}" ]; then
-          echo "aws_role_available=true" >> $GITHUB_OUTPUT
+          echo "aws_role_available=true" >> "$GITHUB_OUTPUT"
         else
-          echo "aws_role_available=false" >> $GITHUB_OUTPUT
+          echo "aws_role_available=false" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Configure AWS Credentials
@@ -72,13 +71,13 @@ jobs:
       id: git_diff
       run: |
           git add .
-          git diff --cached --quiet && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+          git diff --cached --quiet && echo 'changes=' >> "$GITHUB_OUTPUT" || echo 'changes=changes' >> "$GITHUB_OUTPUT"
         
     - name: Get current branch name
       if: steps.git_diff.outputs.changes == 'changes' && ${{ !cancelled() }}
       id: get_branch
       run: |
-        echo "branch_name=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+        echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
 
     - name: Create Pull Request
       if: steps.git_diff.outputs.changes == 'changes' && ${{ !cancelled() }}
