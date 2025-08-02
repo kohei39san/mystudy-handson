@@ -3,8 +3,6 @@ name: GitHub Actions Linter
 permissions:
   contents: write
   pull-requests: write
-  actions: read
-  statuses: read
 
 on:
   push:
@@ -25,7 +23,7 @@ jobs:
       - name: Lint GitHub Actions YAML Files
         uses: github/super-linter@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Only validate new or edited files
           VALIDATE_ALL_CODEBASE: false
           # Only validate YAML and GitHub Actions files
