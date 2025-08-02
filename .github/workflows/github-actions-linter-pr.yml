@@ -25,7 +25,7 @@ jobs:
       - name: Lint GitHub Actions YAML Files
         uses: github/super-linter@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TARGET_REPO_PAT }}
           # Only validate new or edited files
           VALIDATE_ALL_CODEBASE: false
           # Only validate YAML and GitHub Actions files
