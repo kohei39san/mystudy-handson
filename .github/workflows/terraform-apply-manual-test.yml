@@ -32,7 +32,7 @@ jobs:
           echo "Error: No directory found starting with ${{ github.event.inputs.directory-number }}"
           exit 1
         fi
-        echo "WORKING_DIRECTORY=$DIRECTORY" >> $GITHUB_ENV
+        echo "WORKING_DIRECTORY=$DIRECTORY" >> "$GITHUB_ENV"
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4

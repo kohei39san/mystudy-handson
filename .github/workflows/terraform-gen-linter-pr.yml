@@ -47,7 +47,7 @@ jobs:
         out=$(tflint --recursive -f compact --fix --minimum-failure-severity=warning)
         if [ -n "${out}" ];then
           echo "${out}" | grep -E '\.tf:' | tee /tmp/tflint-gen-output.txt
-          echo "linted=linted" >> $GITHUB_OUTPUT
+          echo "linted=linted" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Install and Run Ollama
@@ -56,14 +56,14 @@ jobs:
         cat /tmp/tflint-gen-output.txt | cut -d':' -f1 | sort | uniq | while read f;do
           echo -n "" > /tmp/input.txt
 
-          cat $f >> /tmp/input.txt
+          cat "$f" >> /tmp/input.txt
           echo >> /tmp/input.txt
           echo "---" >> /tmp/input.txt
           echo >> /tmp/input.txt
           echo "The following error was found in one of the above files. Please correct only the above error. Please output the entire file." >> /tmp/input.txt
           echo >> /tmp/input.txt
           pushd .
-          cd $(dirname $f)
+          cd "$(dirname "$f")"
           terraform version >> /tmp/input.txt
           popd
           echo "---" >> /tmp/input.txt
@@ -74,14 +74,14 @@ jobs:
           fi
           sleep 5
           cat /tmp/input.txt | ollama run llama3.2 | tee /tmp/output.txt
-          sed -n '/```/,/```/p' /tmp/output.txt | sed '1d;$d' > $f
+          sed -n '/```/,/```/p' /tmp/output.txt | sed '1d;$d' > "$f"
         done
 
     - name: Check for changes
       id: git_diff
       run: |
           git add .
-          git diff --cached --quiet && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+          git diff --cached --quiet && echo 'changes=' >> "$GITHUB_OUTPUT" || echo 'changes=changes' >> "$GITHUB_OUTPUT"
 
     - name: Create Pull Request
       if: steps.git_diff.outputs.changes == 'changes'

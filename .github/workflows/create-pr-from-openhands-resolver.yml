@@ -16,9 +16,9 @@ jobs:
       - name: Set environment variables
         run: |
           ISSUE_NUMBER=$(echo ${{ github.ref }} | grep -Eo 'openhands-fix-issue-[0-9]+' | cut -d'-' -f4)
-          echo "ISSUE_NUMBER=${ISSUE_NUMBER}" >> $GITHUB_ENV
-          echo "REPO_VISIBILITY=$(gh repo view --json visibility --jq .visibility)" >> $GITHUB_ENV
-          echo "FIX_ME_EXPERIMENTAL=$(gh issue view ${ISSUE_NUMBER} --json labels --jq '.labels[] | select(.name == "fix-me-experimental") | .name')" >> $GITHUB_ENV
+          echo "ISSUE_NUMBER=${ISSUE_NUMBER}" >> "$GITHUB_ENV"
+          echo "REPO_VISIBILITY=$(gh repo view --json visibility --jq .visibility)" >> "$GITHUB_ENV"
+          echo "FIX_ME_EXPERIMENTAL=$(gh issue view "${ISSUE_NUMBER}" --json labels --jq '.labels[] | select(.name == "fix-me-experimental") | .name')" >> "$GITHUB_ENV"
       - name: Create Pull Request
         if: env.REPO_VISIBILITY == 'PRIVATE' || env.FIX_ME_EXPERIMENTAL == 'fix-me-experimental'
         run: |

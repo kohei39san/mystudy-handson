@@ -30,10 +30,10 @@ jobs:
 
         shopt -s globstar # enable globbing
         files=$(ls ./**/cfn/**/*.yaml ./**/cfn/**/*.yml 2>/dev/null || true)
-        [ -n "${files}" ] && out=$(cfn-lint -t $files --non-zero-exit-code none -f parseable)
+        [ -n "${files}" ] && out=$(cfn-lint -t "$files" --non-zero-exit-code none -f parseable)
         if [ -n "${out}" ];then
           echo "${out}" | tee /tmp/cfn-lint-output.txt
-          echo "linted=linted" >> $GITHUB_OUTPUT
+          echo "linted=linted" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Install and Run Ollama
@@ -42,7 +42,7 @@ jobs:
         cat /tmp/cfn-lint-output.txt | cut -d':' -f1 | sort | uniq | while read f;do
           echo -n "" > /tmp/input.txt
 
-          cat $f >> /tmp/input.txt
+          cat "$f" >> /tmp/input.txt
           echo >> /tmp/input.txt
           echo "---" >> /tmp/input.txt
           echo >> /tmp/input.txt
@@ -57,14 +57,14 @@ jobs:
           fi
           sleep 5
           cat /tmp/input.txt | ollama run llama3.2 | tee /tmp/output.txt
-          sed -n '/```/,/```/p' /tmp/output.txt | sed '1d;$d' > $f
+          sed -n '/```/,/```/p' /tmp/output.txt | sed '1d;$d' > "$f"
         done
 
     - name: Check for changes
       id: git_diff
       run: |
           git add .
-          git diff --cached --quiet && echo 'changes=' >> $GITHUB_OUTPUT || echo 'changes=changes' >> $GITHUB_OUTPUT
+          git diff --cached --quiet && echo 'changes=' >> "$GITHUB_OUTPUT" || echo 'changes=changes' >> "$GITHUB_OUTPUT"
 
     - name: Create Pull Request
       if: steps.git_diff.outputs.changes == 'changes'
