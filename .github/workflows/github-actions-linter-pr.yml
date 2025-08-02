@@ -1,0 +1,57 @@
+name: GitHub Actions Linter
+
+permissions:
+  contents: read
+
+on:
+  push:
+    paths:
+      - '.github/workflows/**'
+
+jobs:
+  lint:
+    name: Lint GitHub Actions YAML Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          # Full git history is needed to get a proper list of changed files
+          fetch-depth: 0
+
+      - name: Lint GitHub Actions YAML Files
+        uses: github/super-linter@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Only validate new or edited files
+          VALIDATE_ALL_CODEBASE: false
+          # Only validate YAML and GitHub Actions files
+          VALIDATE_YAML_PRETTIER: true
+          VALIDATE_GITHUB_ACTIONS: true
+          # Filter for only GitHub Actions workflow files
+          FILTER_REGEX_INCLUDE: .*github/workflows/.*
+          # Fix issues automatically where possible
+          FIX_SHELL_SHFMT: true
+          FIX_YAML_PRETTIER: true
+
+      - name: Check for changes
+        if: ${{ !cancelled() }}
+        id: git_diff
+        run: |
+          git add .
+          git diff --cached --quiet && echo 'changes=' >> "$GITHUB_OUTPUT" || echo 'changes=changes' >> "$GITHUB_OUTPUT"
+          
+      - name: Get current branch name
+        if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
+        id: get_branch
+        run: |
+          echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
+  
+      - name: Create Pull Request
+        if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ steps.get_branch.outputs.branch_name }}
+          branch: githubactions-lint-pr-${{ steps.get_branch.outputs.branch_name }}
+          title: "Changes by githubactions-lint-pr actions"
