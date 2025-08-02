@@ -1,7 +1,8 @@
 name: GitHub Actions Linter
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 on:
   push:
