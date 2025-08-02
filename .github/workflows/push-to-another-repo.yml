@@ -1,6 +1,9 @@
 name: Push to Another Repository
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       branch_name:
@@ -32,65 +35,85 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get repository owner
-        id: get_owner
+      - name: Set default values for automatic trigger
+        id: set_defaults
         run: |
-          # Get the owner of the current repository
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "BRANCH_NAME=update-from-source-repo-$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
+            echo "COMMIT_MESSAGE=Update from source repository - $(date)" >> $GITHUB_ENV
+            echo "PR_TITLE=Update from source repository" >> $GITHUB_ENV
+            echo "PR_BODY=This PR contains updates from the source repository." >> $GITHUB_ENV
+          else
+            echo "BRANCH_NAME=${{ inputs.branch_name }}" >> $GITHUB_ENV
+            echo "COMMIT_MESSAGE=${{ inputs.commit_message }}" >> $GITHUB_ENV
+            echo "PR_TITLE=${{ inputs.pr_title }}" >> $GITHUB_ENV
+            echo "PR_BODY=${{ inputs.pr_body }}" >> $GITHUB_ENV
+          fi
+
+      - name: Get repository info and detect fork
+        id: get_repo_info
+        run: |
           REPO_OWNER=$(echo "${{ github.repository }}" | cut -d '/' -f 1)
           echo "REPO_OWNER=$REPO_OWNER" >> $GITHUB_ENV
           echo "repo_owner=$REPO_OWNER" >> $GITHUB_OUTPUT
-
-      - name: Validate target repository owner
-        id: validate_target_owner
-        run: |
-          # Get the owner of the target repository
-          TARGET_REPO_OWNER=$(echo "${{ secrets.TARGET_REPO }}" | cut -d '/' -f 1)
           
-          if [ -z "$TARGET_REPO_OWNER" ]; then
-            echo "Error: TARGET_REPO secret is not set or does not contain a valid repository path"
+          # Check if this is a fork
+          IS_FORK="${{ github.event.repository.fork }}"
+          echo "IS_FORK=$IS_FORK" >> $GITHUB_ENV
+          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
+          
+          if [ "$IS_FORK" = "true" ]; then
+            PARENT_REPO="${{ github.event.repository.parent.full_name }}"
+            echo "PARENT_REPO=$PARENT_REPO" >> $GITHUB_ENV
+            echo "parent_repo=$PARENT_REPO" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine target repository
+        id: determine_target
+        run: |
+          if [ "$IS_FORK" = "true" ]; then
+            # For forks, target is the parent repository
+            TARGET_REPO="$PARENT_REPO"
+            echo "Using parent repository as target: $TARGET_REPO"
+          else
+            # For non-forks, use the configured target repository
+            TARGET_REPO="${{ secrets.TARGET_REPO }}"
+            if [ -z "$TARGET_REPO" ]; then
+              echo "Error: TARGET_REPO secret is not set for non-fork repository"
+              exit 1
+            fi
+          fi
+          
+          echo "TARGET_REPO=$TARGET_REPO" >> $GITHUB_ENV
+          echo "target_repo=$TARGET_REPO" >> $GITHUB_OUTPUT
+
+      - name: Set target repository details
+        id: set_target_details
+        run: |
+          TARGET_REPO_OWNER=$(echo "$TARGET_REPO" | cut -d '/' -f 1)
+          TARGET_REPO_NAME=$(echo "$TARGET_REPO" | cut -d '/' -f 2)
+          
+          if [ -z "$TARGET_REPO_NAME" ]; then
+            echo "Error: Could not extract repository name from target repository"
             exit 1
           fi
           
           echo "TARGET_REPO_OWNER=$TARGET_REPO_OWNER" >> $GITHUB_ENV
-          echo "target_repo_owner=$TARGET_REPO_OWNER" >> $GITHUB_OUTPUT
-          
-          # Validate that the target repository is owned by the same owner
-          if [ "$REPO_OWNER" != "$TARGET_REPO_OWNER" ]; then
-            echo "Error: Target repository must be owned by the same owner ($REPO_OWNER)"
-            exit 1
-          fi
-
-      - name: Set target repository name
-        id: set_target_repo
-        run: |
-          TARGET_REPO="${{ secrets.TARGET_REPO }}"
-          
-          if [ -z "$TARGET_REPO" ]; then
-            echo "Error: TARGET_REPO secret is not set"
-            exit 1
-          fi
-          
-          # Extract just the repo name without owner
-          TARGET_REPO_NAME=$(echo "$TARGET_REPO" | cut -d '/' -f 2)
-          
-          if [ -z "$TARGET_REPO_NAME" ]; then
-            echo "Error: Could not extract repository name from TARGET_REPO secret"
-            exit 1
-          fi
-          
-          echo "TARGET_REPO=$TARGET_REPO" >> $GITHUB_ENV
           echo "TARGET_REPO_NAME=$TARGET_REPO_NAME" >> $GITHUB_ENV
-          echo "target_repo=$TARGET_REPO" >> $GITHUB_OUTPUT
+          echo "target_repo_owner=$TARGET_REPO_OWNER" >> $GITHUB_OUTPUT
           echo "target_repo_name=$TARGET_REPO_NAME" >> $GITHUB_OUTPUT
 
       - name: Clone target repository
         run: |
+          # Determine which token to use
+          TOKEN="${{ secrets.TARGET_REPO_PAT }}"
+          
           # Clone the target repository
-          git clone "https://x-access-token:${{ secrets.TARGET_REPO_PAT }}@github.com/${{ env.REPO_OWNER }}/${{ env.TARGET_REPO_NAME }}.git" target_repo
+          git clone "https://x-access-token:$TOKEN@github.com/$TARGET_REPO.git" target_repo
           
           # Create and checkout a new branch in the target repository
           cd target_repo
-          git checkout -b "${{ inputs.branch_name }}"
+          git checkout -b "$BRANCH_NAME"
 
       - name: Copy content to target repository
         run: |
@@ -107,28 +130,41 @@ jobs:
           # Add all changes
           git add .
           
-          # Commit changes
-          git commit -m "${{ inputs.commit_message }}"
-          
-          # Push changes to the new branch
-          git push origin "${{ inputs.branch_name }}"
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "HAS_CHANGES=false" >> $GITHUB_ENV
+          else
+            # Commit changes
+            git commit -m "$COMMIT_MESSAGE"
+            
+            # Push changes to the new branch
+            git push origin "$BRANCH_NAME"
+            echo "HAS_CHANGES=true" >> $GITHUB_ENV
+          fi
 
       - name: Create pull request
+        if: env.HAS_CHANGES == 'true'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.TARGET_REPO_PAT }}
+          github-token: ${{ env.IS_FORK == 'true' && secrets.GITHUB_TOKEN || secrets.TARGET_REPO_PAT }}
           script: |
-            const owner = process.env.REPO_OWNER;
-            const repo = process.env.TARGET_REPO_NAME;
-            const branch = '${{ inputs.branch_name }}';
-            const title = '${{ inputs.pr_title }}';
-            const body = '${{ inputs.pr_body }}';
+            const targetRepoOwner = process.env.TARGET_REPO_OWNER;
+            const targetRepoName = process.env.TARGET_REPO_NAME;
+            const branch = process.env.BRANCH_NAME;
+            const title = process.env.PR_TITLE;
+            const body = process.env.PR_BODY;
+            const isFork = process.env.IS_FORK === 'true';
+            
+            // For cross-repository PRs, the head should include the source owner
+            const sourceOwner = process.env.REPO_OWNER;
+            const head = (isFork || sourceOwner !== targetRepoOwner) ? `${sourceOwner}:${branch}` : branch;
             
             try {
               const response = await github.rest.pulls.create({
-                owner: owner,
-                repo: repo,
-                head: branch,
+                owner: targetRepoOwner,
+                repo: targetRepoName,
+                head: head,
                 base: 'main',
                 title: title,
                 body: body
