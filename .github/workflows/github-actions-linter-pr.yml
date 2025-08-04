@@ -32,7 +32,6 @@ jobs:
           # Filter for only GitHub Actions workflow files
           FILTER_REGEX_INCLUDE: .*github/workflows/.*
           # Fix issues automatically where possible
-          FIX_SHELL_SHFMT: true
           FIX_YAML_PRETTIER: true
 
       - name: Check for changes
