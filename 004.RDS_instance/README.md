@@ -1,24 +1,26 @@
-# MySQL RDS Instance Setup
+# MySQL RDS インスタンス構成
 
-This Terraform configuration creates a MySQL RDS instance in AWS, with the following resources:
+このTerraform構成は、AWSにMySQL RDSインスタンスを作成します。以下のリソースが含まれています：
 
-## Resource Configuration
+## リソース構成
 
-### Network Resources
-- VPC
-- Two subnets in different availability zones for the DB subnet group
-- Security Group for the RDS instance
+### ネットワークリソース
+- CIDRブロック10.0.0.0/16のVPC
+- 異なるアベイラビリティゾーンの2つのサブネット（DBサブネットグループ用）
+  - サブネット1：10.0.1.0/24（ap-northeast-1c）
+  - サブネット2：10.0.2.0/24（ap-northeast-1a）
+- RDSインスタンス用のセキュリティグループ
 
-### Database Resources
-- MySQL RDS instance:
-  - MySQL 8.0 engine
-  - db.t3.micro instance class
-  - 20GB GP3 storage
-  - Multi-AZ deployment with DB subnet group
-  - Security group with appropriate access rules
+### データベースリソース
+- MySQL RDSインスタンス：
+  - MySQL 8.0エンジン
+  - db.t3.microインスタンスクラス
+  - 20GB GP3ストレージ
+  - DBサブネットグループを使用したマルチAZ配置
+  - 適切なアクセスルールを持つセキュリティグループ
 
-## Usage
+## 使用方法
 
-Follow the instructions in the main README.md file to deploy this configuration.
+この構成をデプロイするには、メインのREADME.mdに記載されている手順に従ってください。
 
-Note: The default configuration uses "admin" as the username and "password" as the password. For production use, you should change these values and store them securely.
+注意：デフォルト設定では、ユーザー名に「admin」、パスワードに「password」を使用しています。本番環境では、これらの値を変更し、安全に保存してください。

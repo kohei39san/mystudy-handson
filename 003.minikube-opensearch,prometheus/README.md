@@ -1,37 +1,37 @@
-# Minikube with OpenSearch and Prometheus Setup
+# Minikube、OpenSearch、Prometheus構成
 
-This Terraform configuration creates an EC2 instance with Minikube, OpenSearch, and Prometheus installed, with the following resources:
+このTerraform構成は、Minikube、OpenSearch、PrometheusがインストールされたEC2インスタンスを作成します。以下のリソースが含まれています：
 
-## Resource Configuration
+## リソース構成
 
-### Network Resources
-- VPC with CIDR block 10.0.0.0/16
-- Public subnet
-- Internet Gateway
-- Route Table with routes to the Internet Gateway
-- Security Group for the instance
+### ネットワークリソース
+- CIDRブロック10.0.0.0/16のVPC
+- パブリックサブネット
+- インターネットゲートウェイ
+- インターネットゲートウェイへのルートを持つルートテーブル
+- インスタンス用のセキュリティグループ
 
-### Compute Resources
-- EC2 instance with:
-  - Installation scripts for Docker and Minikube
-  - Bootstrap configuration for setting up the environment
+### コンピューティングリソース
+- EC2インスタンス：
+  - DockerとMinikubeのインストールスクリプト
+  - 環境セットアップ用のブートストラップ設定
 
-### Kubernetes Resources
-- OpenSearch deployment configurations:
-  - OpenSearch leader node
-  - OpenSearch data nodes
-  - Snapshot repository registration
-  - SLM (Snapshot Lifecycle Management) configuration
+### Kubernetesリソース
+- OpenSearchデプロイメント構成：
+  - OpenSearchリーダーノード
+  - OpenSearchデータノード
+  - スナップショットリポジトリ登録
+  - SLM（スナップショットライフサイクル管理）設定
 
-### IAM Resources
-- IAM role and policies for the EC2 instance
+### IAMリソース
+- EC2インスタンス用のIAMロールとポリシー
 
-## Usage
+## 使用方法
 
-Follow the instructions in the main README.md file to deploy this configuration.
+この構成をデプロイするには、メインのREADME.mdに記載されている手順に従ってください。
 
-After deployment, you can access:
-- OpenSearch dashboard
-- Prometheus monitoring interface
+デプロイ後、以下にアクセスできます：
+- OpenSearchダッシュボード
+- Prometheusモニタリングインターフェース
 
-Refer to the documentation in the `docs` directory for additional information.
+追加情報については、`docs`ディレクトリのドキュメントを参照してください。
