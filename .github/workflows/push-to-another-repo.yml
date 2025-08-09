@@ -84,6 +84,9 @@ jobs:
           echo "target_repo_name=$TARGET_REPO_NAME" >> $GITHUB_OUTPUT
           echo "TARGET_REPO=$TARGET_REPO" >> $GITHUB_ENV
           echo "target_repo=$TARGET_REPO" >> $GITHUB_OUTPUT
+
+          echo "::add-mask::$TARGET_REPO_OWNER"
+          echo "::add-mask::$TARGET_REPO_NAME"
           
       - name: Clone target repository
         run: |
