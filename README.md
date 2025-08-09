@@ -2,7 +2,7 @@
 [![Terraform linter and PR](https://github.com/kohei39san/mystudy-handson/actions/workflows/terraform-linter-pr.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/terraform-linter-pr.yml)
 [![Dependabot Updates](https://github.com/kohei39san/mystudy-handson/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/dependabot/dependabot-updates)
 [![CloudFormation Linter](https://github.com/kohei39san/mystudy-handson/actions/workflows/cfn-lint.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/cfn-lint.yml)
-[![GitHub Actions Linter](https://github.com/kohei39san/mystudy-handson/actions/workflows/github-actions-linter.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/github-actions-linter.yml)
+[![GitHub Actions Linter](https://github.com/kohei39san/mystudy-handson/actions/workflows/github-actions-linter-pr.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/github-actions-linter-pr.yml)
 [![Ansible Linter](https://github.com/kohei39san/mystudy-handson/actions/workflows/ansible-linter-pr.yml/badge.svg)](https://github.com/kohei39san/mystudy-handson/actions/workflows/ansible-linter-pr.yml)
 
 # 概要

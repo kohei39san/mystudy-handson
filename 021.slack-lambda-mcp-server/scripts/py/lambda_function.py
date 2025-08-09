@@ -46,7 +46,7 @@ def get_parameter(param_name):
         )
         return response['Parameter']['Value']
     except Exception as e:
-        logger.error(f"Error retrieving parameter {param_name}: {str(e)}")
+        logger.error(f"Error retrieving parameter: {str(e)}")
         raise
 
 def start_mcp_servers():
