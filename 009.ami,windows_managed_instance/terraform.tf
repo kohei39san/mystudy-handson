@@ -20,3 +20,14 @@ provider "aws" {
     })
   }
 }
+
+provider "aws" {
+  region = "ap-northeast-3"
+  alias  = "osaka"
+  default_tags {
+    tags = merge(var.aws_tags, {
+      Environment = "Development"
+      Terraform   = "true"
+    })
+  }
+}

@@ -1,3 +1,8 @@
+variable "aws_tags" {
+  type    = map(string)
+  default = {}
+}
+
 variable "ami_name" {
   type    = string
   default = "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
