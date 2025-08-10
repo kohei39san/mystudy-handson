@@ -66,7 +66,7 @@ jobs:
               # Convert .drawio to .svg using draw.io desktop
               export XDG_RUNTIME_DIR="/run/user/$(id -u)"
               export DBUS_SESSION_BUS_ADDRESS=unix:path="$XDG_RUNTIME_DIR"/bus
-              if xvfb-run /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
+              if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
                 echo "Successfully converted $drawio_file to $svg_file"
               else
                 echo "Failed to convert $drawio_file"
