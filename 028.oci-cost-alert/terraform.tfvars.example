@@ -1,0 +1,82 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and update the values
+# Command: cp terraform.tfvars.example terraform.tfvars
+
+#==============================================================================
+# REQUIRED CONFIGURATION
+#==============================================================================
+
+# Required: OCID of the compartment where resources will be created
+# You can find this in the OCI Console under Identity & Security > Compartments
+compartment_id = "ocid1.compartment.oc1..aaaaaaaa..."
+
+# Required: List of email addresses to receive budget alerts
+# These addresses will receive confirmation emails that must be clicked
+alert_email_addresses = [
+  "admin@example.com",
+  "finance@example.com"
+]
+
+#==============================================================================
+# BUDGET CONFIGURATION
+#==============================================================================
+
+# Budget amount in your tenancy's currency (e.g., USD, JPY)
+budget_amount = 100
+
+# Budget reset period - when the budget resets
+# Valid values: "MONTHLY", "QUARTERLY", "ANNUALLY"
+budget_reset_period = "MONTHLY"
+
+# Display name for the budget (shown in OCI Console)
+budget_display_name = "Monthly Budget Alert"
+
+#==============================================================================
+# ALERT CONFIGURATION
+#==============================================================================
+
+# Percentage of budget at which to trigger alert (1-100)
+# For example, 80 means alert when 80% of budget is reached
+alert_threshold_percentage = 80
+
+#==============================================================================
+# NOTIFICATION CONFIGURATION
+#==============================================================================
+
+# Name for the notification topic
+notification_topic_name = "budget-alert-topic"
+
+#==============================================================================
+# OPTIONAL CONFIGURATION
+#==============================================================================
+
+# OCI region (default: ap-osaka-1)
+# region = "ap-osaka-1"
+
+# Custom tags to apply to all resources
+freeform_tags = {
+  Environment = "production"
+  Purpose     = "cost-monitoring"
+  Owner       = "finance-team"
+  Project     = "cost-management"
+}
+
+#==============================================================================
+# ADVANCED CONFIGURATION EXAMPLES
+#==============================================================================
+
+# Example for different budget amounts and thresholds:
+# budget_amount = 500
+# alert_threshold_percentage = 75
+
+# Example for quarterly budget:
+# budget_reset_period = "QUARTERLY"
+# budget_display_name = "Quarterly Budget Alert"
+
+# Example for multiple alert recipients:
+# alert_email_addresses = [
+#   "cfo@company.com",
+#   "finance-team@company.com",
+#   "devops@company.com",
+#   "admin@company.com"
+# ]
