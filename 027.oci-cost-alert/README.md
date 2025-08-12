@@ -1,136 +1,181 @@
-# 027.oci-cost-alert - OCIコストアラート
+# OCI コストアラート設定
+
+このTerraformコードは、Oracle Cloud Infrastructure (OCI) でコストアラート機能を実装します。指定した予算額を超えた場合に、指定のメールアドレスに通知を送信します。
 
 ## 概要
 
-このTerraformコードは、Oracle Cloud Infrastructure (OCI) でコストアラート機能を実装します。指定した予算額を超えた場合に、指定のメールアドレスに通知を送信する仕組みを構築します。
+このソリューションは以下のOCIリソースを作成します：
+
+- **予算 (Budget)**: 月次予算の設定
+- **予算アラートルール (Budget Alert Rules)**: 複数の閾値でのアラート設定
+- **通知トピック (ONS Topic)**: アラート通知の配信
+- **メール購読 (Email Subscription)**: 指定メールアドレスへの通知配信
+
+## アーキテクチャ
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│     予算        │───▶│ アラートルール    │───▶│  通知トピック   │
+│   (Budget)      │    │ (Alert Rules)    │    │  (ONS Topic)    │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                                         │
+                                                         ▼
+                                                ┌─────────────────┐
+                                                │  メール通知     │
+                                                │ (Email Alert)   │
+                                                └─────────────────┘
+```
 
 ## 機能
 
-- **予算管理**: 月次予算の設定と管理
-- **アラート通知**: 予算の閾値に達した際のメール通知
-- **複数段階アラート**: 
-  - 設定可能な閾値（デフォルト80%）でのアラート
-  - 100%到達時のアラート
-  - 予算超過予測アラート
+### アラートルール
 
-## 構成リソース
+1. **カスタム閾値アラート**: 設定した割合（デフォルト80%）で通知
+2. **100%アラート**: 予算の100%に達した時点で通知
+3. **予測アラート**: 月末までに予算を超過する予測の場合に通知
 
-### 主要リソース
+### 通知内容
 
-1. **oci_budget_budget**: 月次予算の定義
-2. **oci_budget_alert_rule**: 予算アラートルールの設定
-3. **oci_ons_notification_topic**: 通知トピック
-4. **oci_ons_subscription**: メール通知の購読設定
+- 現在の使用率
+- 予算金額と通貨
+- アラートの種類（実際の使用量 or 予測）
 
-### リソース詳細
+## 前提条件
 
-- **予算**: 月次リセットの予算設定
-- **通知トピック**: アラート通知用のONS（Oracle Notification Service）トピック
-- **メール購読**: 指定されたメールアドレスへの通知設定
-- **アラートルール**: 
-  - 閾値アラート（デフォルト80%）
-  - 100%到達アラート
-  - 予算超過予測アラート
+- OCI CLI または適切な認証情報の設定
+- 適切な権限を持つOCIユーザー
+- 有効なコンパートメントOCID
+- 通知を受信するメールアドレス
+
+## 必要な権限
+
+以下のOCI権限が必要です：
+
+```
+Allow group <group-name> to manage budgets in compartment <compartment-name>
+Allow group <group-name> to manage ons-topics in compartment <compartment-name>
+Allow group <group-name> to manage ons-subscriptions in compartment <compartment-name>
+```
 
 ## 使用方法
 
-### 1. 前提条件
-
-- OCI CLIまたはTerraform用のOCI認証情報が設定済みであること
-- 適切なIAMポリシーが設定されていること（Budget、ONS関連の権限）
-
-### 2. 設定ファイルの準備
+### 1. 設定ファイルの準備
 
 ```bash
-# terraform.tfvars.exampleをコピーして設定
+# サンプル設定ファイルをコピー
 cp terraform.tfvars.example terraform.tfvars
+
+# 設定ファイルを編集
+vi terraform.tfvars
 ```
 
-### 3. 必須変数の設定
+### 2. 必須変数の設定
 
-`terraform.tfvars`ファイルで以下の変数を設定してください：
+`terraform.tfvars`ファイルで以下の値を設定してください：
 
 ```hcl
-compartment_id = "ocid1.compartment.oc1..aaaaaaaa..."  # コンパートメントOCID
-alert_email    = "your-email@example.com"              # アラート受信メールアドレス
+# 必須項目
+compartment_id = "ocid1.compartment.oc1..your-compartment-ocid"
+alert_email    = "your-email@example.com"
+
+# オプション項目（必要に応じて変更）
+budget_amount              = 100
+budget_currency            = "USD"
+alert_threshold_percentage = 80
+budget_display_name        = "Monthly Budget Alert"
 ```
 
-### 4. デプロイ
+### 3. Terraformの実行
 
 ```bash
-# Terraformの初期化
+# 初期化
 terraform init
 
-# 実行計画の確認
+# プランの確認
 terraform plan
 
 # リソースの作成
 terraform apply
 ```
 
+### 4. メール購読の確認
+
+リソース作成後、指定したメールアドレスに購読確認メールが送信されます。メール内のリンクをクリックして購読を確認してください。
+
 ## 設定可能な変数
 
 | 変数名 | 説明 | デフォルト値 | 必須 |
 |--------|------|-------------|------|
-| `region` | OCIリージョン | `ap-osaka-1` | No |
-| `compartment_id` | コンパートメントOCID | - | Yes |
-| `budget_amount` | 予算額 | `100` | No |
-| `budget_currency` | 通貨 | `USD` | No |
-| `alert_email` | アラート受信メールアドレス | - | Yes |
-| `alert_threshold_percentage` | アラート閾値（%） | `80` | No |
-| `budget_display_name` | 予算の表示名 | `Monthly Budget Alert` | No |
-| `notification_topic_name` | 通知トピック名 | `budget-alert-topic` | No |
-| `freeform_tags` | フリーフォームタグ | `{Environment = "production", Terraform = "true"}` | No |
+| `compartment_id` | コンパートメントOCID | - | ✓ |
+| `alert_email` | アラート通知先メールアドレス | - | ✓ |
+| `region` | OCIリージョン | `ap-osaka-1` | - |
+| `budget_amount` | 予算金額 | `100` | - |
+| `budget_currency` | 予算通貨 | `USD` | - |
+| `alert_threshold_percentage` | アラート閾値（%） | `80` | - |
+| `budget_display_name` | 予算の表示名 | `Monthly Budget Alert` | - |
+| `notification_topic_name` | 通知トピック名 | `budget-alert-topic` | - |
+| `freeform_tags` | フリーフォームタグ | 基本タグセット | - |
 
 ## 出力値
 
-- `budget_id`: 作成された予算のOCID
-- `budget_display_name`: 予算の表示名
-- `notification_topic_id`: 通知トピックのOCID
-- `notification_topic_name`: 通知トピック名
-- `email_subscription_id`: メール購読のOCID
-- `alert_rules`: 作成されたアラートルールの情報
-
-## セキュリティ考慮事項
-
-- コンパートメントレベルでの予算管理により、適切なスコープでのコスト監視を実現
-- ONSを使用した安全なメール通知
-- フリーフォームタグによるリソース管理
+| 出力名 | 説明 |
+|--------|------|
+| `budget_id` | 作成された予算のOCID |
+| `notification_topic_id` | 通知トピックのOCID |
+| `email_subscription_id` | メール購読のOCID |
+| `alert_rules` | 作成されたアラートルールの詳細情報 |
 
 ## 注意事項
 
-1. **メール確認**: 初回デプロイ後、指定したメールアドレスに確認メールが送信されます。購読を有効にするために確認が必要です。
+### セキュリティ
 
-2. **権限要件**: 以下のOCI IAMポリシーが必要です：
-   ```
-   Allow group <group-name> to manage budgets in compartment <compartment-name>
-   Allow group <group-name> to manage ons-topics in compartment <compartment-name>
-   Allow group <group-name> to manage ons-subscriptions in compartment <compartment-name>
-   ```
+- メールアドレスは機密情報として扱われ、出力時にマスクされます
+- 適切なIAMポリシーを設定して、必要最小限の権限のみを付与してください
 
-3. **通貨設定**: 予算の通貨は、OCIアカウントの請求通貨と一致させることを推奨します。
+### コスト
 
-4. **アラート頻度**: アラートは条件を満たした際に送信されますが、スパム防止のため一定の間隔で制限される場合があります。
+- ONS（Oracle Notification Service）の使用料金が発生する場合があります
+- 予算アラート機能自体は無料ですが、通知の配信に少額の料金が発生する可能性があります
+
+### 制限事項
+
+- 予算は月次リセットのみサポート
+- アラート閾値は1-100%の範囲で設定
+- メール通知のみサポート（SMS、Slack等は別途設定が必要）
 
 ## トラブルシューティング
 
 ### よくある問題
 
 1. **メール通知が届かない**
-   - メールアドレスの確認が完了しているか確認
-   - スパムフォルダを確認
-   - ONSサブスクリプションのステータスを確認
+   - 購読確認メールを確認してください
+   - スパムフォルダを確認してください
+   - メールアドレスが正しく設定されているか確認してください
 
 2. **権限エラー**
-   - 必要なIAMポリシーが設定されているか確認
-   - コンパートメントIDが正しいか確認
+   - 必要なIAMポリシーが設定されているか確認してください
+   - コンパートメントOCIDが正しいか確認してください
 
 3. **予算が作成されない**
-   - コンパートメントIDの形式が正しいか確認
-   - 予算額と通貨の設定を確認
+   - コンパートメントIDが有効か確認してください
+   - 予算金額が正の数値か確認してください
 
-## 関連ドキュメント
+## リソースの削除
 
-- [OCI Budget Service Documentation](https://docs.oracle.com/en-us/iaas/Content/Billing/Concepts/budgetsoverview.htm)
-- [OCI Notification Service Documentation](https://docs.oracle.com/en-us/iaas/Content/Notification/Concepts/notificationoverview.htm)
-- [OCI Terraform Provider Documentation](https://registry.terraform.io/providers/oracle/oci/latest/docs)
+```bash
+# 全リソースの削除
+terraform destroy
+```
+
+**注意**: リソースを削除すると、設定されたアラートも無効になります。
+
+## サポート
+
+このコードに関する質問や問題がある場合は、以下を確認してください：
+
+1. [OCI公式ドキュメント](https://docs.oracle.com/en-us/iaas/Content/Billing/Concepts/budgetsoverview.htm)
+2. [Terraform OCI Provider ドキュメント](https://registry.terraform.io/providers/oracle/oci/latest/docs)
+
+## ライセンス
+
+このコードはMITライセンスの下で提供されています。

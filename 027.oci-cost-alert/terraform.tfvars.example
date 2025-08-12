@@ -1,20 +1,23 @@
-# Example terraform.tfvars file
-# Copy this file to terraform.tfvars and update with your values
+# OCI Cost Alert Configuration Example
+# このファイルをterraform.tfvarsにコピーして、実際の値を設定してください
 
-# Required variables
-compartment_id = "ocid1.compartment.oc1..aaaaaaaa..."
+# 必須設定項目
+compartment_id = "ocid1.compartment.oc1..aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 alert_email    = "your-email@example.com"
 
-# Optional variables (uncomment and modify as needed)
-# region                     = "ap-osaka-1"
-# budget_amount              = 100
-# budget_currency            = "USD"
-# alert_threshold_percentage = 80
-# budget_display_name        = "Monthly Budget Alert"
-# notification_topic_name    = "budget-alert-topic"
+# 予算設定
+budget_amount              = 100
+budget_currency            = "USD"
+alert_threshold_percentage = 80
+budget_display_name        = "Monthly Budget Alert"
 
-# freeform_tags = {
-#   Environment = "production"
-#   Terraform   = "true"
-#   Project     = "cost-management"
-# }
+# 通知設定
+notification_topic_name = "budget-alert-topic"
+
+# タグ設定
+freeform_tags = {
+  Environment = "Production"
+  Project     = "CostManagement"
+  ManagedBy   = "Terraform"
+  Terraform   = "true"
+}
