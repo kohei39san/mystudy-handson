@@ -1,0 +1,20 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and update with your values
+
+# Required variables
+compartment_id = "ocid1.compartment.oc1..aaaaaaaa..."
+alert_email    = "your-email@example.com"
+
+# Optional variables (uncomment and modify as needed)
+# region                     = "ap-osaka-1"
+# budget_amount              = 100
+# budget_currency            = "USD"
+# alert_threshold_percentage = 80
+# budget_display_name        = "Monthly Budget Alert"
+# notification_topic_name    = "budget-alert-topic"
+
+# freeform_tags = {
+#   Environment = "production"
+#   Terraform   = "true"
+#   Project     = "cost-management"
+# }
