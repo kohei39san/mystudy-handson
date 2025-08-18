@@ -1,0 +1,101 @@
+<mxfile host="65bd71144e">
+    <diagram name="ページ1" id="Wp9Tot8XLC37BgMdsrnz">
+        <mxGraphModel dx="1456" dy="804" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <!-- AWS Cloud Container -->
+                <mxCell id="aws-cloud" value="AWS Cloud" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E;dashed=0;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="40" width="740" height="500" as="geometry"/>
+                </mxCell>
+                
+                <!-- EventBridge -->
+                <mxCell id="eventbridge" value="EventBridge&#xa;(週次スケジュール)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;" vertex="1" parent="aws-cloud">
+                    <mxGeometry x="60" y="80" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- Lambda Function -->
+                <mxCell id="lambda" value="Lambda Function&#xa;(ゲーム情報取得)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7100;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;" vertex="1" parent="aws-cloud">
+                    <mxGeometry x="280" y="80" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- IAM Role -->
+                <mxCell id="iam" value="IAM Role&#xa;(実行権限)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#DD344C;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.iam;" vertex="1" parent="aws-cloud">
+                    <mxGeometry x="280" y="220" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- SSM Parameter Store -->
+                <mxCell id="ssm" value="Systems Manager&#xa;Parameter Store&#xa;(APIキー・Webhook URL)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#759C3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.systems_manager;" vertex="1" parent="aws-cloud">
+                    <mxGeometry x="500" y="80" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- CloudWatch Logs -->
+                <mxCell id="cloudwatch" value="CloudWatch Logs&#xa;(ログ出力)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#759C3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch_2;" vertex="1" parent="aws-cloud">
+                    <mxGeometry x="280" y="360" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- External Services -->
+                <!-- OpenRouter API -->
+                <mxCell id="openrouter" value="OpenRouter API&#xa;(AI API)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.client;" vertex="1" parent="1">
+                    <mxGeometry x="900" y="120" width="78" height="76" as="geometry"/>
+                </mxCell>
+                
+                <!-- Discord -->
+                <mxCell id="discord" value="Discord&#xa;(Webhook)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.chat;" vertex="1" parent="1">
+                    <mxGeometry x="900" y="280" width="78" height="68" as="geometry"/>
+                </mxCell>
+                
+                <!-- Connections -->
+                <!-- EventBridge to Lambda -->
+                <mxCell id="conn1" value="週次実行" style="endArrow=classic;html=1;rounded=0;fontColor=#232F3E;strokeColor=#232F3E;" edge="1" parent="1" source="eventbridge" target="lambda">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="300" as="sourcePoint"/>
+                        <mxPoint x="450" y="250" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- Lambda to SSM -->
+                <mxCell id="conn2" value="パラメータ取得" style="endArrow=classic;html=1;rounded=0;fontColor=#232F3E;strokeColor=#232F3E;" edge="1" parent="1" source="lambda" target="ssm">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="300" as="sourcePoint"/>
+                        <mxPoint x="450" y="250" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- Lambda to OpenRouter -->
+                <mxCell id="conn3" value="ゲーム情報取得" style="endArrow=classic;html=1;rounded=0;fontColor=#232F3E;strokeColor=#232F3E;" edge="1" parent="1" source="lambda" target="openrouter">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="300" as="sourcePoint"/>
+                        <mxPoint x="450" y="250" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- Lambda to Discord -->
+                <mxCell id="conn4" value="通知送信" style="endArrow=classic;html=1;rounded=0;fontColor=#232F3E;strokeColor=#232F3E;" edge="1" parent="1" source="lambda" target="discord">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="300" as="sourcePoint"/>
+                        <mxPoint x="450" y="250" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- IAM to Lambda -->
+                <mxCell id="conn5" value="権限付与" style="endArrow=classic;html=1;rounded=0;fontColor=#232F3E;strokeColor=#232F3E;dashed=1;" edge="1" parent="1" source="iam" target="lambda">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="300" as="sourcePoint"/>
+                        <mxPoint x="450" y="250" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- Lambda to CloudWatch -->
+                <mxCell id="conn6" value="ログ出力" style="endArrow=classic;html=1;rounded=0;fontColor=#232F3E;strokeColor=#232F3E;dashed=1;" edge="1" parent="1" source="lambda" target="cloudwatch">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="300" as="sourcePoint"/>
+                        <mxPoint x="450" y="250" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
