@@ -9,27 +9,42 @@
 
 システムは、期限切れ2週間前のコードを自動的に検出し、Discordウェブフックを通じて通知します。各通知にはコードの自動入力リンクが含まれます。
 
-## アーキテクチャ
+![構成図](src/architecture.svg)
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   EventBridge   │────▶│     Lambda      │────▶│     Discord     │
-│  (週次スケジュール)  │     │  (Python関数)   │     │   (Webhook)    │
-└─────────────────┘     └────────┬────────┘     └─────────────────┘
-                               │
-                               ▼
-                      ┌─────────────────┐
-                      │   OpenRouter    │
-                      │    (AI API)     │
-                      └─────────────────┘
-```
+## リソース構成
 
-### 使用するAWSサービス
+### コンピューティングリソース
+- **Lambda Function**: ゲーム情報を取得しDiscordへ送信するPython関数
+  - ランタイム: Python 3.9
+  - 設定可能なタイムアウト（デフォルト: 30秒）
+  - 設定可能なメモリサイズ（デフォルト: 128MB）
 
-- **AWS Lambda**: ゲーム情報を取得しDiscordへ送信するPython関数を実行
-- **AWS EventBridge**: 1週間ごとにLambda関数を実行するスケジューラー
-- **AWS Systems Manager Parameter Store**: APIキーやWebhook URLなどの機密情報を安全に保存
-- **AWS IAM**: 必要な権限を持つロールとポリシーを提供
+### スケジューリングリソース
+- **EventBridge Rule**: Lambda関数を定期実行するスケジューラー
+  - デフォルトスケジュール: 毎週日曜日午前0時（UTC）
+  - カスタマイズ可能なcron式
+
+### セキュリティ・アクセス管理
+- **IAM Role**: Lambda実行用のロール
+  - AWSLambdaBasicExecutionRole（基本実行権限）
+  - SSM Parameter Store読み取り権限
+- **Lambda Permission**: EventBridgeからのLambda呼び出し許可
+
+### 設定管理
+- **Systems Manager Parameter Store**: 機密情報の安全な保存
+  - OpenRouter APIキー（SecureString）
+  - Discord Webhook URL（SecureString）
+
+### ログ・モニタリング
+- **CloudWatch Logs**: Lambda関数の実行ログ
+  - 自動ログ出力
+  - 設定可能な保持期間（推奨: 3日）
+
+## セキュリティ設計
+
+- **IAMロールベースのアクセス制御**: Lambda関数は最小権限の原則に従い、必要なリソースのみにアクセス
+- **機密情報の安全な管理**: APIキーやWebhook URLはSSM Parameter Storeで暗号化保存
+- **ネットワークセキュリティ**: Lambda関数は外部APIとの通信にHTTPS使用
 
 ## デプロイ方法
 
