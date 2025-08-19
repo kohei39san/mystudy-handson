@@ -3,6 +3,7 @@ name: GitHub Actions Linter
 permissions:
   contents: write
   pull-requests: write
+  workflows: write
 
 on:
   push:
@@ -20,13 +21,6 @@ jobs:
           # Full git history is needed to get a proper list of changed files
           fetch-depth: 0
 
-      - name: Clean up any existing super-linter output
-        run: |
-          # Remove any existing super-linter output directories and files
-          sudo rm -rf super-linter-output/ .super-linter-output/ super-linter.log .super-linter.log || true
-          # Clean any untracked files that might interfere with git operations
-          git clean -fd || true
-
       - name: Lint GitHub Actions YAML Files
         uses: github/super-linter@v7
         env:
@@ -40,18 +34,6 @@ jobs:
           FILTER_REGEX_INCLUDE: .*github/workflows/.*
           # Fix issues automatically where possible
           FIX_YAML_PRETTIER: true
-          # Disable summary output to avoid file conflicts
-          CREATE_LOG_FILE: false
-          # Set output directory to /tmp to avoid permission issues
-          OUTPUT_FOLDER: /tmp/super-linter-output
-
-      - name: Clean up super-linter output files
-        if: always()
-        run: |
-          # Remove super-linter output files that might cause git conflicts
-          sudo rm -rf super-linter-output/ .super-linter-output/ super-linter.log .super-linter.log /tmp/super-linter-output/ || true
-          # Ensure no untracked files remain that could interfere with git operations
-          git status --porcelain | grep '^??' | cut -c4- | grep -E '(super-linter|\.super-linter)' | xargs rm -rf || true
 
       - name: Check for changes
         if: ${{ !cancelled() }}
