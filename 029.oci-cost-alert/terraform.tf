@@ -6,10 +6,10 @@ terraform {
       version = "~> 7.0"
     }
   }
-  
+
   backend "oci" {
     # Required
-    bucket            = "terraform_state_bucket"
+    bucket              = "terraform_state_bucket"
     config_file_profile = "DEFAULT"
   }
 }
