@@ -56,3 +56,9 @@ cdk.out
 
 # CDK context
 cdk.context.json
+
+# Super-linter output files
+super-linter-output/
+.super-linter-output/
+super-linter.log
+.super-linter.log
