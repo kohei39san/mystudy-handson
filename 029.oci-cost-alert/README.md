@@ -70,7 +70,7 @@ alert_email_addresses = [
 
 ```bash
 # 初期化
-terraform init
+terraform init -backend-config="namespace=<ネームスペース>"
 
 # プランの確認
 terraform plan

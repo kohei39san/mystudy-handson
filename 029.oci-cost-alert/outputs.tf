@@ -23,21 +23,6 @@ output "alert_threshold_percentage" {
   value       = oci_budget_alert_rule.budget_alert_rule.threshold
 }
 
-output "notification_topic_id" {
-  description = "OCID of the notification topic"
-  value       = oci_ons_notification_topic.budget_alert_topic.id
-}
-
-output "notification_topic_name" {
-  description = "Name of the notification topic"
-  value       = oci_ons_notification_topic.budget_alert_topic.name
-}
-
-output "email_subscription_ids" {
-  description = "OCIDs of the email subscriptions"
-  value       = oci_ons_subscription.budget_alert_email_subscription[*].id
-}
-
 output "alert_email_addresses" {
   description = "Email addresses configured for alerts"
   value       = var.alert_email_addresses

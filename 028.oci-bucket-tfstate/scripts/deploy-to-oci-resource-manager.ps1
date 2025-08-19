@@ -5,23 +5,12 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$StackName,
     
+    [string]$ZipFile = "../src/terraform-config.zip",
+    
     [string]$BucketName = "terraform-state-bucket"
 )
 
 $ErrorActionPreference = "Stop"
-
-# Set paths
-$TerraformDir = ".."
-$ZipFile = "oci-bucket-tfstate.zip"
-
-Write-Host "Creating Terraform configuration zip file..." -ForegroundColor Green
-
-# Create zip file
-if (Test-Path $ZipFile) {
-    Remove-Item $ZipFile -Force
-}
-
-Compress-Archive -Path "$TerraformDir\*.tf" -DestinationPath $ZipFile
 
 Write-Host "Creating OCI Resource Manager stack..." -ForegroundColor Green
 
@@ -84,8 +73,5 @@ if ($applyStatus -eq "SUCCEEDED") {
     Write-Error "Apply failed with status: $applyStatus"
     exit 1
 }
-
-# Clean up zip file
-Remove-Item $ZipFile -Force
 
 Write-Host "Deployment completed. You can view the stack in OCI Console." -ForegroundColor Green

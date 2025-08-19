@@ -10,13 +10,13 @@ terraform {
 provider "oci" {}
 
 resource "oci_objectstorage_bucket" "tfstate_bucket" {
-  compartment_id = var.compartment_id
+  compartment_id = var.compartment_ocid
   name           = var.bucket_name
   namespace      = data.oci_objectstorage_namespace.ns.namespace
 
   versioning = "Enabled"
 
-  public_access_type = "NoPublicAccess"
+  access_type = "NoPublicAccess"
 
   storage_tier = "Standard"
 
@@ -28,5 +28,5 @@ resource "oci_objectstorage_bucket" "tfstate_bucket" {
 }
 
 data "oci_objectstorage_namespace" "ns" {
-  compartment_id = var.compartment_id
+  compartment_id = var.compartment_ocid
 }
