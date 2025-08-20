@@ -38,12 +38,6 @@ variable "budget_display_name" {
   default     = "Monthly Budget Alert"
 }
 
-variable "notification_topic_name" {
-  description = "Name for the notification topic"
-  type        = string
-  default     = "budget-alert-topic"
-}
-
 variable "freeform_tags" {
   description = "Free-form tags to apply to resources"
   type        = map(string)
