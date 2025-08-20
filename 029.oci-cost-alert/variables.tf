@@ -35,7 +35,7 @@ variable "alert_email_addresses" {
 variable "budget_display_name" {
   description = "Display name for the budget"
   type        = string
-  default     = "Monthly Budget Alert"
+  default     = "Monthly-Budget-Alert"
 }
 
 variable "freeform_tags" {

@@ -73,10 +73,13 @@ alert_email_addresses = [
 PowerShell -ExecutionPolicy RemoteSigned '..\scripts\terraform-init-oci-be.ps1'
 
 # プランの確認
-terraform plan -backend-config="namespace=<ネームスペース>"
+terraform plan
 
 # 適用
-terraform apply -backend-config="namespace=<ネームスペース>"
+terraform apply
+
+# 削除
+terraform destroy
 ```
 
 ### 4. 確認

@@ -15,7 +15,7 @@ resource "oci_budget_budget" "main_budget" {
 # Budget Alert Rule
 resource "oci_budget_alert_rule" "budget_alert_rule" {
   budget_id      = oci_budget_budget.main_budget.id
-  display_name   = "${var.budget_display_name} Alert Rule"
+  display_name   = "${var.budget_display_name}-Alert-Rule"
   description    = "Alert rule to notify when budget threshold is exceeded"
   type           = "ACTUAL"
   threshold      = var.alert_threshold_percentage
