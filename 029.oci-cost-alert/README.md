@@ -70,13 +70,13 @@ alert_email_addresses = [
 
 ```bash
 # 初期化
-terraform init -backend-config="namespace=<ネームスペース>"
+PowerShell -ExecutionPolicy RemoteSigned '..\scripts\terraform-init-oci-be.ps1'
 
 # プランの確認
-terraform plan
+terraform plan -backend-config="namespace=<ネームスペース>"
 
 # 適用
-terraform apply
+terraform apply -backend-config="namespace=<ネームスペース>"
 ```
 
 ### 4. 確認

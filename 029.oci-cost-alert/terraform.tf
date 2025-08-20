@@ -7,11 +7,7 @@ terraform {
     }
   }
   
-  backend "oci" {
-    # Required
-    bucket            = "terraform_state_bucket"
-    config_file_profile = "DEFAULT"
-  }
+  backend "oci" {}
 }
 
 provider "oci" {
