@@ -3,6 +3,7 @@ name: GitHub Actions Linter
 permissions:
   contents: write
   pull-requests: write
+  workflows: write
 
 on:
   push:
