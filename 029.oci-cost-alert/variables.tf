@@ -12,7 +12,7 @@ variable "compartment_id" {
 variable "budget_amount" {
   description = "Budget amount in the currency of the tenancy"
   type        = number
-  default     = 100
+  default     = 1
 }
 
 variable "budget_reset_period" {
