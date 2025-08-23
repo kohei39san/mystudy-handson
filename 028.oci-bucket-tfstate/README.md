@@ -26,12 +26,7 @@ Oracle Cloud Infrastructure (OCI) でTerraformのstateファイルを保存す�
 
 ## 使用方法
 
-[
-![Deploy to Oracle Cloud]
-(https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)
-]
-(https://cloud.oracle.com/resourcemanager/stacks/create
-?zipUrl=https://github.com/kohei39san/mystudy-handson/blob/main/028.oci-bucket-tfstate/src/terraform-config.zip)
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https://github.com/kohei39san/mystudy-handson/blob/main/028.oci-bucket-tfstate/src/terraform-config.zip)
 
 ### 1. 設定ファイルの準備
 
