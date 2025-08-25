@@ -1,0 +1,78 @@
+<mxfile host="65bd71144e">
+    <diagram name="Aurora MySQL RDS クラスター構成" id="Wp9Tot8XLC37BgMdsrnz">
+        <mxGraphModel dx="1456" dy="804" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <!-- VPC Container -->
+                <mxCell id="vpc-container" value="VPC (10.0.0.0/16)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc;strokeColor=#248814;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;" vertex="1" parent="1">
+                    <mxGeometry x="80" y="120" width="640" height="400" as="geometry"/>
+                </mxCell>
+                
+                <!-- Availability Zone 1 -->
+                <mxCell id="az1" value="アベイラビリティゾーン 1c" style="fillColor=none;strokeColor=#147EBA;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#147EBA;whiteSpace=wrap;html=1;" vertex="1" parent="vpc-container">
+                    <mxGeometry x="40" y="60" width="240" height="280" as="geometry"/>
+                </mxCell>
+                
+                <!-- Availability Zone 2 -->
+                <mxCell id="az2" value="アベイラビリティゾーン 1a" style="fillColor=none;strokeColor=#147EBA;dashed=1;verticalAlign=top;fontStyle=0;fontColor=#147EBA;whiteSpace=wrap;html=1;" vertex="1" parent="vpc-container">
+                    <mxGeometry x="360" y="60" width="240" height="280" as="geometry"/>
+                </mxCell>
+                
+                <!-- DB Subnet 1 -->
+                <mxCell id="subnet1" value="DBサブネット1&#xa;(10.0.1.0/24)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" vertex="1" parent="az1">
+                    <mxGeometry x="20" y="40" width="200" height="120" as="geometry"/>
+                </mxCell>
+                
+                <!-- DB Subnet 2 -->
+                <mxCell id="subnet2" value="DBサブネット2&#xa;(10.0.2.0/24)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_security_group;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=0;" vertex="1" parent="az2">
+                    <mxGeometry x="20" y="40" width="200" height="120" as="geometry"/>
+                </mxCell>
+                
+                <!-- Aurora MySQL Cluster -->
+                <mxCell id="aurora-cluster" value="Aurora MySQL クラスター&#xa;(mydb)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.aurora;" vertex="1" parent="vpc-container">
+                    <mxGeometry x="281" y="200" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- RDS Instance in AZ1 -->
+                <mxCell id="rds-instance1" value="RDS インスタンス&#xa;(db.t3.medium)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.rds_instance;" vertex="1" parent="subnet1">
+                    <mxGeometry x="61" y="40" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- Security Group -->
+                <mxCell id="security-group" value="セキュリティグループ&#xa;(RDS用)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#FF9900;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.security_group;" vertex="1" parent="vpc-container">
+                    <mxGeometry x="520" y="200" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- DB Subnet Group -->
+                <mxCell id="db-subnet-group" value="DBサブネットグループ" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#C925D1;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.db_subnet_group;" vertex="1" parent="vpc-container">
+                    <mxGeometry x="281" y="300" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- Connections -->
+                <mxCell id="connection1" value="" style="endArrow=none;html=1;rounded=0;strokeColor=#545B64;strokeWidth=2;" edge="1" parent="vpc-container" source="aurora-cluster" target="rds-instance1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="200" y="200" as="sourcePoint"/>
+                        <mxPoint x="250" y="150" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="connection2" value="" style="endArrow=none;html=1;rounded=0;strokeColor=#545B64;strokeWidth=2;" edge="1" parent="vpc-container" source="db-subnet-group" target="subnet1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="200" y="250" as="sourcePoint"/>
+                        <mxPoint x="250" y="200" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="connection3" value="" style="endArrow=none;html=1;rounded=0;strokeColor=#545B64;strokeWidth=2;" edge="1" parent="vpc-container" source="db-subnet-group" target="subnet2">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="250" as="sourcePoint"/>
+                        <mxPoint x="450" y="200" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -1,28 +1,39 @@
-# Aurora MySQL RDS Cluster Setup
+# Aurora MySQL RDS クラスター構成
 
-This Terraform configuration creates an Aurora MySQL RDS cluster in AWS, with the following resources:
+このTerraform構成は、AWSにAurora MySQL RDSクラスターを作成します。以下のリソースが含まれています：
 
-## Resource Configuration
+![構成図](src/architecture.svg)
 
-### Network Resources
-- VPC
-- Two subnets in different availability zones for the DB subnet group
-- Security Group for the RDS cluster
+## リソース構成
 
-### Database Resources
-- Aurora MySQL RDS cluster:
-  - Aurora MySQL 8.0 engine (version 8.0.mysql_aurora.3.05.2)
-  - Database name: "mydb"
-  - Backup retention period: 1 day
-  - Preferred backup window: 07:00-09:00 UTC
+### ネットワークリソース
+- **VPC**: CIDRブロック10.0.0.0/16
+- **DBサブネット1**: アベイラビリティゾーン1c（10.0.1.0/24）
+- **DBサブネット2**: アベイラビリティゾーン1a（10.0.2.0/24）
+- **DBサブネットグループ**: 高可用性のための複数AZ構成
+- **セキュリティグループ**: RDSクラスター用のアクセス制御
 
-- RDS Cluster Instance:
-  - db.t3.medium instance class
-  - Same engine and version as the cluster
-  - DB subnet group for high availability
+### データベースリソース
+- **Aurora MySQL RDSクラスター**：
+  - Aurora MySQL 8.0エンジン（バージョン8.0.mysql_aurora.3.05.2）
+  - データベース名: "mydb"
+  - バックアップ保持期間: 1日
+  - 優先バックアップウィンドウ: 07:00-09:00 UTC
+  - 最終スナップショットをスキップ
 
-## Usage
+- **RDSクラスターインスタンス**：
+  - db.t3.mediumインスタンスクラス
+  - クラスターと同じエンジンとバージョン
+  - 高可用性のためのDBサブネットグループ使用
 
-Follow the instructions in the main README.md file to deploy this configuration.
+## セキュリティ設計
 
-Note: The default configuration uses "foo" as the username and "must_be_eight_characters" as the password. For production use, you should change these values and store them securely.
+- データベースは専用のセキュリティグループで保護
+- 複数のアベイラビリティゾーンにまたがるサブネット構成で高可用性を実現
+- DBサブネットグループによりデータベースアクセスを制御
+
+## 使用方法
+
+この構成をデプロイするには、メインのREADME.mdに記載されている手順に従ってください。
+
+注意: デフォルト設定では、ユーザー名に"foo"、パスワードに"must_be_eight_characters"を使用しています。本番環境では、これらの値を変更し、安全に保存してください。
