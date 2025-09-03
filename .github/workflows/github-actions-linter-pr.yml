@@ -23,7 +23,7 @@ jobs:
       - name: Lint GitHub Actions YAML Files
         uses: super-linter/super-linter@v8.1.0
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SAVE_SUPER_LINTER_OUTPUT: false
           SAVE_SUPER_LINTER_SUMMARY: false
           ENABLE_GITHUB_ACTIONS_STEP_SUMMARY: false
@@ -54,7 +54,7 @@ jobs:
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
           base: ${{ steps.get_branch.outputs.branch_name }}
           branch: githubactions-lint-pr-${{ steps.get_branch.outputs.branch_name }}
           title: "Changes by githubactions-lint-pr actions"
