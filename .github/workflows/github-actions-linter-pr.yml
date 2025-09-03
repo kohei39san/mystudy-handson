@@ -7,7 +7,7 @@ permissions:
 on:
   push:
     paths:
-      - '.github/workflows/**'
+      - ".github/workflows/**"
 
 jobs:
   lint:
@@ -21,9 +21,12 @@ jobs:
           fetch-depth: 0
 
       - name: Lint GitHub Actions YAML Files
-        uses: github/super-linter@v7
+        uses: super-linter/super-linter@v8.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SAVE_SUPER_LINTER_OUTPUT: false
+          SAVE_SUPER_LINTER_SUMMARY: false
+          ENABLE_GITHUB_ACTIONS_STEP_SUMMARY: false
           # Only validate new or edited files
           VALIDATE_ALL_CODEBASE: false
           # Only validate YAML and GitHub Actions files
@@ -40,18 +43,18 @@ jobs:
         run: |
           git add .
           git diff --cached --quiet && echo 'changes=' >> "$GITHUB_OUTPUT" || echo 'changes=changes' >> "$GITHUB_OUTPUT"
-          
+
       - name: Get current branch name
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
         id: get_branch
         run: |
           echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
-  
+
       - name: Create Pull Request
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
           base: ${{ steps.get_branch.outputs.branch_name }}
           branch: githubactions-lint-pr-${{ steps.get_branch.outputs.branch_name }}
           title: "Changes by githubactions-lint-pr actions"
