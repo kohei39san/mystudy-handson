@@ -3,7 +3,6 @@ name: GitHub Actions Linter
 permissions:
   contents: write
   pull-requests: write
-  actions: write
 
 on:
   push:
@@ -24,7 +23,7 @@ jobs:
       - name: Lint GitHub Actions YAML Files
         uses: super-linter/super-linter@v8.1.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
           SAVE_SUPER_LINTER_OUTPUT: false
           SAVE_SUPER_LINTER_SUMMARY: false
           ENABLE_GITHUB_ACTIONS_STEP_SUMMARY: false
