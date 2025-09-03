@@ -24,6 +24,7 @@ jobs:
         uses: github/super-linter@v7
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SAVE_SUPER_LINTER_OUTPUT: false
           # Only validate new or edited files
           VALIDATE_ALL_CODEBASE: false
           # Only validate YAML and GitHub Actions files
