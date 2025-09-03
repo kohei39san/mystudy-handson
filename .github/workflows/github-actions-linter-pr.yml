@@ -25,6 +25,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SAVE_SUPER_LINTER_OUTPUT: false
+          SAVE_SUPER_LINTER_SUMMARY: false
+          ENABLE_GITHUB_ACTIONS_STEP_SUMMARY: false
           # Only validate new or edited files
           VALIDATE_ALL_CODEBASE: false
           # Only validate YAML and GitHub Actions files
