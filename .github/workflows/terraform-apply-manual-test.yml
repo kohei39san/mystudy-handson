@@ -2,13 +2,13 @@ name: Terraform Apply Manual Test
 
 permissions:
   id-token: write # This is required for requesting the JWT
-  contents: read    # This is required for actions/checkout
+  contents: read # This is required for actions/checkout
 
 on:
   workflow_dispatch:
     inputs:
       directory-number:
-        description: 'Directory number (e.g. 001 for 001.ec2-ec2,ec2)'
+        description: "Directory number (e.g. 001 for 001.ec2-ec2,ec2)"
         required: true
         type: string
 
@@ -20,53 +20,53 @@ jobs:
       id-token: write
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
-      with:
-        ref: ${{ github.ref_name }}
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
 
-    - name: Set working directory
-      run: |
-        DIRECTORY=$(find . -maxdepth 1 -type d -name "${{ github.event.inputs.directory-number }}*" -printf "%f\n")
-        if [ -z "$DIRECTORY" ]; then
-          echo "Error: No directory found starting with ${{ github.event.inputs.directory-number }}"
-          exit 1
-        fi
-        echo "WORKING_DIRECTORY=$DIRECTORY" >> "$GITHUB_ENV"
+      - name: Set working directory
+        run: |
+          DIRECTORY=$(find . -maxdepth 1 -type d -name "${{ github.event.inputs.directory-number }}*" -printf "%f\n")
+          if [ -z "$DIRECTORY" ]; then
+            echo "Error: No directory found starting with ${{ github.event.inputs.directory-number }}"
+            exit 1
+          fi
+          echo "WORKING_DIRECTORY=$DIRECTORY" >> "$GITHUB_ENV"
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v5
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        aws-region: ap-northeast-1
-        mask-aws-account-id: true
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+          mask-aws-account-id: true
 
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      
-    - name: Terraform Init
-      id: init
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: terraform init
-      
-    - name: Terraform Plan
-      id: plan
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: terraform plan -no-color
-      
-    - name: Terraform Apply
-      id: apply
-      if: steps.plan.outcome == 'success'
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: terraform apply -auto-approve
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-    - name: Terraform Destroy
-      if: always()
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      run: terraform destroy -auto-approve
-      
-    - name: Terraform State List
-      if: always()
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-      continue-on-error: true
-      run: terraform state list
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform init
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform plan -no-color
+
+      - name: Terraform Apply
+        id: apply
+        if: steps.plan.outcome == 'success'
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform apply -auto-approve
+
+      - name: Terraform Destroy
+        if: always()
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: terraform destroy -auto-approve
+
+      - name: Terraform State List
+        if: always()
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        continue-on-error: true
+        run: terraform state list
