@@ -3,7 +3,7 @@ name: Weekly README Update
 on:
   schedule:
     # Run every Monday at 9:00 AM UTC
-    - cron: '0 9 * * 1'
+    - cron: "0 9 * * 1"
   # Allow manual triggering for testing
   workflow_dispatch:
 
@@ -31,12 +31,12 @@ jobs:
             同一ディレクトリのリソース構成を読み取り、それぞれのREADME.mdと内容が異なっていた場合、README.mdを修正してください。
             README.mdへの記載は基本的に日本語でお願いします。
             `;
-            
+
             // Get current date in JST
             const now = new Date();
             const jstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000));
             const dateStr = jstDate.toISOString().split('T')[0];
-            
+
             // Create the issue
             const issue = await github.rest.issues.create({
               owner: context.repo.owner,
@@ -45,5 +45,5 @@ jobs:
               body: prompt,
               labels: ['Amazon Q development agent']
             });
-            
+
             console.log(`Issue created: ${issue.data.html_url}`);
