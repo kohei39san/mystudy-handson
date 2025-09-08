@@ -1,0 +1,121 @@
+<mxfile host="65bd71144e">
+    <diagram name="Amazon EKS クラスター構成" id="Wp9Tot8XLC37BgMdsrnz">
+        <mxGraphModel dx="1456" dy="804" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <!-- Title -->
+                <mxCell id="title" value="Amazon EKS クラスター構成" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontStyle=1;fontSize=16;" vertex="1" parent="1">
+                    <mxGeometry x="300" y="10" width="220" height="30" as="geometry"/>
+                </mxCell>
+                
+                <!-- VPC Container -->
+                <mxCell id="vpc-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0277BD;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="60" width="700" height="500" as="geometry"/>
+                </mxCell>
+                <mxCell id="vpc-label" value="VPC (10.0.0.0/16)" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+                    <mxGeometry x="60" y="70" width="140" height="30" as="geometry"/>
+                </mxCell>
+                
+                <!-- VPC Icon -->
+                <mxCell id="vpc-icon" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.vpc;" vertex="1" parent="1">
+                    <mxGeometry x="680" y="70" width="60" height="60" as="geometry"/>
+                </mxCell>
+                
+                <!-- Internet Gateway -->
+                <mxCell id="igw-icon" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.internet_gateway;" vertex="1" parent="1">
+                    <mxGeometry x="370" y="580" width="60" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="igw-label" value="インターネット&#xa;ゲートウェイ" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="345" y="650" width="110" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- Subnet 1 -->
+                <mxCell id="subnet1-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#4CAF50;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+                    <mxGeometry x="80" y="140" width="280" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="subnet1-label" value="パブリックサブネット1&#xa;(10.0.0.0/24)" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="150" width="140" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- Subnet 2 -->
+                <mxCell id="subnet2-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#4CAF50;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+                    <mxGeometry x="380" y="140" width="280" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="subnet2-label" value="パブリックサブネット2&#xa;(10.0.1.0/24)" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="390" y="150" width="140" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- kubectl Subnet -->
+                <mxCell id="kubectl-subnet-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+                    <mxGeometry x="80" y="350" width="280" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="kubectl-subnet-label" value="kubectl サブネット&#xa;(10.0.10.0/24)" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="360" width="140" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- EKS Cluster -->
+                <mxCell id="eks-cluster" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7D31;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.eks_cluster;" vertex="1" parent="1">
+                    <mxGeometry x="480" y="350" width="78" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="eks-label" value="EKSクラスター&#xa;(eks-study)" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="464" y="435" width="110" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- EKS Node Group -->
+                <mxCell id="node-group1" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7D31;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.ec2_instance;" vertex="1" parent="1">
+                    <mxGeometry x="180" y="220" width="78" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="node1-label" value="ワーカーノード1&#xa;(t2.micro)" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="164" y="305" width="110" height="40" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="node-group2" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7D31;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.ec2_instance;" vertex="1" parent="1">
+                    <mxGeometry x="480" y="220" width="78" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="node2-label" value="ワーカーノード2&#xa;(t2.micro)" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="464" y="305" width="110" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- kubectl Instance -->
+                <mxCell id="kubectl-instance" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7D31;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.ec2_instance;" vertex="1" parent="1">
+                    <mxGeometry x="180" y="430" width="78" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="kubectl-label" value="kubectl インスタンス&#xa;(t2.micro)" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="154" y="515" width="130" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- Security Group -->
+                <mxCell id="sg-icon" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#F58536;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.security_group;" vertex="1" parent="1">
+                    <mxGeometry x="580" y="350" width="60" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="sg-label" value="セキュリティ&#xa;グループ" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="565" y="415" width="90" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- Connections -->
+                <mxCell id="eks-node1-connection" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#666666;strokeWidth=2;" edge="1" parent="1" source="eks-cluster" target="node-group1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="350" as="sourcePoint"/>
+                        <mxPoint x="450" y="300" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="eks-node2-connection" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#666666;strokeWidth=2;" edge="1" parent="1" source="eks-cluster" target="node-group2">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="350" as="sourcePoint"/>
+                        <mxPoint x="450" y="300" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="kubectl-eks-connection" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#666666;strokeWidth=2;dashed=1;" edge="1" parent="1" source="kubectl-instance" target="eks-cluster">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="300" y="450" as="sourcePoint"/>
+                        <mxPoint x="450" y="400" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

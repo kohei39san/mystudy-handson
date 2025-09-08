@@ -1,0 +1,64 @@
+<mxfile host="65bd71144e">
+    <diagram name="CloudFormation サンプル構成" id="Wp9Tot8XLC37BgMdsrnz">
+        <mxGraphModel dx="1456" dy="804" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <!-- VPC Container -->
+                <mxCell id="vpc-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0277BD;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="50" width="600" height="400" as="geometry"/>
+                </mxCell>
+                <mxCell id="vpc-label" value="VPC (10.0.0.0/16)" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+                    <mxGeometry x="60" y="60" width="140" height="30" as="geometry"/>
+                </mxCell>
+                
+                <!-- VPC Icon -->
+                <mxCell id="vpc-icon" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.vpc;" vertex="1" parent="1">
+                    <mxGeometry x="580" y="60" width="60" height="60" as="geometry"/>
+                </mxCell>
+                
+                <!-- Security Group -->
+                <mxCell id="sg-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+                    <mxGeometry x="100" y="150" width="500" height="250" as="geometry"/>
+                </mxCell>
+                <mxCell id="sg-label" value="セキュリティグループ" style="text;html=1;align=left;verticalAlign=top;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="110" y="160" width="120" height="30" as="geometry"/>
+                </mxCell>
+                
+                <!-- Security Group Icon -->
+                <mxCell id="sg-icon" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#F58536;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.security_group;" vertex="1" parent="1">
+                    <mxGeometry x="520" y="160" width="60" height="60" as="geometry"/>
+                </mxCell>
+                
+                <!-- EC2 Instance -->
+                <mxCell id="ec2-instance" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#ED7D31;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.ec2_instance;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="250" width="78" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec2-label" value="EC2インスタンス&#xa;(t2.micro)" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="189" y="335" width="100" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- Key Pair -->
+                <mxCell id="keypair-icon" value="" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.credentials;" vertex="1" parent="1">
+                    <mxGeometry x="400" y="250" width="56" height="78" as="geometry"/>
+                </mxCell>
+                <mxCell id="keypair-label" value="キーペア&#xa;(my-key-pair)" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=10;" vertex="1" parent="1">
+                    <mxGeometry x="378" y="335" width="100" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- Connection from Key Pair to EC2 -->
+                <mxCell id="keypair-connection" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#666666;strokeWidth=2;dashed=1;" edge="1" parent="1" source="keypair-icon" target="ec2-instance">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="350" y="300" as="sourcePoint"/>
+                        <mxPoint x="400" y="250" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- Title -->
+                <mxCell id="title" value="CloudFormation サンプル構成" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontStyle=1;fontSize=16;" vertex="1" parent="1">
+                    <mxGeometry x="280" y="10" width="220" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
