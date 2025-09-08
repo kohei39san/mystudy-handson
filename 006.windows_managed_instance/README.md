@@ -2,6 +2,8 @@
 
 This Terraform configuration creates a Windows Server 2022 EC2 instance managed by AWS Systems Manager, with the following resources:
 
+![Architecture Diagram](src/architecture.svg)
+
 ## Resource Configuration
 
 ### Network Resources
