@@ -7,21 +7,21 @@ on:
   workflow_dispatch:
     inputs:
       branch_name:
-        description: 'Branch name to create in target repository'
+        description: "Branch name to create in target repository"
         required: true
-        default: 'update-from-source-repo'
+        default: "update-from-source-repo"
       commit_message:
-        description: 'Commit message'
+        description: "Commit message"
         required: true
-        default: 'Update from source repository'
+        default: "Update from source repository"
       pr_title:
-        description: 'Pull request title'
+        description: "Pull request title"
         required: true
-        default: 'Update from source repository'
+        default: "Update from source repository"
       pr_body:
-        description: 'Pull request body'
+        description: "Pull request body"
         required: false
-        default: 'This PR contains updates from the source repository.'
+        default: "This PR contains updates from the source repository."
 
 permissions:
   contents: read
@@ -57,27 +57,27 @@ jobs:
         id: set_target_details
         run: |
           TARGET_REPO="${{ secrets.TARGET_REPO }}"
-          
+
           # Validate TARGET_REPO is not empty
           if [ -z "$TARGET_REPO" ]; then
             echo "Error: TARGET_REPO secret is empty."
             exit 1
           fi
-          
+
           # Validate TARGET_REPO format (should be owner/repo)
           if ! [[ "$TARGET_REPO" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]; then
             echo "Error: TARGET_REPO secret is malformed. Expected format 'owner/repo'."
             exit 1
           fi
-          
+
           TARGET_REPO_OWNER=$(echo "$TARGET_REPO" | cut -d '/' -f 1)
           TARGET_REPO_NAME=$(echo "$TARGET_REPO" | cut -d '/' -f 2)
-          
+
           if [ -z "$TARGET_REPO_NAME" ]; then
             echo "Error: Could not extract repository name from target repository"
             exit 1
           fi
-          
+
           echo "TARGET_REPO_OWNER=$TARGET_REPO_OWNER" >> $GITHUB_ENV
           echo "TARGET_REPO_NAME=$TARGET_REPO_NAME" >> $GITHUB_ENV
           echo "target_repo_owner=$TARGET_REPO_OWNER" >> $GITHUB_OUTPUT
@@ -87,15 +87,15 @@ jobs:
 
           echo "::add-mask::$TARGET_REPO_OWNER"
           echo "::add-mask::$TARGET_REPO_NAME"
-          
+
       - name: Clone target repository
         run: |
           # Determine which token to use
           TOKEN="${{ secrets.TARGET_REPO_PAT }}"
-          
+
           # Clone the target repository
           git clone "https://x-access-token:$TOKEN@github.com/$TARGET_REPO.git" target_repo
-          
+
           # Create and checkout a new branch in the target repository
           cd target_repo
           git fetch origin
@@ -118,10 +118,10 @@ jobs:
           cd target_repo
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          
+
           # Add all changes
           git add .
-          
+
           # Check if there are changes to commit
           if git diff --staged --quiet; then
             echo "No changes to commit"
@@ -146,11 +146,11 @@ jobs:
             const branch = process.env.BRANCH_NAME;
             const title = process.env.PR_TITLE;
             const body = process.env.PR_BODY;
-            
+
             // For cross-repository PRs, the head should include the source owner
             const sourceOwner = process.env.REPO_OWNER;
             const head = `${sourceOwner}:${branch}`;
-            
+
             try {
               // Check if PR already exists
               const existingPRs = await github.rest.pulls.list({
