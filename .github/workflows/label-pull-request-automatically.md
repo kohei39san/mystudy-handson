@@ -16,7 +16,7 @@ timeout_minutes: 10
 
 engine:
   id: codex
-  version: 0.34.0
+  version: 0.29.0
   model: 'openai/gpt-oss-120b:free'
   env:
     OPENAI_BASE_URL: https://openrouter.ai/api/v1

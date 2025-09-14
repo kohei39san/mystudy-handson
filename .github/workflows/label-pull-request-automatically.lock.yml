@@ -126,7 +126,7 @@ jobs:
         with:
           node-version: '24'
       - name: Install Codex
-        run: npm install -g @openai/codex@0.34.0
+        run: npm install -g @openai/codex@0.29.0
       - name: Setup MCPs
         run: |
           mkdir -p /tmp/mcp-config
@@ -175,7 +175,7 @@ jobs:
               engine_id: "codex",
               engine_name: "Codex",
               model: "openai/gpt-oss-120b:free",
-              version: "0.34.0",
+              version: "0.29.0",
               workflow_name: "Label Pull Request Automatically",
               experimental: true,
               supports_tools_whitelist: true,
