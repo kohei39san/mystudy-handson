@@ -215,7 +215,7 @@ jobs:
           
           # Run codex with log capture - pipefail ensures codex exit code is preserved
           codex exec \
-            -c model=openai/gpt-oss-120b:free --provider openrouter \
+            -c model=openai/gpt-oss-120b:free -c model_provider=openrouter \
             --full-auto "$INSTRUCTION" 2>&1 | tee /tmp/label-pull-request-automatically.log
         env:
           DEBUG_MODE: true
