@@ -15,9 +15,10 @@ tools:
 timeout_minutes: 10
 
 engine:
-  id: codex
+  id: claude
   version: beta
   model: 'openai/gpt-oss-120b:free'
+  max-turns: 5
   env:
     CUSTOM_API_ENDPOINT: https://openrouter.ai/api/v1
     DEBUG_MODE: "true"
