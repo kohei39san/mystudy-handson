@@ -223,6 +223,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: https://openrouter.ai/api/v1
+          RUST_LOG: codex_core=debug,codex_tui=debug
       - name: Parse agent logs for step summary
         if: always()
         uses: actions/github-script@v7
