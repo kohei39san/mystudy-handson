@@ -222,8 +222,7 @@ jobs:
           GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          openai_BASE_URL: https://openrouter.ai/api/v1
-          openai_NAME: OpenRouter
+          OPENAI_BASE_URL: https://openrouter.ai/api/v1
       - name: Parse agent logs for step summary
         if: always()
         uses: actions/github-script@v7
