@@ -2,7 +2,7 @@
 name: tflintの指摘修正
 about: tflintにて指摘された指摘を修正する
 title: tflintの指摘修正
-labels: Amazon Q development agent
+labels: Amazon Q development agent, fix
 assignees: ''
 
 ---
