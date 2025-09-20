@@ -2,12 +2,12 @@
 resource "oci_network_load_balancer_network_load_balancer" "redmine_nlb" {
   compartment_id = var.compartment_id
   display_name   = "redmine-nlb"
-  
+
   subnet_id = oci_core_subnet.public_subnet.id
-  
+
   is_private                     = false
   is_preserve_source_destination = false
-  
+
   freeform_tags = var.freeform_tags
 }
 
@@ -16,7 +16,7 @@ resource "oci_network_load_balancer_backend_set" "redmine_backend_set" {
   network_load_balancer_id = oci_network_load_balancer_network_load_balancer.redmine_nlb.id
   name                     = "redmine-backend-set"
   policy                   = "FIVE_TUPLE_HASH"
-  
+
   health_checker {
     protocol            = "HTTP"
     port                = 3000
@@ -26,7 +26,7 @@ resource "oci_network_load_balancer_backend_set" "redmine_backend_set" {
     interval_in_millis  = 30000
     retries             = 3
   }
-  
+
   is_preserve_source = false
 }
 
@@ -34,11 +34,11 @@ resource "oci_network_load_balancer_backend_set" "redmine_backend_set" {
 resource "oci_network_load_balancer_backend" "redmine_backend" {
   network_load_balancer_id = oci_network_load_balancer_network_load_balancer.redmine_nlb.id
   backend_set_name         = oci_network_load_balancer_backend_set.redmine_backend_set.name
-  
+
   ip_address = oci_container_instances_container_instance.redmine_container.vnics[0].private_ip
   port       = 3000
   weight     = 1
-  
+
   depends_on = [time_sleep.wait_for_container]
 }
 
@@ -74,7 +74,7 @@ resource "oci_core_network_security_group_security_rule" "nlb_ingress_http" {
   protocol                  = "6"
   source                    = var.allowed_cidr
   source_type               = "CIDR_BLOCK"
-  
+
   tcp_options {
     destination_port_range {
       min = 80
@@ -89,7 +89,7 @@ resource "oci_core_network_security_group_security_rule" "nlb_ingress_https" {
   protocol                  = "6"
   source                    = var.allowed_cidr
   source_type               = "CIDR_BLOCK"
-  
+
   tcp_options {
     destination_port_range {
       min = 443
