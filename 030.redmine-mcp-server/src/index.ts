@@ -1,0 +1,282 @@
+#!/usr/bin/env node
+
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
+import fetch from 'node-fetch';
+import {
+  SearchRedmineTicketsSchema,
+  GetRedmineTicketDetailSchema,
+  SearchRedmineTicketsInput,
+  GetRedmineTicketDetailInput,
+} from './schemas.js';
+import {
+  RedmineIssuesResponse,
+  RedmineIssueResponse,
+  RedmineErrorResponse,
+  SearchTicketsParams,
+} from './types.js';
+
+class RedmineMCPServer {
+  private server: Server;
+  private ssmClient: SSMClient;
+  private redmineBaseUrl: string;
+  private apiKeyParameter: string;
+  private apiKey: string | null = null;
+
+  constructor() {
+    this.server = new Server(
+      {
+        name: 'redmine-mcp-server',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {
+          tools: {},
+        },
+      }
+    );
+
+    // Environment variables
+    this.redmineBaseUrl = process.env.REDMINE_BASE_URL || '';
+    this.apiKeyParameter = process.env.REDMINE_API_KEY_PARAMETER || '';
+    const awsRegion = process.env.AWS_REGION || 'us-east-1';
+
+    if (!this.redmineBaseUrl) {
+      throw new Error('REDMINE_BASE_URL environment variable is required');
+    }
+
+    if (!this.apiKeyParameter) {
+      throw new Error('REDMINE_API_KEY_PARAMETER environment variable is required');
+    }
+
+    // Initialize AWS SSM client
+    this.ssmClient = new SSMClient({ region: awsRegion });
+
+    this.setupToolHandlers();
+  }
+
+  private async getApiKey(): Promise<string> {
+    if (this.apiKey) {
+      return this.apiKey;
+    }
+
+    try {
+      const command = new GetParameterCommand({
+        Name: this.apiKeyParameter,
+        WithDecryption: true,
+      });
+
+      const response = await this.ssmClient.send(command);
+      
+      if (!response.Parameter?.Value) {
+        throw new Error('API key not found in Parameter Store');
+      }
+
+      this.apiKey = response.Parameter.Value;
+      return this.apiKey;
+    } catch (error) {
+      throw new Error(`Failed to retrieve API key from Parameter Store: ${error}`);
+    }
+  }
+
+  private async makeRedmineRequest<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    const apiKey = await this.getApiKey();
+    
+    const url = new URL(`${this.redmineBaseUrl}${endpoint}`);
+    url.searchParams.append('key', apiKey);
+    
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          url.searchParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      
+      try {
+        const errorJson = JSON.parse(errorText) as RedmineErrorResponse;
+        if (errorJson.errors && errorJson.errors.length > 0) {
+          errorMessage += ` - ${errorJson.errors.join(', ')}`;
+        }
+      } catch {
+        // If parsing fails, use the raw error text
+        errorMessage += ` - ${errorText}`;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json() as T;
+    return data;
+  }
+
+  private setupToolHandlers(): void {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      return {
+        tools: [
+          {
+            name: 'search_redmine_tickets',
+            description: 'Search for Redmine tickets with optional filters',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                project_id: {
+                  type: 'number',
+                  description: 'Project ID to filter tickets',
+                },
+                status_id: {
+                  type: 'number',
+                  description: 'Status ID to filter tickets',
+                },
+                assigned_to_id: {
+                  type: 'number',
+                  description: 'Assigned user ID to filter tickets',
+                },
+                limit: {
+                  type: 'number',
+                  description: 'Maximum number of tickets to return (default: 25, max: 100)',
+                  default: 25,
+                },
+                offset: {
+                  type: 'number',
+                  description: 'Number of tickets to skip (default: 0)',
+                  default: 0,
+                },
+              },
+            },
+          },
+          {
+            name: 'get_redmine_ticket_detail',
+            description: 'Get detailed information about a specific Redmine ticket',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                ticket_id: {
+                  type: 'number',
+                  description: 'The ID of the ticket to retrieve',
+                },
+              },
+              required: ['ticket_id'],
+            },
+          },
+        ],
+      };
+    });
+
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+
+      try {
+        switch (name) {
+          case 'search_redmine_tickets':
+            return await this.handleSearchTickets(args as SearchRedmineTicketsInput);
+          
+          case 'get_redmine_ticket_detail':
+            return await this.handleGetTicketDetail(args as GetRedmineTicketDetailInput);
+          
+          default:
+            throw new Error(`Unknown tool: ${name}`);
+        }
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    });
+  }
+
+  private async handleSearchTickets(args: SearchRedmineTicketsInput) {
+    // Validate input using Zod
+    const validatedArgs = SearchRedmineTicketsSchema.parse(args);
+
+    const params: SearchTicketsParams & { include?: string } = {
+      ...validatedArgs,
+      include: 'attachments,journals',
+    };
+
+    const response = await this.makeRedmineRequest<RedmineIssuesResponse>('/issues.json', params);
+
+    const ticketSummary = response.issues.map(issue => ({
+      id: issue.id,
+      subject: issue.subject,
+      status: issue.status.name,
+      priority: issue.priority.name,
+      assigned_to: issue.assigned_to?.name || 'Unassigned',
+      project: issue.project.name,
+      created_on: issue.created_on,
+      updated_on: issue.updated_on,
+    }));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            total_count: response.total_count,
+            offset: response.offset,
+            limit: response.limit,
+            tickets: ticketSummary,
+          }, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleGetTicketDetail(args: GetRedmineTicketDetailInput) {
+    // Validate input using Zod
+    const validatedArgs = GetRedmineTicketDetailSchema.parse(args);
+
+    const params = {
+      include: 'children,attachments,relations,changesets,journals,watchers',
+    };
+
+    const response = await this.makeRedmineRequest<RedmineIssueResponse>(
+      `/issues/${validatedArgs.ticket_id}.json`,
+      params
+    );
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.issue, null, 2),
+        },
+      ],
+    };
+  }
+
+  async run(): Promise<void> {
+    const transport = new StdioServerTransport();
+    await this.server.connect(transport);
+    console.error('Redmine MCP server running on stdio');
+  }
+}
+
+// Start the server
+const server = new RedmineMCPServer();
+server.run().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+});
