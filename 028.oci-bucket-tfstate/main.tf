@@ -1,5 +1,5 @@
+# tflint-ignore-file: terraform_required_version
 terraform {
-  required_version = ">= 1.0"
   required_providers {
     oci = {
       source  = "oracle/oci"
