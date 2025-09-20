@@ -7,8 +7,8 @@ resource "oci_mysql_mysql_db_system" "redmine_mysql" {
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
   shape_name          = "MySQL.Free"
 
-  subnet_id = oci_core_subnet.mysql_subnet.id
-  nsg_ids   = [oci_core_network_security_group.mysql_nsg.id]
+  subnet_id     = oci_core_subnet.mysql_subnet.id
+  nsg_ids       = [oci_core_network_security_group.mysql_nsg.id]
   mysql_version = var.mysql_version
 
   display_name = "redmine-mysql"
@@ -35,8 +35,8 @@ resource "oci_mysql_mysql_db_system" "redmine_mysql" {
 # Create database for Redmine
 resource "oci_functions_invoke_function" "create_redmine_database" {
   function_id = oci_functions_function.mysql_init_function.id
-  
+
   invoke_function_body = "{}"
-  
+
   depends_on = [oci_functions_function.mysql_init_function, oci_mysql_mysql_db_system.redmine_mysql]
 }

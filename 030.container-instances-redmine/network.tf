@@ -26,28 +26,28 @@ resource "oci_core_subnet" "public_subnet" {
 
 # Private Subnet for Container Instance
 resource "oci_core_subnet" "private_subnet" {
-  compartment_id                 = var.compartment_id
-  vcn_id                         = oci_core_vcn.redmine_vcn.id
-  cidr_block                     = var.private_subnet_cidr
-  display_name                   = "redmine-private-subnet"
-  dns_label                      = "privatesubnet"
-  availability_domain            = data.oci_identity_availability_domains.ads.availability_domains[0].name
-  route_table_id                 = oci_core_route_table.private_rt.id
-  prohibit_public_ip_on_vnic     = true
-  prohibit_internet_ingress      = true
+  compartment_id             = var.compartment_id
+  vcn_id                     = oci_core_vcn.redmine_vcn.id
+  cidr_block                 = var.private_subnet_cidr
+  display_name               = "redmine-private-subnet"
+  dns_label                  = "privatesubnet"
+  availability_domain        = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  route_table_id             = oci_core_route_table.private_rt.id
+  prohibit_public_ip_on_vnic = true
+  prohibit_internet_ingress  = true
 }
 
 # Private Subnet for MySQL
 resource "oci_core_subnet" "mysql_subnet" {
-  compartment_id                 = var.compartment_id
-  vcn_id                         = oci_core_vcn.redmine_vcn.id
-  cidr_block                     = var.mysql_subnet_cidr
-  display_name                   = "redmine-mysql-subnet"
-  dns_label                      = "mysqlsubnet"
-  availability_domain            = data.oci_identity_availability_domains.ads.availability_domains[0].name
-  route_table_id                 = oci_core_route_table.private_rt.id
-  prohibit_public_ip_on_vnic     = true
-  prohibit_internet_ingress      = true
+  compartment_id             = var.compartment_id
+  vcn_id                     = oci_core_vcn.redmine_vcn.id
+  cidr_block                 = var.mysql_subnet_cidr
+  display_name               = "redmine-mysql-subnet"
+  dns_label                  = "mysqlsubnet"
+  availability_domain        = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  route_table_id             = oci_core_route_table.private_rt.id
+  prohibit_public_ip_on_vnic = true
+  prohibit_internet_ingress  = true
 }
 
 # NAT Gateway
@@ -121,7 +121,7 @@ resource "oci_core_network_security_group_security_rule" "lb_ingress_http" {
   protocol                  = "6"
   source                    = var.allowed_cidr
   source_type               = "CIDR_BLOCK"
-  
+
   tcp_options {
     destination_port_range {
       min = var.http_port
@@ -136,7 +136,7 @@ resource "oci_core_network_security_group_security_rule" "lb_ingress_https" {
   protocol                  = "6"
   source                    = var.allowed_cidr
   source_type               = "CIDR_BLOCK"
-  
+
   tcp_options {
     destination_port_range {
       min = var.https_port
@@ -151,7 +151,7 @@ resource "oci_core_network_security_group_security_rule" "lb_egress_container" {
   protocol                  = "6"
   destination               = oci_core_network_security_group.container_nsg.id
   destination_type          = "NETWORK_SECURITY_GROUP"
-  
+
   tcp_options {
     destination_port_range {
       min = var.redmine_port
@@ -167,7 +167,7 @@ resource "oci_core_network_security_group_security_rule" "container_ingress_lb" 
   protocol                  = "6"
   source                    = oci_core_network_security_group.lb_nsg.id
   source_type               = "NETWORK_SECURITY_GROUP"
-  
+
   tcp_options {
     destination_port_range {
       min = var.redmine_port
@@ -182,7 +182,7 @@ resource "oci_core_network_security_group_security_rule" "container_egress_mysql
   protocol                  = "6"
   destination               = oci_core_network_security_group.mysql_nsg.id
   destination_type          = "NETWORK_SECURITY_GROUP"
-  
+
   tcp_options {
     destination_port_range {
       min = var.mysql_port
@@ -206,7 +206,7 @@ resource "oci_core_network_security_group_security_rule" "function_egress_mysql"
   protocol                  = "6"
   destination               = oci_core_network_security_group.mysql_nsg.id
   destination_type          = "NETWORK_SECURITY_GROUP"
-  
+
   tcp_options {
     destination_port_range {
       min = var.mysql_port
@@ -230,7 +230,7 @@ resource "oci_core_network_security_group_security_rule" "mysql_ingress_containe
   protocol                  = "6"
   source                    = oci_core_network_security_group.container_nsg.id
   source_type               = "NETWORK_SECURITY_GROUP"
-  
+
   tcp_options {
     destination_port_range {
       min = var.mysql_port
@@ -245,7 +245,7 @@ resource "oci_core_network_security_group_security_rule" "mysql_ingress_function
   protocol                  = "6"
   source                    = oci_core_network_security_group.function_nsg.id
   source_type               = "NETWORK_SECURITY_GROUP"
-  
+
   tcp_options {
     destination_port_range {
       min = var.mysql_port
@@ -260,7 +260,7 @@ resource "oci_core_network_security_group_security_rule" "mysql_ingress_x_protoc
   protocol                  = "6"
   source                    = oci_core_network_security_group.container_nsg.id
   source_type               = "NETWORK_SECURITY_GROUP"
-  
+
   tcp_options {
     destination_port_range {
       min = var.mysql_x_protocol_port
