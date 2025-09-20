@@ -40,7 +40,7 @@ resource "oci_network_load_balancer_backend" "redmine_backend" {
   port       = 3000
   weight     = 1
 
-  depends_on = [time_sleep.wait_for_container]
+  depends_on = [oci_container_instances_container_instance.redmine_container]
 }
 
 # Listener for HTTP

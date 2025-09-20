@@ -70,9 +70,3 @@ resource "oci_container_instances_container_instance" "redmine_container" {
 
   depends_on = [oci_mysql_mysql_db_system.redmine_mysql]
 }
-
-# Wait for container to be ready
-resource "time_sleep" "wait_for_container" {
-  depends_on      = [oci_container_instances_container_instance.redmine_container]
-  create_duration = "120s"
-}
