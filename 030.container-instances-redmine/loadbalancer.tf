@@ -4,6 +4,7 @@ resource "oci_network_load_balancer_network_load_balancer" "redmine_nlb" {
   display_name   = "redmine-nlb"
 
   subnet_id = oci_core_subnet.public_subnet.id
+  network_security_group_ids = [oci_core_network_security_group.lb_nsg.id]
 
   is_private                     = false
   is_preserve_source_destination = false
@@ -60,48 +61,3 @@ resource "oci_network_load_balancer_listener" "redmine_listener_https" {
   protocol                 = "TCP"
 }
 
-# Network Security Group for Load Balancer (for more granular access control)
-resource "oci_core_network_security_group" "nlb_nsg" {
-  compartment_id = var.compartment_id
-  vcn_id         = oci_core_vcn.redmine_vcn.id
-  display_name   = "redmine-nlb-nsg"
-}
-
-# NSG Rules for restricted access
-resource "oci_core_network_security_group_security_rule" "nlb_ingress_http" {
-  network_security_group_id = oci_core_network_security_group.nlb_nsg.id
-  direction                 = "INGRESS"
-  protocol                  = "6"
-  source                    = var.allowed_cidr
-  source_type               = "CIDR_BLOCK"
-
-  tcp_options {
-    destination_port_range {
-      min = 80
-      max = 80
-    }
-  }
-}
-
-resource "oci_core_network_security_group_security_rule" "nlb_ingress_https" {
-  network_security_group_id = oci_core_network_security_group.nlb_nsg.id
-  direction                 = "INGRESS"
-  protocol                  = "6"
-  source                    = var.allowed_cidr
-  source_type               = "CIDR_BLOCK"
-
-  tcp_options {
-    destination_port_range {
-      min = 443
-      max = 443
-    }
-  }
-}
-
-resource "oci_core_network_security_group_security_rule" "nlb_egress_all" {
-  network_security_group_id = oci_core_network_security_group.nlb_nsg.id
-  direction                 = "EGRESS"
-  protocol                  = "all"
-  destination               = "0.0.0.0/0"
-  destination_type          = "CIDR_BLOCK"
-}

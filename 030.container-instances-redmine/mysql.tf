@@ -3,11 +3,13 @@ resource "oci_mysql_mysql_db_system" "redmine_mysql" {
   compartment_id = var.compartment_id
 
   admin_password      = var.mysql_admin_password
-  admin_username      = "admin"
+  admin_username      = var.mysql_admin_username
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
   shape_name          = "MySQL.Free"
 
   subnet_id = oci_core_subnet.mysql_subnet.id
+  nsg_ids   = [oci_core_network_security_group.mysql_nsg.id]
+  mysql_version = var.mysql_version
 
   display_name = "redmine-mysql"
   description  = "MySQL HeatWave for Redmine application"
@@ -31,21 +33,10 @@ resource "oci_mysql_mysql_db_system" "redmine_mysql" {
 # Note: MySQL.Free shape uses default configuration, custom configurations are not supported
 
 # Create database for Redmine
-resource "null_resource" "create_redmine_database" {
-  depends_on = [oci_mysql_mysql_db_system.redmine_mysql]
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      # Wait for MySQL to be available
-      sleep 60
-      
-      # Create database and user for Redmine
-      # Note: This is a placeholder - in production, you would use proper MySQL client tools
-      echo "Database creation would be handled through MySQL client or application initialization"
-    EOT
-  }
-
-  triggers = {
-    mysql_id = oci_mysql_mysql_db_system.redmine_mysql.id
-  }
+resource "oci_functions_invoke_function" "create_redmine_database" {
+  function_id = oci_functions_function.mysql_init_function.id
+  
+  invoke_function_body = "{}"
+  
+  depends_on = [oci_functions_function.mysql_init_function, oci_mysql_mysql_db_system.redmine_mysql]
 }

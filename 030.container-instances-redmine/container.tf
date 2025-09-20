@@ -17,6 +17,7 @@ resource "oci_container_instances_container_instance" "redmine_container" {
     display_name           = "redmine-vnic"
     hostname_label         = "redmine"
     skip_source_dest_check = false
+    nsg_ids                = [oci_core_network_security_group.container_nsg.id]
   }
 
   containers {
@@ -24,9 +25,9 @@ resource "oci_container_instances_container_instance" "redmine_container" {
     image_url    = "docker.io/bitnami/redmine:6.0.6"
 
     environment_variables = {
-      "REDMINE_DATABASE_TYPE"     = "mysql2"
+      "REDMINE_DATABASE_TYPE"     = var.redmine_database_type
       "REDMINE_DATABASE_HOST"     = oci_mysql_mysql_db_system.redmine_mysql.ip_address
-      "REDMINE_DATABASE_PORT"     = "3306"
+      "REDMINE_DATABASE_PORT"     = tostring(var.mysql_port)
       "REDMINE_DATABASE_NAME"     = "redmine"
       "REDMINE_DATABASE_USER"     = "redmine"
       "REDMINE_DATABASE_PASSWORD" = var.redmine_db_password
