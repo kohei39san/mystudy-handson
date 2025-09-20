@@ -1,0 +1,23 @@
+# OCI Configuration
+region         = "ap-osaka-1"
+compartment_id = "ocid1.compartment.oc1..aaaaaaaa..."
+
+# Network Security
+allowed_cidr = "203.0.113.0/24"  # Replace with your allowed IP range
+
+# MySQL Configuration
+mysql_admin_password = "SecurePassword123!"
+
+# Redmine Configuration
+redmine_db_password     = "RedmineDBPassword123!"
+redmine_admin_username  = "admin"
+redmine_admin_password  = "RedmineAdminPassword123!"
+redmine_admin_email     = "admin@yourcompany.com"
+
+# Tags
+freeform_tags = {
+  "Environment" = "production"
+  "Application" = "redmine"
+  "ManagedBy"   = "terraform"
+  "Owner"       = "your-team"
+}
