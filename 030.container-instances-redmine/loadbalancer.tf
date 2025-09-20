@@ -3,7 +3,7 @@ resource "oci_network_load_balancer_network_load_balancer" "redmine_nlb" {
   compartment_id = var.compartment_id
   display_name   = "redmine-nlb"
 
-  subnet_id = oci_core_subnet.public_subnet.id
+  subnet_id                  = oci_core_subnet.public_subnet.id
   network_security_group_ids = [oci_core_network_security_group.lb_nsg.id]
 
   is_private                     = false
@@ -19,13 +19,13 @@ resource "oci_network_load_balancer_backend_set" "redmine_backend_set" {
   policy                   = "FIVE_TUPLE_HASH"
 
   health_checker {
-    protocol            = "HTTP"
-    port                = 3000
-    url_path            = "/"
-    return_code         = 200
-    timeout_in_millis   = 10000
-    interval_in_millis  = 30000
-    retries             = 3
+    protocol           = "HTTP"
+    port               = 3000
+    url_path           = "/"
+    return_code        = 200
+    timeout_in_millis  = 10000
+    interval_in_millis = 30000
+    retries            = 3
   }
 
   is_preserve_source = false

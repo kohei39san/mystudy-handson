@@ -11,11 +11,6 @@ variable "compartment_id" {
   type        = string
 }
 
-variable "tenancy_ocid" {
-  description = "OCI tenancy OCID"
-  type        = string
-}
-
 variable "allowed_cidr" {
   description = "CIDR block allowed to access the load balancer"
   type        = string
