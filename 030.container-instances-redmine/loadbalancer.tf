@@ -8,10 +8,7 @@ resource "oci_network_load_balancer_network_load_balancer" "redmine_nlb" {
   is_private                     = false
   is_preserve_source_destination = false
   
-  freeform_tags = {
-    "Environment" = "production"
-    "Application" = "redmine"
-  }
+  freeform_tags = var.freeform_tags
 }
 
 # Backend Set

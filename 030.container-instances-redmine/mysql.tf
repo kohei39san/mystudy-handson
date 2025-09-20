@@ -25,10 +25,7 @@ resource "oci_mysql_mysql_db_system" "redmine_mysql" {
     window_start_time = "SUNDAY 02:00"
   }
   
-  freeform_tags = {
-    "Environment" = "production"
-    "Application" = "redmine"
-  }
+  freeform_tags = var.freeform_tags
 }
 
 # Note: MySQL.Free shape uses default configuration, custom configurations are not supported

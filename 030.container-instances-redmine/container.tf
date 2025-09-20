@@ -65,10 +65,7 @@ resource "oci_container_instances_container_instance" "redmine_container" {
   
   container_restart_policy = "ALWAYS"
   
-  freeform_tags = {
-    "Environment" = "production"
-    "Application" = "redmine"
-  }
+  freeform_tags = var.freeform_tags
   
   depends_on = [oci_mysql_mysql_db_system.redmine_mysql]
 }
