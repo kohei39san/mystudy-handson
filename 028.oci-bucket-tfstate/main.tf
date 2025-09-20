@@ -1,3 +1,4 @@
+# tflint-ignore-file: required_version
 terraform {
   required_providers {
     oci = {

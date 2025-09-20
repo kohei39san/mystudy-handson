@@ -1,3 +1,4 @@
+# tflint-ignore-file: terraform_typed_variables
 variable "compartment_ocid" {}
 variable "region" {}
 
