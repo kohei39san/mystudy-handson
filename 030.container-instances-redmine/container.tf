@@ -13,7 +13,6 @@ resource "oci_container_instances_container_instance" "redmine_container" {
 
   vnics {
     subnet_id              = oci_core_subnet.private_subnet.id
-    assign_public_ip       = false
     display_name           = "redmine-vnic"
     hostname_label         = "redmine"
     skip_source_dest_check = false
