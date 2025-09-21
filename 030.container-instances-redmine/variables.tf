@@ -134,3 +134,9 @@ variable "freeform_tags" {
     "ManagedBy"   = "terraform"
   }
 }
+
+variable "docker_registry_username" {
+  description = "Username for Docker registry authentication"
+  type        = string
+  sensitive   = true
+}

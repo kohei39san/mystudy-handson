@@ -18,7 +18,13 @@ provider "oci" {
   region = var.region
 }
 
-provider "docker" {}
+provider "docker" {
+  registry_auth {
+    address  = "${var.region}.ocir.io"
+    username = var.docker_registry_username
+    password = oci_identity_auth_token.auth_token.token
+  }
+}
 
 # Data sources
 data "oci_identity_availability_domains" "ads" {
