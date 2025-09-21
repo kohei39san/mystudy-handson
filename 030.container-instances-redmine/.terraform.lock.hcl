@@ -5,6 +5,7 @@ provider "registry.terraform.io/kreuzwerker/docker" {
   version     = "3.6.2"
   constraints = "~> 3.0"
   hashes = [
+    "h1:1K3j0xUY2D0+E+DBDQc6k1u6Al9MkuNWrIC9rnvwFSM=",
     "h1:sbdKCURC0XeBU6kPVfj24w7mtZtKbuibaqxtZEZ4bjU=",
     "zh:22b51a8fb63481d290bdad9a221bc8c9e45d66d1a0cd45beed3f3627bf1debd8",
     "zh:2b902eb80a1ae033af1135cc165d192668820a7f8ea15beb5472f811c18bea1f",
@@ -27,6 +28,7 @@ provider "registry.terraform.io/oracle/oci" {
   constraints = "~> 7.0"
   hashes = [
     "h1:Zn/hXDTohsCiiGtkje4YJzc3rwuQmQ5PWQZB1xU1oeo=",
+    "h1:tJgJWJ1ZMADU18foa0kcQBUaQcOSNqKDfnrvJtycdDs=",
     "zh:214f8efa0a7c926ff9480c6fdce33159ca786cc42fdd3be9e6d74408c40005e2",
     "zh:2a549ecf0a39008ce7201591d182da918c0f308baf0d90f652a8c39470586a7d",
     "zh:334d96efd9036f2593b97906c56c92264fca406821ac5982973464229b55b017",
