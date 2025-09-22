@@ -1,6 +1,6 @@
 # Build Docker image
 resource "docker_image" "mysql_init_image" {
-  name = "${oci_artifacts_container_repository.mysql_init_repo.namespace}/${oci_artifacts_container_repository.mysql_init_repo.display_name}:latest"
+  name = "${var.region}.ocir.io/${oci_artifacts_container_repository.mysql_init_repo.namespace}/${oci_artifacts_container_repository.mysql_init_repo.display_name}:latest"
 
   build {
     context    = path.module

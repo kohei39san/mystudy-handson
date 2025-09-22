@@ -16,7 +16,7 @@ resource "oci_network_load_balancer_network_load_balancer" "redmine_nlb" {
 resource "oci_network_load_balancer_backend_set" "redmine_backend_set" {
   network_load_balancer_id = oci_network_load_balancer_network_load_balancer.redmine_nlb.id
   name                     = "redmine-backend-set"
-  policy                   = "FIVE_TUPLE_HASH"
+  policy                   = "FIVE_TUPLE"
 
   health_checker {
     protocol           = "HTTP"
