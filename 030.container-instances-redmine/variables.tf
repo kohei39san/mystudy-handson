@@ -86,12 +86,6 @@ variable "mysql_port" {
   default     = 3306
 }
 
-variable "mysql_version" {
-  description = "MySQL version"
-  type        = string
-  default     = "8.0.35"
-}
-
 # Redmine Database Variables
 variable "redmine_database_type" {
   description = "Redmine database type"
