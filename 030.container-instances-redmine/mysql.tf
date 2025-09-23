@@ -12,7 +12,9 @@ resource "oci_mysql_mysql_db_system" "redmine_mysql" {
     automatic_backup_retention = "DELETE"
   }
   nsg_ids       = [oci_core_network_security_group.mysql_nsg.id]
-  freeform_tags = var.freeform_tags
+  port = var.mysql_port
+  port_x = var.mysql_x_protocol_port
+  fault_domain = data.oci_identity_fault_domains.fds.fault_domains[0].name
 }
 
 # Note: MySQL.Free shape uses default configuration, custom configurations are not supported

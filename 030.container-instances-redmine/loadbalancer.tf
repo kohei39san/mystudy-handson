@@ -53,11 +53,10 @@ resource "oci_network_load_balancer_listener" "redmine_listener_http" {
 }
 
 # Listener for HTTPS (optional, for future SSL termination)
-resource "oci_network_load_balancer_listener" "redmine_listener_https" {
-  network_load_balancer_id = oci_network_load_balancer_network_load_balancer.redmine_nlb.id
-  name                     = "redmine-listener-https"
-  default_backend_set_name = oci_network_load_balancer_backend_set.redmine_backend_set.name
-  port                     = 443
-  protocol                 = "TCP"
-}
-
+#resource "oci_network_load_balancer_listener" "redmine_listener_https" {
+#  network_load_balancer_id = oci_network_load_balancer_network_load_balancer.redmine_nlb.id
+#  name                     = "redmine-listener-https"
+#  default_backend_set_name = oci_network_load_balancer_backend_set.redmine_backend_set.name
+#  port                     = 443
+#  protocol                 = "TCP"
+#}
