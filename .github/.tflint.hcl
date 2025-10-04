@@ -21,3 +21,25 @@ rule "aws_instance_invalid_type" {
 rule "aws_instance_invalid_ami" {
   enabled = true
 }
+
+# Generic Terraform rules for all providers
+rule "terraform_required_version" {
+  enabled = true
+}
+
+rule "terraform_typed_variables" {
+  enabled = true
+}
+
+rule "terraform_unused_declarations" {
+  enabled = true
+}
+
+rule "terraform_deprecated_interpolation" {
+  enabled = true
+}
+
+rule "terraform_naming_convention" {
+  enabled = true
+  format = "snake_case"
+}
