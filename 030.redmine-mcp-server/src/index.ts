@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Load environment variables from .env (if present)
+import 'dotenv/config';
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -25,6 +28,7 @@ class RedmineMCPServer {
   private server: Server;
   private ssmClient: SSMClient;
   private redmineBaseUrl: string;
+  private redmineBaseUrlParameter: string;
   private apiKeyParameter: string;
   private apiKey: string | null = null;
 
@@ -42,12 +46,16 @@ class RedmineMCPServer {
     );
 
     // Environment variables
-    this.redmineBaseUrl = process.env.REDMINE_BASE_URL || '';
-    this.apiKeyParameter = process.env.REDMINE_API_KEY_PARAMETER || '';
+  this.redmineBaseUrl = process.env.REDMINE_BASE_URL || '';
+  this.redmineBaseUrlParameter = process.env.REDMINE_BASE_URL_PARAMETER || '';
+  this.apiKeyParameter = process.env.REDMINE_API_KEY_PARAMETER || '';
     const awsRegion = process.env.AWS_REGION || 'us-east-1';
 
     if (!this.redmineBaseUrl) {
-      throw new Error('REDMINE_BASE_URL environment variable is required');
+      // If base URL is not set via env var, it may be provided via SSM parameter name.
+      if (!this.redmineBaseUrlParameter) {
+        throw new Error('REDMINE_BASE_URL environment variable or REDMINE_BASE_URL_PARAMETER is required');
+      }
     }
 
     if (!this.apiKeyParameter) {
@@ -84,10 +92,41 @@ class RedmineMCPServer {
     }
   }
 
+  private async getRedmineBaseUrl(): Promise<string> {
+    // If env var provided, prefer it
+    if (this.redmineBaseUrl) {
+      return this.redmineBaseUrl;
+    }
+
+    // Otherwise, fetch from SSM using the configured parameter name
+    if (!this.redmineBaseUrlParameter) {
+      throw new Error('REDMINE_BASE_URL is not configured and REDMINE_BASE_URL_PARAMETER is not provided');
+    }
+
+    try {
+      const command = new GetParameterCommand({
+        Name: this.redmineBaseUrlParameter,
+        WithDecryption: true,
+      });
+
+      const response = await this.ssmClient.send(command);
+      if (!response.Parameter?.Value) {
+        throw new Error('Redmine base URL not found in Parameter Store');
+      }
+
+      // Cache the value so future calls don't hit SSM
+      this.redmineBaseUrl = response.Parameter.Value;
+      return this.redmineBaseUrl;
+    } catch (error) {
+      throw new Error(`Failed to retrieve Redmine base URL from Parameter Store: ${error}`);
+    }
+  }
+
   private async makeRedmineRequest<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
     const apiKey = await this.getApiKey();
-    
-    const url = new URL(`${this.redmineBaseUrl}${endpoint}`);
+    const baseUrl = await this.getRedmineBaseUrl();
+
+    const url = new URL(`${baseUrl}${endpoint}`);
     url.searchParams.append('key', apiKey);
     
     if (params) {
