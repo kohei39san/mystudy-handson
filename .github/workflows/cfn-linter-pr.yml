@@ -39,18 +39,20 @@ jobs:
     - name: Install and Run Ollama
       if: steps.run_linter.outputs.linted == 'linted'
       run: |
-        cat /tmp/cfn-lint-output.txt | cut -d':' -f1 | sort | uniq | while read f;do
+        cat /tmp/cfn-lint-output.txt | cut -d':' -f1 | sort | uniq | while read -r f;do
           echo -n "" > /tmp/input.txt
 
-          cat "$f" >> /tmp/input.txt
-          echo >> /tmp/input.txt
-          echo "---" >> /tmp/input.txt
-          echo >> /tmp/input.txt
-          grep "$f" /tmp/cfn-lint-output.txt >> /tmp/input.txt
-          echo >> /tmp/input.txt
-          echo "---" >> /tmp/input.txt
-          echo >> /tmp/input.txt
-          echo "Create a fixed cloudformation yaml file" >> /tmp/input.txt
+          {
+            cat "$f"
+            echo
+            echo "---"
+            echo
+            grep "$f" /tmp/cfn-lint-output.txt
+            echo
+            echo "---"
+            echo
+            echo "Create a fixed cloudformation yaml file"
+          } >> /tmp/input.txt
 
           if ! command -v ollama 1>/dev/null;then
             curl -fsSL https://ollama.com/install.sh | sh
