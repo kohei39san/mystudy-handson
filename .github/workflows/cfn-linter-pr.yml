@@ -75,3 +75,4 @@ jobs:
         branch: cfn-lint-pr
         title: "Changes by cfn-lint actions"
         body-path: /tmp/cfn-lint-output.txt
+        labels: fix

@@ -92,3 +92,4 @@ jobs:
           branch: tflint-gen-pr
           title: "Changes by tflint actions"
           body-path: /tmp/tflint-gen-output.txt
+          labels: fix

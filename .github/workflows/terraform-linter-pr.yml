@@ -87,3 +87,4 @@ jobs:
           base: ${{ steps.get_branch.outputs.branch_name }}
           branch: tflint-pr-${{ steps.get_branch.outputs.branch_name }}
           title: "Changes by tflint actions"
+          labels: fix

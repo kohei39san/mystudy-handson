@@ -58,3 +58,4 @@ jobs:
           base: ${{ steps.get_branch.outputs.branch_name }}
           branch: githubactions-lint-pr-${{ steps.get_branch.outputs.branch_name }}
           title: "Changes by githubactions-lint-pr actions"
+          labels: fix
