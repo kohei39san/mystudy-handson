@@ -8,14 +8,14 @@ resource "aws_cloudformation_stack" "infrastructure" {
   template_body = file(var.cloudformation_template_path)
 
   parameters = {
-    Environment           = var.environment
-    ProjectName           = var.project_name
-    UserEmail             = var.user_email
-    LambdaFunctionName    = var.lambda_function_name
-    CognitoUserPoolName   = var.cognito_user_pool_name
-    CognitoUserGroupName  = var.cognito_user_group_name
-    ApiGatewayName        = var.api_gateway_name
-    AllowedIpAddresses    = join(",", var.allowed_ip_addresses)
+    Environment          = var.environment
+    ProjectName          = var.project_name
+    UserEmail            = var.user_email
+    LambdaFunctionName   = var.lambda_function_name
+    CognitoUserPoolName  = var.cognito_user_pool_name
+    CognitoUserGroupName = var.cognito_user_group_name
+    ApiGatewayName       = var.api_gateway_name
+    AllowedIpAddresses   = join(",", var.allowed_ip_addresses)
   }
 
   capabilities = ["CAPABILITY_IAM"]
