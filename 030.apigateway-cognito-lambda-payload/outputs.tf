@@ -51,10 +51,10 @@ output "cloudformation_stack_id" {
 output "deployment_info" {
   description = "Deployment information and next steps"
   value = {
-    user_pool_id     = aws_cloudformation_stack.infrastructure.outputs["CognitoUserPoolId"]
-    client_id        = aws_cloudformation_stack.infrastructure.outputs["CognitoUserPoolClientId"]
-    api_url          = aws_cloudformation_stack.infrastructure.outputs["ApiGatewayUrl"]
-    user_email       = var.user_email
+    user_pool_id = aws_cloudformation_stack.infrastructure.outputs["CognitoUserPoolId"]
+    client_id    = aws_cloudformation_stack.infrastructure.outputs["CognitoUserPoolClientId"]
+    api_url      = aws_cloudformation_stack.infrastructure.outputs["ApiGatewayUrl"]
+    user_email   = var.user_email
     next_steps = [
       "1. Set temporary password for user: aws cognito-idp admin-set-user-password --user-pool-id ${aws_cloudformation_stack.infrastructure.outputs["CognitoUserPoolId"]} --username ${var.user_email} --password 'TempPassword123!' --permanent",
       "2. Test authentication with the Cognito User Pool",

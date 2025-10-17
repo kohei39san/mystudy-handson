@@ -4,11 +4,11 @@ locals {
 
 # CloudFormation stack for the infrastructure
 resource "aws_cloudformation_stack" "infrastructure" {
-  name         = local.stack_name
+  name          = local.stack_name
   template_body = file(var.cloudformation_template_path)
-  
+
   parameters = {
-    Environment            = var.environment
+    Environment           = var.environment
     ProjectName           = var.project_name
     UserEmail             = var.user_email
     LambdaFunctionName    = var.lambda_function_name
@@ -17,9 +17,9 @@ resource "aws_cloudformation_stack" "infrastructure" {
     ApiGatewayName        = var.api_gateway_name
     AllowedIpAddresses    = join(",", var.allowed_ip_addresses)
   }
-  
+
   capabilities = ["CAPABILITY_IAM"]
-  
+
   tags = {
     Name        = local.stack_name
     Environment = var.environment
