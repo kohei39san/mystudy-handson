@@ -37,34 +37,12 @@
 
 ## クイックスタート
 
-### 自動デプロイ（推奨）
-
-1. **リポジトリのクローンと移動**
-```bash
-cd 030.apigateway-cognito-lambda-payload
-```
-
-2. **デプロイスクリプトの実行**
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
-
-スクリプトが以下を自動で実行します：
-- 前提条件のチェック
-- 設定情報の入力
-- Terraform による AWS リソースのデプロイ
-- Cognito ユーザのパスワード設定
-- テストの実行（オプション）
-
-### 手動デプロイ
-
-#### 前提条件
+### 前提条件
 - AWS CLI が設定済み
 - Terraform がインストール済み
 - 適切な AWS 権限を持つ IAM ユーザまたはロール
 
-#### 手順
+### 手順
 
 1. **設定ファイルの作成**
 ```bash
@@ -91,23 +69,6 @@ aws cognito-idp admin-set-user-password \
 ```
 
 ## テスト方法
-
-### 自動テスト
-
-Python テストスクリプトを使用：
-
-```bash
-# 依存関係のインストール
-pip install -r requirements.txt
-
-# テストの実行
-python test-api.py \
-  --user-pool-id <USER_POOL_ID> \
-  --client-id <CLIENT_ID> \
-  --api-url <API_URL> \
-  --username <EMAIL> \
-  --password <PASSWORD>
-```
 
 ### 手動テスト
 
@@ -168,10 +129,6 @@ aws logs get-log-events --log-group-name "/aws/lambda/<FUNCTION_NAME>"
 ### リソースの削除
 
 ```bash
-# 自動削除
-./deploy.sh destroy
-
-# 手動削除
 terraform destroy -var-file=terraform.tfvars
 ```
 
@@ -198,11 +155,7 @@ terraform destroy -var-file=terraform.tfvars
 ├── variables.tf                   # 変数定義
 ├── outputs.tf                     # 出力定義
 ├── provider.tf                    # プロバイダー設定
-├── deploy.sh                      # 自動デプロイスクリプト
-├── test-api.py                    # API テストスクリプト
-├── requirements.txt               # Python 依存関係
 ├── terraform.tfvars.example       # 設定例ファイル
-├── .gitignore                     # Git 除外設定
 └── cfn/                           # CloudFormation テンプレート
     └── infrastructure.yaml        # インフラストラクチャ定義
 ```

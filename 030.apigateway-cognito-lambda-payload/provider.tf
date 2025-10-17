@@ -17,6 +17,7 @@ provider "aws" {
       Project     = "apigateway-cognito-lambda-payload"
       Environment = var.environment
       ManagedBy   = "terraform"
+      Terraform   = "true"
     }
   }
 }

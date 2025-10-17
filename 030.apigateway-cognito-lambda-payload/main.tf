@@ -1,11 +1,5 @@
 locals {
   stack_name = "${var.project_name}-${var.environment}"
-  
-  # Convert IP addresses to CloudFormation format
-  allowed_ips_condition = join(",", [
-    for ip in var.allowed_ip_addresses : 
-    "IpAddress(aws:SourceIp, \"${ip}\")"
-  ])
 }
 
 # CloudFormation stack for the infrastructure
@@ -31,15 +25,6 @@ resource "aws_cloudformation_stack" "infrastructure" {
     Environment = var.environment
     Project     = var.project_name
     ManagedBy   = "terraform"
+    Terraform   = "true"
   }
-}
-
-# Data source to get current AWS account ID and region
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
-
-# Output some useful information
-locals {
-  account_id = data.aws_caller_identity.current.account_id
-  region     = data.aws_region.current.name
 }
