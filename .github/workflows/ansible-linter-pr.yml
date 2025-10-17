@@ -50,3 +50,4 @@ jobs:
           base: ${{ steps.get_branch.outputs.branch_name }}
           branch: ansible-lint-pr-${{ steps.get_branch.outputs.branch_name }}
           title: "Changes by ansible-lint actions"
+          labels: fix

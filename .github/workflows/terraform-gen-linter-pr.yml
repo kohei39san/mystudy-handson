@@ -15,7 +15,6 @@ jobs:
     outputs:
       linted: ${{ steps.run_linter.outputs.linted }}
       changes: ${{ steps.git_diff.outputs.changes }}
-      branch: ${{ steps.create_branch.outputs.branch }}
 
     steps:
       - name: Checkout repository
@@ -53,21 +52,23 @@ jobs:
       - name: Install and Run Ollama
         if: steps.run_linter.outputs.linted == 'linted'
         run: |
-          cat /tmp/tflint-gen-output.txt | cut -d':' -f1 | sort | uniq | while read f;do
+          cat /tmp/tflint-gen-output.txt | cut -d':' -f1 | sort | uniq | while read -r f;do
             echo -n "" > /tmp/input.txt
 
-            cat "$f" >> /tmp/input.txt
-            echo >> /tmp/input.txt
-            echo "---" >> /tmp/input.txt
-            echo >> /tmp/input.txt
-            echo "The following error was found in one of the above files. Please correct only the above error. Please output the entire file." >> /tmp/input.txt
-            echo >> /tmp/input.txt
-            pushd .
-            cd "$(dirname "$f")"
-            terraform version >> /tmp/input.txt
-            popd
-            echo "---" >> /tmp/input.txt
-            grep "$f:" /tmp/tflint-gen-output.txt >> /tmp/input.txt
+            {
+              cat "$f"
+              echo
+              echo "---"
+              echo
+              echo "The following error was found in one of the above files. Please correct only the above error. Please output the entire file."
+              echo
+              pushd .
+              cd "$(dirname "$f")"
+              terraform version
+              popd
+              echo "---"
+              grep "$f:" /tmp/tflint-gen-output.txt
+            } >> /tmp/input.txt
 
             if ! command -v ollama 1>/dev/null;then
               curl -fsSL https://ollama.com/install.sh | sh
@@ -92,3 +93,4 @@ jobs:
           branch: tflint-gen-pr
           title: "Changes by tflint actions"
           body-path: /tmp/tflint-gen-output.txt
+          labels: fix
