@@ -1,0 +1,30 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and modify the values as needed
+
+# Environment name (e.g., dev, staging, prod)
+environment = "dev"
+
+# Project name for resource naming
+project_name = "apigateway-cognito-lambda"
+
+# Email address for the Cognito user
+user_email = "your-email@example.com"
+
+# List of IP addresses allowed to access the API Gateway
+# For security, replace "0.0.0.0/0" with your specific IP addresses
+allowed_ip_addresses = ["0.0.0.0/0"]
+
+# Lambda function name
+lambda_function_name = "payload-logger"
+
+# Cognito User Pool name
+cognito_user_pool_name = "payload-verification-pool"
+
+# Cognito User Group name
+cognito_user_group_name = "api-users"
+
+# API Gateway name
+api_gateway_name = "payload-verification-api"
+
+# Path to CloudFormation template (relative to this file)
+cloudformation_template_path = "./cfn/infrastructure.yaml"
