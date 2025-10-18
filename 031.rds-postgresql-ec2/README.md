@@ -9,11 +9,11 @@
 - **パブリックサブネット**: EC2インスタンス用（10.0.1.0/24）
 - **プライベートサブネット**: RDSインスタンス用（10.0.2.0/24, 10.0.3.0/24）
 - **EC2インスタンス**: Amazon Linux 2023, t3.micro
-- **RDSインスタンス**: PostgreSQL 15.4, db.t4g.micro
+- **RDSインスタンス**: PostgreSQL 15, db.t4g.medium
 - **IAMロール**: Systems Manager接続とRDS IAM認証用
 
 ### コスト最適化
-- 最小インスタンスタイプ（t3.micro, db.t4g.micro）を使用
+- 最小インスタンスタイプ（t3.micro, db.t4g.medium）を使用
 - シングルAZ構成でRDSを配置
 - バックアップ保持期間を0日に設定
 - 暗号化ストレージを使用（セキュリティ要件）
@@ -183,7 +183,7 @@ chmod +x cleanup.sh
 ### 主要リソース
 - **VPC**: カスタムVPCとサブネット
 - **EC2インスタンス**: PostgreSQLクライアントがプリインストールされたAmazon Linux 2023
-- **RDSインスタンス**: PostgreSQL 15.4データベース
+- **RDSインスタンス**: PostgreSQL 15データベース
 - **セキュリティグループ**: EC2からRDSへのアクセスを許可
 - **IAMロール**: Systems Manager接続とRDS IAM認証用
 
@@ -243,9 +243,9 @@ sudo systemctl status amazon-ssm-agent
 
 月額概算コスト（ap-northeast-1リージョン）：
 - EC2 t3.micro: 約 $8.50/月
-- RDS db.t4g.micro: 約 $13.00/月
+- RDS db.t4g.medium: 約 $26.00/月
 - EBS gp2 20GB: 約 $2.40/月
-- **合計**: 約 $24/月
+- **合計**: 約 $37/月
 
 ※実際のコストは使用量や為替レートにより変動します。
 

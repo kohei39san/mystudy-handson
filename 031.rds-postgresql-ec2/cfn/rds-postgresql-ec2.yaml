@@ -13,7 +13,6 @@ Parameters:
     MinLength: 8
     MaxLength: 128
     Description: 'Database master password (8-128 characters)'
-    Default: 'TempPassword123!'
 
   EnvironmentName:
     Type: String
@@ -102,7 +101,7 @@ Resources:
       GatewayId: !Ref InternetGateway
 
   PublicSubnet1RouteTableAssociation:
-    Type: AWS::EC2::RouteTableAssociation
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet1
@@ -187,9 +186,9 @@ Resources:
     DeletionPolicy: Delete
     Properties:
       DBInstanceIdentifier: !Sub '${EnvironmentName}-postgresql'
-      DBInstanceClass: db.t4g.micro
+      DBInstanceClass: db.t4g.medium
       Engine: postgres
-      EngineVersion: '15.4'
+      EngineVersion: '15'
       AllocatedStorage: 20
       StorageType: gp2
       StorageEncrypted: true
