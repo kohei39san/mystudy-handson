@@ -62,11 +62,7 @@ chmod +x *.sh
 
 ```bash
 # CloudFormationテンプレートを直接使用する場合
-aws cloudformation deploy \
-    --template-file cfn/rds-postgresql-ec2.yaml \
-    --stack-name rds-postgresql-ec2-stack \
-    --capabilities CAPABILITY_NAMED_IAM \
-    --region ap-northeast-1
+aws cloudformation deploy --template-file cfn/rds-postgresql-ec2.yaml --stack-name rds-postgresql-ec2-stack --capabilities CAPABILITY_NAMED_IAM --region ap-northeast-1
 ```
 
 ## 接続方法
@@ -75,11 +71,7 @@ aws cloudformation deploy \
 
 ```bash
 # EC2インスタンスIDを取得
-EC2_INSTANCE_ID=$(aws cloudformation describe-stacks \
-    --stack-name rds-postgresql-ec2-stack \
-    --region ap-northeast-1 \
-    --query 'Stacks[0].Outputs[?OutputKey==`EC2InstanceId`].OutputValue' \
-    --output text)
+EC2_INSTANCE_ID=$(aws cloudformation describe-stacks --stack-name rds-postgresql-ec2-stack --region ap-northeast-1 --query 'Stacks[0].Outputs[?OutputKey==`EC2InstanceId`].OutputValue' --output text)
 
 # Systems Managerセッションを開始
 aws ssm start-session --target $EC2_INSTANCE_ID --region ap-northeast-1
@@ -92,12 +84,18 @@ EC2インスタンスに接続後、以下のスクリプトが利用可能で�
 #### パスワード認証での接続（Secrets Manager使用）
 ```bash
 # 事前に作成されたスクリプトを使用
+cd /home/ssm-user
+cp sudo cp /home/ec2-user/connect-to-rds.sh .
+chmod +x connect-to-rds.sh
 ./connect-to-rds.sh
 ```
 
 #### IAM認証での接続
 ```bash
 # IAM認証を使用した接続
+cd /home/ssm-user
+cp sudo cp /home/ec2-user/connect-to-rds-iam.sh .
+chmod +x connect-to-rds-iam.sh
 ./connect-to-rds-iam.sh
 ```
 
