@@ -93,24 +93,41 @@ else
 fi
 echo ""
 
-# Test 5: Test basic PostgreSQL connection (this will prompt for password)
-echo -e "${YELLOW}Test 5: Testing PostgreSQL connection with password authentication...${NC}"
-echo "This test will prompt for the database password."
-echo "Enter the password you set during CloudFormation deployment:"
+# Test 5: Test Secrets Manager access
+echo -e "${YELLOW}Test 5: Testing Secrets Manager access...${NC}"
+if [ -n "$DB_SECRET_ARN" ]; then
+    DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $DB_SECRET_ARN --region $AWS_REGION --query SecretString --output text 2>/dev/null | jq -r .password 2>/dev/null)
+    if [ -n "$DB_PASSWORD" ] && [ "$DB_PASSWORD" != "null" ]; then
+        echo -e "${GREEN}✓ Successfully retrieved password from Secrets Manager${NC}"
+        echo "Password length: ${#DB_PASSWORD} characters"
+    else
+        echo -e "${RED}✗ Failed to retrieve password from Secrets Manager${NC}"
+        echo "Please check:"
+        echo "  - EC2 instance has proper IAM permissions for Secrets Manager"
+        echo "  - Secret exists and is accessible"
+        exit 1
+    fi
+else
+    echo -e "${RED}✗ DB_SECRET_ARN not found in environment variables${NC}"
+    exit 1
+fi
+echo ""
 
-if psql -h $RDS_ENDPOINT -p 5432 -U $DB_USER -d $DB_NAME -c "SELECT version();" 2>/dev/null; then
+# Test 6: Test basic PostgreSQL connection with Secrets Manager password
+echo -e "${YELLOW}Test 6: Testing PostgreSQL connection with Secrets Manager password...${NC}"
+if PGPASSWORD=$DB_PASSWORD psql -h $RDS_ENDPOINT -p 5432 -U $DB_USER -d $DB_NAME -c "SELECT version();" 2>/dev/null; then
     echo -e "${GREEN}✓ Password authentication successful${NC}"
 else
     echo -e "${RED}✗ Password authentication failed${NC}"
     echo "Please check:"
-    echo "  - Correct password is being used"
     echo "  - RDS instance is accepting connections"
     echo "  - Database user exists and has proper permissions"
+    echo "  - Password retrieved from Secrets Manager is correct"
 fi
 echo ""
 
-# Test 6: Test IAM authentication (non-interactive)
-echo -e "${YELLOW}Test 6: Testing PostgreSQL connection with IAM authentication...${NC}"
+# Test 7: Test IAM authentication (non-interactive)
+echo -e "${YELLOW}Test 7: Testing PostgreSQL connection with IAM authentication...${NC}"
 if PGPASSWORD=$TOKEN psql -h $RDS_ENDPOINT -p 5432 -U $DB_USER -d $DB_NAME -c "SELECT current_user, session_user;" 2>/dev/null; then
     echo -e "${GREEN}✓ IAM authentication successful${NC}"
 else
@@ -125,5 +142,5 @@ echo ""
 echo -e "${BLUE}=== Connection Test Complete ===${NC}"
 echo ""
 echo -e "${GREEN}Available connection scripts:${NC}"
-echo "  ./connect-to-rds.sh      - Password authentication"
+echo "  ./connect-to-rds.sh      - Password authentication (using Secrets Manager)"
 echo "  ./connect-to-rds-iam.sh  - IAM authentication (after setup)"

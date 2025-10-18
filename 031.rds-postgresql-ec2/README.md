@@ -11,6 +11,13 @@
 - **EC2インスタンス**: Amazon Linux 2023, t3.micro
 - **RDSインスタンス**: PostgreSQL 15, db.t4g.medium
 - **IAMロール**: Systems Manager接続とRDS IAM認証用
+- **Secrets Manager**: データベースパスワードの安全な管理
+
+### セキュリティ機能
+- データベースパスワードはAWS Secrets Managerで自動生成・管理
+- RDSストレージの暗号化
+- プライベートサブネットでのRDS配置
+- IAMベースのデータベース認証サポート
 
 ### コスト最適化
 - 最小インスタンスタイプ（t3.micro, db.t4g.medium）を使用
@@ -25,6 +32,7 @@
    - CloudFormation操作権限
    - EC2、RDS、VPC、IAMリソースの作成・管理権限
    - Systems Manager操作権限
+   - Secrets Manager操作権限
 
 ## デプロイ手順
 
@@ -48,7 +56,7 @@ chmod +x *.sh
 ./deploy.sh
 ```
 
-デプロイ時にPostgreSQLのマスターパスワード（8文字以上）の入力が求められます。
+**注意**: データベースパスワードはAWS Secrets Managerで自動生成されるため、手動入力は不要です。
 
 ### 2. 手動でのデプロイ（オプション）
 
@@ -57,7 +65,6 @@ chmod +x *.sh
 aws cloudformation deploy \
     --template-file cfn/rds-postgresql-ec2.yaml \
     --stack-name rds-postgresql-ec2-stack \
-    --parameter-overrides DBPassword="YourSecurePassword123!" \
     --capabilities CAPABILITY_NAMED_IAM \
     --region ap-northeast-1
 ```
@@ -82,7 +89,7 @@ aws ssm start-session --target $EC2_INSTANCE_ID --region ap-northeast-1
 
 EC2インスタンスに接続後、以下のスクリプトが利用可能です：
 
-#### パスワード認証での接続
+#### パスワード認証での接続（Secrets Manager使用）
 ```bash
 # 事前に作成されたスクリプトを使用
 ./connect-to-rds.sh
@@ -107,8 +114,11 @@ GRANT rds_iam TO postgres;
 # 環境変数を読み込み
 source rds-env.sh
 
+# Secrets Managerからパスワードを取得
+DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $DB_SECRET_ARN --region $AWS_REGION --query SecretString --output text | jq -r .password)
+
 # パスワード認証
-psql -h $RDS_ENDPOINT -p 5432 -U $DB_USER -d $DB_NAME
+PGPASSWORD=$DB_PASSWORD psql -h $RDS_ENDPOINT -p 5432 -U $DB_USER -d $DB_NAME
 
 # IAM認証
 TOKEN=$(aws rds generate-db-auth-token --hostname $RDS_ENDPOINT --port 5432 --username $DB_USER --region $AWS_REGION)
@@ -157,6 +167,26 @@ chmod +x cleanup.sh
 ./cleanup.sh
 ```
 
+## パスワード管理
+
+### Secrets Managerからのパスワード取得
+
+```bash
+# Secret ARNを取得
+DB_SECRET_ARN=$(aws cloudformation describe-stacks \
+    --stack-name rds-postgresql-ec2-stack \
+    --region ap-northeast-1 \
+    --query 'Stacks[0].Outputs[?OutputKey==`DBSecretArn`].OutputValue' \
+    --output text)
+
+# パスワードを取得
+aws secretsmanager get-secret-value \
+    --secret-id $DB_SECRET_ARN \
+    --region ap-northeast-1 \
+    --query SecretString \
+    --output text | jq -r .password
+```
+
 ## ファイル構成
 
 ```
@@ -177,13 +207,13 @@ chmod +x cleanup.sh
 
 ### パラメータ
 - `DBUsername`: データベースのマスターユーザー名（デフォルト: postgres）
-- `DBPassword`: データベースのマスターパスワード（8-128文字）
 - `EnvironmentName`: リソース命名用の環境名（デフォルト: rds-postgresql-demo）
 
 ### 主要リソース
 - **VPC**: カスタムVPCとサブネット
 - **EC2インスタンス**: PostgreSQLクライアントがプリインストールされたAmazon Linux 2023
 - **RDSインスタンス**: PostgreSQL 15データベース
+- **Secrets Manager**: データベースパスワードの安全な管理
 - **セキュリティグループ**: EC2からRDSへのアクセスを許可
 - **IAMロール**: Systems Manager接続とRDS IAM認証用
 
@@ -194,6 +224,7 @@ chmod +x cleanup.sh
 - RDSポート
 - データベース名
 - データベースユーザー名
+- データベースシークレットARN
 - Systems Manager接続コマンド
 - PostgreSQL接続コマンド
 
@@ -206,10 +237,12 @@ chmod +x cleanup.sh
 2. **認証**
    - RDSはパスワード認証とIAM認証の両方をサポート
    - EC2はSystems Managerを通じてキーペア不要でアクセス
+   - データベースパスワードはSecrets Managerで安全に管理
 
 3. **暗号化**
    - RDSストレージは暗号化を有効化
    - 転送中のデータはSSL/TLS暗号化
+   - Secrets Managerでのパスワード暗号化
 
 ## トラブルシューティング
 
@@ -229,6 +262,10 @@ chmod +x cleanup.sh
    - EC2のIAMロールにRDS接続権限があることを確認
    - RDSでIAMデータベース認証が有効になっていることを確認
 
+4. **Secrets Managerアクセスエラー**
+   - EC2のIAMロールにSecrets Manager読み取り権限があることを確認
+   - シークレットが正しく作成されていることを確認
+
 ### ログの確認
 
 ```bash
@@ -245,7 +282,8 @@ sudo systemctl status amazon-ssm-agent
 - EC2 t3.micro: 約 $8.50/月
 - RDS db.t4g.medium: 約 $26.00/月
 - EBS gp2 20GB: 約 $2.40/月
-- **合計**: 約 $37/月
+- Secrets Manager: 約 $0.40/月（1シークレット）
+- **合計**: 約 $37.30/月
 
 ※実際のコストは使用量や為替レートにより変動します。
 
@@ -257,6 +295,7 @@ sudo systemctl status amazon-ssm-agent
    - バックアップ設定
    - より大きなインスタンスタイプ
    - 削除保護の有効化
+   - Secrets Managerの自動ローテーション
 3. 不要になったリソースは必ずクリーンアップしてください
 
 ## サポート
@@ -265,3 +304,4 @@ sudo systemctl status amazon-ssm-agent
 1. AWS CloudFormationコンソールでスタックイベントを確認
 2. EC2インスタンスのシステムログを確認
 3. RDSインスタンスのログを確認
+4. Secrets Managerでシークレットの状態を確認

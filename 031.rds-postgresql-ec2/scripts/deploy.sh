@@ -31,27 +31,18 @@ if [ ! -f "$TEMPLATE_FILE" ]; then
     exit 1
 fi
 
-# Prompt for database password
-echo -e "${YELLOW}Please enter a password for the PostgreSQL database (8-128 characters):${NC}"
-read -s DB_PASSWORD
-echo ""
-
-if [ ${#DB_PASSWORD} -lt 8 ]; then
-    echo -e "${RED}Error: Password must be at least 8 characters long${NC}"
-    exit 1
-fi
-
 echo -e "${GREEN}Deploying CloudFormation stack...${NC}"
 echo "Stack Name: $STACK_NAME"
 echo "Region: $REGION"
 echo "Template: $TEMPLATE_FILE"
+echo ""
+echo -e "${YELLOW}Note: Database password will be automatically generated and stored in AWS Secrets Manager${NC}"
 echo ""
 
 # Deploy the stack
 aws cloudformation deploy \
     --template-file "$TEMPLATE_FILE" \
     --stack-name "$STACK_NAME" \
-    --parameter-overrides DBPassword="$DB_PASSWORD" \
     --capabilities CAPABILITY_NAMED_IAM \
     --region "$REGION"
 
@@ -83,6 +74,18 @@ if [ $? -eq 0 ]; then
     
     echo -e "${YELLOW}To connect to EC2 via Systems Manager:${NC}"
     echo "aws ssm start-session --target $EC2_INSTANCE_ID --region $REGION"
+    echo ""
+    
+    # Get database secret information
+    DB_SECRET_ARN=$(aws cloudformation describe-stacks \
+        --stack-name "$STACK_NAME" \
+        --region "$REGION" \
+        --query 'Stacks[0].Outputs[?OutputKey==`DBSecretArn`].OutputValue' \
+        --output text)
+    
+    echo -e "${YELLOW}Database password is stored in AWS Secrets Manager:${NC}"
+    echo "Secret ARN: $DB_SECRET_ARN"
+    echo "To retrieve the password: aws secretsmanager get-secret-value --secret-id $DB_SECRET_ARN --region $REGION"
     echo ""
     
 else

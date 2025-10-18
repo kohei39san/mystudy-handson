@@ -42,7 +42,7 @@ echo "Current Status: $STACK_STATUS"
 echo ""
 
 # Confirm deletion
-echo -e "${RED}WARNING: This will delete all resources including the RDS database!${NC}"
+echo -e "${RED}WARNING: This will delete all resources including the RDS database and Secrets Manager secret!${NC}"
 echo -e "${YELLOW}Are you sure you want to delete the stack? (yes/no):${NC}"
 read -r CONFIRM
 
