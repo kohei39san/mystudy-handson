@@ -18,7 +18,7 @@ resource "aws_cloudformation_stack" "infrastructure" {
     AllowedIpAddresses   = join(",", var.allowed_ip_addresses)
   }
 
-  capabilities = ["CAPABILITY_IAM"]
+  capabilities = ["CAPABILITY_IAM", "CAPABILITY_NAMED_IAM"]
 
   tags = {
     Name        = local.stack_name

@@ -7,7 +7,7 @@ variable "environment" {
 variable "project_name" {
   description = "Project name for resource naming"
   type        = string
-  default     = "apigateway-cognito-lambda"
+  default     = "apigateway-userpool-payload-test"
 }
 
 variable "user_email" {

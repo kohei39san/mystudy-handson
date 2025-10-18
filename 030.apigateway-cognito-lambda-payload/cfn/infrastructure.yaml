@@ -97,7 +97,7 @@ Resources:
   CognitoUserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
-      Domain: !Sub "${ProjectName}-${Environment}-${AWS::AccountId}"
+      Domain: !Sub "${ProjectName}-${Environment}"
       UserPoolId: !Ref CognitoUserPool
 
   # IAM Role for Cognito Users
@@ -274,19 +274,18 @@ Resources:
         Statement:
           - Effect: Allow
             Principal: '*'
-            Action: execute-api:Invoke
-            Resource: '*'
+            Action: 'execute-api:Invoke'
+            Resource: 'execute-api:/*/*/*'
             Condition:
               IpAddress:
                 aws:SourceIp: !Ref AllowedIpAddresses
           - Effect: Deny
             Principal: '*'
-            Action: execute-api:Invoke
-            Resource: '*'
+            Action: 'execute-api:Invoke'
+            Resource: 'execute-api:/*/*/*'
             Condition:
-              Not:
-                IpAddress:
-                  aws:SourceIp: !Ref AllowedIpAddresses
+              NotIpAddress:
+                aws:SourceIp: !Ref AllowedIpAddresses
       Tags:
         - Key: Environment
           Value: !Ref Environment
