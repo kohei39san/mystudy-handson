@@ -1,0 +1,349 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'RDS PostgreSQL instance with EC2 client access via Systems Manager'
+
+Parameters:
+  DBUsername:
+    Type: String
+    Default: 'postgres'
+    Description: 'Database master username'
+  
+  DBPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 128
+    Description: 'Database master password (8-128 characters)'
+    Default: 'TempPassword123!'
+
+  EnvironmentName:
+    Type: String
+    Default: 'rds-postgresql-demo'
+    Description: 'Environment name for resource naming'
+
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+    Description: 'Latest Amazon Linux 2023 AMI ID'
+
+Resources:
+  # VPC Configuration
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vpc'
+
+  # Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-igw'
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  # Public Subnet for EC2
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-subnet-1'
+
+  # Private Subnet for RDS
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.2.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-subnet-1'
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: 10.0.3.0/24
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-private-subnet-2'
+
+  # Route Table for Public Subnet
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-routes'
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::RouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  # Security Groups
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${EnvironmentName}-ec2-sg'
+      GroupDescription: 'Security group for EC2 instance'
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-ec2-sg'
+
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${EnvironmentName}-rds-sg'
+      GroupDescription: 'Security group for RDS PostgreSQL'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref EC2SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-rds-sg'
+
+  # IAM Role for EC2 Systems Manager
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-ec2-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: RDSIAMAuth
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-db:connect
+                Resource: !Sub 'arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:${EnvironmentName}-postgresql/${DBUsername}'
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub '${EnvironmentName}-ec2-profile'
+      Roles:
+        - !Ref EC2Role
+
+  # RDS Subnet Group
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupName: !Sub '${EnvironmentName}-db-subnet-group'
+      DBSubnetGroupDescription: 'Subnet group for RDS PostgreSQL'
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-db-subnet-group'
+
+  # RDS PostgreSQL Instance
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      DBInstanceIdentifier: !Sub '${EnvironmentName}-postgresql'
+      DBInstanceClass: db.t4g.micro
+      Engine: postgres
+      EngineVersion: '15.4'
+      AllocatedStorage: 20
+      StorageType: gp2
+      StorageEncrypted: true
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      BackupRetentionPeriod: 0
+      MultiAZ: false
+      PubliclyAccessible: false
+      EnableIAMDatabaseAuthentication: true
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-postgresql'
+
+  # EC2 Instance
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: t3.micro
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      SubnetId: !Ref PublicSubnet1
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          
+          # Install PostgreSQL client
+          yum install -y postgresql15
+          
+          # Install AWS CLI v2 (if not already installed)
+          if ! command -v aws &> /dev/null; then
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            ./aws/install
+            rm -rf aws awscliv2.zip
+          fi
+          
+          # Create connection script
+          cat > /home/ec2-user/connect-to-rds.sh << 'EOF'
+          #!/bin/bash
+          
+          # RDS connection details
+          RDS_ENDPOINT="${DBInstance.Endpoint.Address}"
+          DB_NAME="postgres"
+          DB_USER="${DBUsername}"
+          
+          echo "Connecting to RDS PostgreSQL..."
+          echo "Endpoint: $RDS_ENDPOINT"
+          echo "Database: $DB_NAME"
+          echo "User: $DB_USER"
+          echo ""
+          
+          # Connect using password authentication
+          echo "Using password authentication:"
+          psql -h $RDS_ENDPOINT -p 5432 -U $DB_USER -d $DB_NAME
+          
+          EOF
+          
+          # Create IAM authentication script
+          cat > /home/ec2-user/connect-to-rds-iam.sh << 'EOF'
+          #!/bin/bash
+          
+          # RDS connection details
+          RDS_ENDPOINT="${DBInstance.Endpoint.Address}"
+          DB_NAME="postgres"
+          DB_USER="${DBUsername}"
+          REGION="${AWS::Region}"
+          
+          echo "Connecting to RDS PostgreSQL using IAM authentication..."
+          echo "Endpoint: $RDS_ENDPOINT"
+          echo "Database: $DB_NAME"
+          echo "User: $DB_USER"
+          echo ""
+          
+          # Generate IAM auth token
+          TOKEN=$(aws rds generate-db-auth-token --hostname $RDS_ENDPOINT --port 5432 --username $DB_USER --region $REGION)
+          
+          # Connect using IAM authentication
+          echo "Using IAM authentication:"
+          PGPASSWORD=$TOKEN psql -h $RDS_ENDPOINT -p 5432 -U $DB_USER -d $DB_NAME
+          
+          EOF
+          
+          # Make scripts executable
+          chmod +x /home/ec2-user/connect-to-rds.sh
+          chmod +x /home/ec2-user/connect-to-rds-iam.sh
+          chown ec2-user:ec2-user /home/ec2-user/connect-to-rds*.sh
+          
+          # Create environment file with connection details
+          cat > /home/ec2-user/rds-env.sh << 'EOF'
+          #!/bin/bash
+          export RDS_ENDPOINT="${DBInstance.Endpoint.Address}"
+          export DB_NAME="postgres"
+          export DB_USER="${DBUsername}"
+          export AWS_REGION="${AWS::Region}"
+          EOF
+          
+          chown ec2-user:ec2-user /home/ec2-user/rds-env.sh
+          
+          # Install and start SSM agent (should be pre-installed on Amazon Linux 2023)
+          systemctl enable amazon-ssm-agent
+          systemctl start amazon-ssm-agent
+          
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-ec2'
+
+Outputs:
+  VPCId:
+    Description: 'VPC ID'
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${EnvironmentName}-vpc-id'
+
+  EC2InstanceId:
+    Description: 'EC2 Instance ID'
+    Value: !Ref EC2Instance
+    Export:
+      Name: !Sub '${EnvironmentName}-ec2-id'
+
+  RDSEndpoint:
+    Description: 'RDS PostgreSQL Endpoint'
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Export:
+      Name: !Sub '${EnvironmentName}-rds-endpoint'
+
+  RDSPort:
+    Description: 'RDS PostgreSQL Port'
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Export:
+      Name: !Sub '${EnvironmentName}-rds-port'
+
+  DatabaseName:
+    Description: 'Database Name'
+    Value: 'postgres'
+    Export:
+      Name: !Sub '${EnvironmentName}-db-name'
+
+  DatabaseUsername:
+    Description: 'Database Username'
+    Value: !Ref DBUsername
+    Export:
+      Name: !Sub '${EnvironmentName}-db-username'
+
+  SSMConnectCommand:
+    Description: 'Command to connect to EC2 via Systems Manager'
+    Value: !Sub 'aws ssm start-session --target ${EC2Instance} --region ${AWS::Region}'
+
+  PostgreSQLConnectCommand:
+    Description: 'Command to connect to PostgreSQL from EC2'
+    Value: !Sub 'psql -h ${DBInstance.Endpoint.Address} -p 5432 -U ${DBUsername} -d postgres'
