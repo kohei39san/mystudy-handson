@@ -1,2 +1,1 @@
-oci session refresh --profile $args[0]
-oci session authenticate $args[0]
+oci session authenticate --region $args[0] --profile-name $args[1]

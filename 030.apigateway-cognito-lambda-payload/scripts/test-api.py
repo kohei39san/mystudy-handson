@@ -32,16 +32,34 @@ class CognitoApiTester:
         try:
             print(f"Authenticating user: {username}")
             
-            # Initiate authentication
-            response = self.cognito_client.admin_initiate_auth(
-                UserPoolId=self.user_pool_id,
-                ClientId=self.client_id,
-                AuthFlow='ADMIN_NO_SRP_AUTH',
-                AuthParameters={
-                    'USERNAME': username,
-                    'PASSWORD': password
-                }
-            )
+            # Try different authentication flows
+            try:
+                # First try ADMIN_USER_PASSWORD_AUTH
+                response = self.cognito_client.admin_initiate_auth(
+                    UserPoolId=self.user_pool_id,
+                    ClientId=self.client_id,
+                    AuthFlow='ADMIN_USER_PASSWORD_AUTH',
+                    AuthParameters={
+                        'USERNAME': username,
+                        'PASSWORD': password
+                    }
+                )
+            except ClientError as e1:
+                print(f"ADMIN_USER_PASSWORD_AUTH failed: {e1}")
+                try:
+                    # Try ADMIN_NO_SRP_AUTH
+                    response = self.cognito_client.admin_initiate_auth(
+                        UserPoolId=self.user_pool_id,
+                        ClientId=self.client_id,
+                        AuthFlow='ADMIN_NO_SRP_AUTH',
+                        AuthParameters={
+                            'USERNAME': username,
+                            'PASSWORD': password
+                        }
+                    )
+                except ClientError as e2:
+                    print(f"ADMIN_NO_SRP_AUTH also failed: {e2}")
+                    raise e2
             
             # Handle challenge if needed (e.g., NEW_PASSWORD_REQUIRED)
             if 'ChallengeName' in response:
@@ -50,24 +68,24 @@ class CognitoApiTester:
                     print("New password required. Please set a permanent password first.")
                     return False
             
-            # Extract tokens
+            # Extract tokens - use ID Token for API Gateway
             auth_result = response['AuthenticationResult']
-            self.access_token = auth_result['AccessToken']
-            id_token = auth_result['IdToken']
+            access_token = auth_result['AccessToken']
+            self.access_token = auth_result['IdToken']  # Use ID Token for API Gateway
             
-            print("✅ Authentication successful!")
-            print(f"Access Token (first 50 chars): {self.access_token[:50]}...")
+            print("Authentication successful!")
+            print(f"ID Token (first 50 chars): {self.access_token[:50]}...")
             
             return True
             
         except ClientError as e:
-            print(f"❌ Authentication failed: {e}")
+            print(f"Authentication failed: {e}")
             return False
     
     def test_api_call(self, method='GET', path='/', data=None, headers=None):
         """Make an API call to the deployed API Gateway"""
         if not self.access_token:
-            print("❌ No access token available. Please authenticate first.")
+            print("No access token available. Please authenticate first.")
             return None
         
         url = f"{self.api_url}{path}"
@@ -82,7 +100,7 @@ class CognitoApiTester:
             api_headers.update(headers)
         
         try:
-            print(f"\n🔄 Making {method} request to: {url}")
+            print(f"\nMaking {method} request to: {url}")
             print(f"Headers: {json.dumps({k: v[:50] + '...' if len(v) > 50 else v for k, v in api_headers.items()}, indent=2)}")
             
             if data:
@@ -97,7 +115,7 @@ class CognitoApiTester:
                 timeout=30
             )
             
-            print(f"✅ Response Status: {response.status_code}")
+            print(f"Response Status: {response.status_code}")
             print(f"Response Headers: {dict(response.headers)}")
             
             try:
@@ -109,24 +127,24 @@ class CognitoApiTester:
             return response
             
         except requests.exceptions.RequestException as e:
-            print(f"❌ API call failed: {e}")
+            print(f"API call failed: {e}")
             return None
     
     def run_test_suite(self):
         """Run a comprehensive test suite"""
-        print("\n🧪 Running API Test Suite")
+        print("\nRunning API Test Suite")
         print("=" * 50)
         
         # Test 1: Simple GET request
-        print("\n📋 Test 1: Simple GET request")
+        print("\nTest 1: Simple GET request")
         self.test_api_call('GET', '/')
         
         # Test 2: GET with query parameters
-        print("\n📋 Test 2: GET with query parameters")
+        print("\nTest 2: GET with query parameters")
         self.test_api_call('GET', '/?param1=value1&param2=value2')
         
         # Test 3: POST with JSON data
-        print("\n📋 Test 3: POST with JSON data")
+        print("\nTest 3: POST with JSON data")
         test_data = {
             'message': 'Hello from test script',
             'timestamp': time.time(),
@@ -135,7 +153,7 @@ class CognitoApiTester:
         self.test_api_call('POST', '/test', data=test_data)
         
         # Test 4: PUT request
-        print("\n📋 Test 4: PUT request")
+        print("\nTest 4: PUT request")
         update_data = {
             'action': 'update',
             'resource_id': '12345',
@@ -144,15 +162,15 @@ class CognitoApiTester:
         self.test_api_call('PUT', '/resource/12345', data=update_data)
         
         # Test 5: Custom headers
-        print("\n📋 Test 5: Request with custom headers")
+        print("\nTest 5: Request with custom headers")
         custom_headers = {
             'X-Custom-Header': 'test-value',
             'X-Request-ID': 'req-12345'
         }
         self.test_api_call('GET', '/custom', headers=custom_headers)
         
-        print("\n✅ Test suite completed!")
-        print("\n💡 Check CloudWatch Logs for the Lambda function to see the logged payloads.")
+        print("\nTest suite completed!")
+        print("\nCheck CloudWatch Logs for the Lambda function to see the logged payloads.")
 
 def main():
     parser = argparse.ArgumentParser(description='Test API Gateway + Cognito + Lambda system')
@@ -178,7 +196,7 @@ def main():
         # Run test suite
         tester.run_test_suite()
     else:
-        print("❌ Authentication failed. Cannot proceed with API tests.")
+        print("Authentication failed. Cannot proceed with API tests.")
         return 1
     
     return 0
