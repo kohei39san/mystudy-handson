@@ -9,7 +9,7 @@ Parameters:
   
   ProjectName:
     Type: String
-    Default: apigateway-cognito-lambda
+    Default: apigateway-userpool-payload-test
     Description: Project name for resource naming
   
   UserEmail:
