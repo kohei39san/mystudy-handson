@@ -16,12 +16,15 @@ import {
   GetRedmineTicketDetailSchema,
   SearchRedmineTicketsInput,
   GetRedmineTicketDetailInput,
+  ListRedmineProjectsSchema,
+  ListRedmineProjectsInput,
 } from './schemas.js';
 import {
   RedmineIssuesResponse,
   RedmineIssueResponse,
   RedmineErrorResponse,
   SearchTicketsParams,
+  RedmineProjectsResponse,
 } from './types.js';
 
 class RedmineMCPServer {
@@ -215,6 +218,25 @@ class RedmineMCPServer {
               required: ['ticket_id'],
             },
           },
+          {
+            name: 'list_redmine_projects',
+            description: 'List Redmine projects with pagination',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                limit: {
+                  type: 'number',
+                  description: 'Maximum number of projects to return (default: 25, max: 100)',
+                  default: 25,
+                },
+                offset: {
+                  type: 'number',
+                  description: 'Number of projects to skip (default: 0)',
+                  default: 0,
+                },
+              },
+            },
+          },
         ],
       };
     });
@@ -229,6 +251,9 @@ class RedmineMCPServer {
           
           case 'get_redmine_ticket_detail':
             return await this.handleGetTicketDetail(args as GetRedmineTicketDetailInput);
+
+          case 'list_redmine_projects':
+            return await this.handleListProjects(args as ListRedmineProjectsInput);
           
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -301,6 +326,39 @@ class RedmineMCPServer {
         {
           type: 'text',
           text: JSON.stringify(response.issue, null, 2),
+        },
+      ],
+    };
+  }
+
+  private async handleListProjects(args: ListRedmineProjectsInput) {
+    // Validate input using Zod
+    const validatedArgs = ListRedmineProjectsSchema.parse(args);
+
+    const params = {
+      limit: validatedArgs.limit,
+      offset: validatedArgs.offset,
+    } as Record<string, any>;
+
+    const response = await this.makeRedmineRequest<RedmineProjectsResponse>('/projects.json', params);
+
+    const projects = response.projects.map(p => ({
+      id: p.id,
+      name: p.name,
+      identifier: p.identifier,
+      description: p.description || '',
+    }));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            total_count: response.total_count ?? projects.length,
+            offset: response.offset ?? validatedArgs.offset,
+            limit: response.limit ?? validatedArgs.limit,
+            projects,
+          }, null, 2),
         },
       ],
     };

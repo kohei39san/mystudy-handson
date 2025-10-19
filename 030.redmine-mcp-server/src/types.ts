@@ -116,3 +116,18 @@ export interface SearchTicketsParams {
 export interface GetTicketDetailParams {
   ticket_id: number;
 }
+
+// Projects
+export interface RedmineProjectSummary {
+  id: number;
+  name: string;
+  identifier?: string;
+  description?: string;
+}
+
+export interface RedmineProjectsResponse {
+  projects: RedmineProjectSummary[];
+  total_count?: number;
+  offset?: number;
+  limit?: number;
+}
