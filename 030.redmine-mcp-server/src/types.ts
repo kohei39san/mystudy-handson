@@ -131,3 +131,20 @@ export interface RedmineProjectsResponse {
   offset?: number;
   limit?: number;
 }
+
+// Roles
+export interface RedmineRole {
+  id: number;
+  name: string;
+  assignable?: boolean;
+  builtin?: number;
+  permissions?: string[];
+}
+
+export interface RedmineRolesResponse {
+  roles: RedmineRole[];
+}
+
+export interface RedmineRoleResponse {
+  role: RedmineRole;
+}

@@ -18,6 +18,10 @@ import {
   GetRedmineTicketDetailInput,
   ListRedmineProjectsSchema,
   ListRedmineProjectsInput,
+  ListRedmineRolesSchema,
+  ListRedmineRolesInput,
+  GetRedmineRoleDetailSchema,
+  GetRedmineRoleDetailInput,
 } from './schemas.js';
 import {
   RedmineIssuesResponse,
@@ -25,9 +29,11 @@ import {
   RedmineErrorResponse,
   SearchTicketsParams,
   RedmineProjectsResponse,
+  RedmineRolesResponse,
+  RedmineRoleResponse,
 } from './types.js';
 
-class RedmineMCPServer {
+export class RedmineMCPServer {
   private server: Server;
   private ssmClient: SSMClient;
   private redmineBaseUrl: string;
@@ -237,6 +243,28 @@ class RedmineMCPServer {
               },
             },
           },
+          {
+            name: 'list_redmine_roles',
+            description: 'List all Redmine roles',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+            },
+          },
+          {
+            name: 'get_redmine_role_detail',
+            description: 'Get detailed information about a specific Redmine role',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                role_id: {
+                  type: 'number',
+                  description: 'The ID of the role to retrieve',
+                },
+              },
+              required: ['role_id'],
+            },
+          },
         ],
       };
     });
@@ -254,6 +282,12 @@ class RedmineMCPServer {
 
           case 'list_redmine_projects':
             return await this.handleListProjects(args as ListRedmineProjectsInput);
+
+          case 'list_redmine_roles':
+            return await this.handleListRoles(args as ListRedmineRolesInput);
+
+          case 'get_redmine_role_detail':
+            return await this.handleGetRoleDetail(args as GetRedmineRoleDetailInput);
           
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -271,7 +305,7 @@ class RedmineMCPServer {
     });
   }
 
-  private async handleSearchTickets(args: SearchRedmineTicketsInput) {
+  async handleSearchTickets(args: SearchRedmineTicketsInput) {
     // Validate input using Zod
     const validatedArgs = SearchRedmineTicketsSchema.parse(args);
 
@@ -308,7 +342,7 @@ class RedmineMCPServer {
     };
   }
 
-  private async handleGetTicketDetail(args: GetRedmineTicketDetailInput) {
+  async handleGetTicketDetail(args: GetRedmineTicketDetailInput) {
     // Validate input using Zod
     const validatedArgs = GetRedmineTicketDetailSchema.parse(args);
 
@@ -331,7 +365,7 @@ class RedmineMCPServer {
     };
   }
 
-  private async handleListProjects(args: ListRedmineProjectsInput) {
+  async handleListProjects(args: ListRedmineProjectsInput) {
     // Validate input using Zod
     const validatedArgs = ListRedmineProjectsSchema.parse(args);
 
@@ -359,6 +393,47 @@ class RedmineMCPServer {
             limit: response.limit ?? validatedArgs.limit,
             projects,
           }, null, 2),
+        },
+      ],
+    };
+  }
+
+  async handleListRoles(args: ListRedmineRolesInput) {
+    // Validate input using Zod
+    const validatedArgs = ListRedmineRolesSchema.parse(args);
+
+    const response = await this.makeRedmineRequest<RedmineRolesResponse>('/roles.json');
+
+    const roles = response.roles.map(r => ({
+      id: r.id,
+      name: r.name,
+      assignable: r.assignable ?? false,
+      builtin: r.builtin,
+    }));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ roles }, null, 2),
+        },
+      ],
+    };
+  }
+
+  async handleGetRoleDetail(args: GetRedmineRoleDetailInput) {
+    // Validate input using Zod
+    const validatedArgs = GetRedmineRoleDetailSchema.parse(args);
+
+    const response = await this.makeRedmineRequest<RedmineRoleResponse>(
+      `/roles/${validatedArgs.role_id}.json`
+    );
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(response.role, null, 2),
         },
       ],
     };

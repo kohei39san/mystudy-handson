@@ -24,3 +24,13 @@ export const ListRedmineProjectsSchema = z.object({
 });
 
 export type ListRedmineProjectsInput = z.infer<typeof ListRedmineProjectsSchema>;
+
+// Schema for listing roles
+export const ListRedmineRolesSchema = z.object({});
+
+export const GetRedmineRoleDetailSchema = z.object({
+  role_id: z.number().int().positive(),
+});
+
+export type ListRedmineRolesInput = z.infer<typeof ListRedmineRolesSchema>;
+export type GetRedmineRoleDetailInput = z.infer<typeof GetRedmineRoleDetailSchema>;
