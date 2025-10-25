@@ -2,7 +2,7 @@
 
 ## 概要
 
-このプロジェクトは、AWS API Gateway、Cognito ユーザプール、Lambda を使用してペイロード検証システムを構築します。Cognito による認証を通じて、Lambda 関数のイベントペイロードをログ出力するシンプルなシステムです。
+このプロジェクトは、AWS API Gateway、Cognito ユーザプール、Lambda を使用してペイロード検証システムを構築します。Cognito による認証を通じて、Lambda 関数のイベントペイロードをログ出力するシステムに加えて、Cognito認証時にユーザーグループに基づいてカスタム属性を自動設定する機能を提供します。
 
 ## アーキテクチャ
 
@@ -11,17 +11,25 @@
     ↓ (認証トークン)
 [API Gateway REST API] 
     ↓ (Cognito オーソライザー)
-[Lambda 関数] 
+[Lambda 関数 (ペイロードログ)] 
     ↓ (ログ出力)
 [CloudWatch Logs]
+
+[Cognito認証イベント]
+    ↓ (Pre Token Generation トリガー)
+[Lambda 関数 (カスタム属性設定)]
+    ↓ (グループベースのロール設定)
+[Cognito ユーザー属性更新]
 ```
 
 ## 構成要素
 
 ### AWS Cognito
 - **ユーザプール**: ユーザ認証を管理
+- **カスタム属性**: ユーザーのロール情報を格納する `custom:role` 属性
 - **ユーザプールクライアント**: シングルページアプリケーション用の設定
 - **ユーザグループ**: IAM ロールが紐づけられたユーザグループ
+- **Lambda トリガー**: Pre Token Generation イベントでカスタム属性を設定
 - **IAM ロール**: Cognito ユーザに割り当てられる権限
 
 ### API Gateway
@@ -31,9 +39,21 @@
 - **プロキシ統合**: Lambda 関数との統合
 
 ### Lambda
-- **関数**: Python で実装されたシンプルなログ出力関数
+- **ペイロードログ関数**: Python で実装されたシンプルなログ出力関数
+- **カスタム属性設定関数**: Cognito認証時にユーザーグループに基づいてロールを設定
 - **IAM ロール**: Lambda 実行に必要な権限
 - **CloudWatch Logs**: ログ出力先
+
+## カスタム属性機能
+
+### ロール設定ロジック
+- **api-users グループのメンバー**: `custom:role` = "admin"
+- **その他のユーザー**: `custom:role` = "anonymous"
+
+### 動作タイミング
+- Cognito の Pre Token Generation トリガーで実行
+- JWT トークンにカスタムクレームとして `custom:role` を追加
+- ユーザー属性としても永続化
 
 ## クイックスタート
 
@@ -81,6 +101,10 @@ curl -X GET \
   -H "Authorization: Bearer <JWT_TOKEN>" \
   -H "Content-Type: application/json" \
   "<API_GATEWAY_URL>/test"
+```
+
+```powershell
+python scripts\test-api.py --user-pool-id <USER_POOL_ID> --client-id <CLIENT_ID> --api-url https://<API_GATEWAY_ENDPOINT>/dev --username <USER_NAME> --password "TempPassword123!"
 ```
 
 3. **ログ確認**
@@ -169,6 +193,46 @@ terraform destroy -var-file=terraform.tfvars
 - **ランタイム**: Python 3.9
 - **Terraform**: >= 1.0
 - **AWS Provider**: ~> 5.0
+- **Cognito トリガー**: Pre Token Generation
+- **カスタム属性**: custom:role (String型、可変)
+
+## カスタム属性の監視とトラブルシューティング
+
+### ログの確認
+
+```bash
+# カスタム属性Lambda関数のログを確認
+aws logs describe-log-groups --log-group-name-prefix "/aws/lambda/" | grep cognito-custom-attribute
+aws logs get-log-events --log-group-name "/aws/lambda/<CUSTOM_ATTRIBUTE_FUNCTION_NAME>"
+```
+
+### カスタム属性の動作確認
+
+```bash
+# ユーザーの属性を確認
+aws cognito-idp admin-get-user \
+  --user-pool-id <USER_POOL_ID> \
+  --username <USER_EMAIL> \
+  --region ap-northeast-1
+
+# ユーザーのグループメンバーシップを確認
+aws cognito-idp admin-list-groups-for-user \
+  --user-pool-id <USER_POOL_ID> \
+  --username <USER_EMAIL> \
+  --region ap-northeast-1
+```
+
+### トラブルシューティング
+
+#### カスタム属性が設定されない場合
+- Lambda関数のCloudWatch Logsでエラーメッセージを確認
+- IAMロールにCognito操作権限が付与されているか確認
+- Cognito User PoolのLambda Triggersが正しく設定されているか確認
+
+#### 認証エラー
+- Cognito ユーザのパスワードが正しく設定されているか確認
+- JWT トークンの有効期限を確認
+- カスタムクレーム `custom:role` がトークンに含まれているか確認
 
 ## セキュリティ
 
@@ -183,6 +247,9 @@ terraform destroy -var-file=terraform.tfvars
 - Cognito ユーザのメールアドレスは `user_email` 変数で指定してください
 - Lambda 関数は受信したイベントをそのままログ出力するため、機密情報が含まれる場合は注意してください
 - 本番環境では、より強固なパスワードポリシーと MFA の設定を推奨します
+- **カスタム属性機能**: ユーザーのロール情報は JWT トークンに含まれるため、クライアント側で参照可能です
+- **グループ変更**: ユーザーのグループメンバーシップが変更された場合、次回認証時にロールが自動更新されます
+- **Lambda エラー**: カスタム属性設定でエラーが発生しても認証は継続されますが、ロール情報が正しく設定されない可能性があります
 
 ## ライセンス
 
