@@ -133,9 +133,9 @@ Resources:
                   # Add custom claim to the token
                   if 'response' not in event:
                       event['response'] = {}
-                  if 'claimsOverrideDetails' not in event['response']:
+                  if 'claimsOverrideDetails' not in event['response'] or event['response']['claimsOverrideDetails'] is None:
                       event['response']['claimsOverrideDetails'] = {}
-                  if 'claimsToAddOrOverride' not in event['response']['claimsOverrideDetails']:
+                  if 'claimsToAddOrOverride' not in event['response']['claimsOverrideDetails'] or event['response']['claimsOverrideDetails']['claimsToAddOrOverride'] is None:
                       event['response']['claimsOverrideDetails']['claimsToAddOrOverride'] = {}
                   
                   # Add the role as a custom claim
