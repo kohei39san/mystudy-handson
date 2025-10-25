@@ -103,6 +103,10 @@ curl -X GET \
   "<API_GATEWAY_URL>/test"
 ```
 
+```powershell
+python scripts\test-api.py --user-pool-id <USER_POOL_ID> --client-id <CLIENT_ID> --api-url https://<API_GATEWAY_ENDPOINT>/dev --username <USER_NAME> --password "TempPassword123!"
+```
+
 3. **ログ確認**
    - CloudWatch Logs で Lambda 関数のログを確認
 
