@@ -16,6 +16,9 @@ RedmineのチケットAPIを利用したMCPサーバーの実装
 - **トラッカー一覧取得**: Redmineのトラッカー一覧を取得
 - **優先度一覧取得**: Redmineのチケット優先度一覧を取得
 - **ステータス一覧取得**: Redmineのチケットステータス一覧を取得
+- **チケット作成**: 新しいRedmineチケットを作成
+- **チケット更新**: 既存のRedmineチケットを更新
+- **チケット削除**: Redmineチケットを削除
 - **AWS Parameter Store統合**: APIキーとベースURLの安全な管理
 - **Zod入力検証**: 型安全な入力パラメータ検証
 
@@ -220,6 +223,74 @@ Redmineのチケットステータス一覧を取得します。
 **使用例:**
 ```json
 {}
+```
+
+### create_redmine_issue
+
+新しいRedmineチケットを作成します。
+
+**パラメータ:**
+- `project_id` (required): プロジェクトID
+- `tracker_id` (required): トラッカーID
+- `subject` (required): チケット件名
+- `description` (optional): チケット説明
+- `status_id` (optional): ステータスID
+- `priority_id` (optional): 優先度ID
+- `assigned_to_id` (optional): 担当者ID
+
+**レスポンス:**
+- 作成されたチケットの情報
+
+**使用例:**
+```json
+{
+  "project_id": 1,
+  "tracker_id": 2,
+  "subject": "新しい機能の実装",
+  "description": "ユーザー管理機能を追加する"
+}
+```
+
+### update_redmine_issue
+
+既存のRedmineチケットを更新します。
+
+**パラメータ:**
+- `issue_id` (required): 更新するチケットID
+- `subject` (optional): 新しい件名
+- `description` (optional): 新しい説明
+- `status_id` (optional): 新しいステータスID
+- `priority_id` (optional): 新しい優先度ID
+- `assigned_to_id` (optional): 新しい担当者ID
+- `notes` (optional): 更新メモ
+
+**レスポンス:**
+- 更新成功メッセージ
+
+**使用例:**
+```json
+{
+  "issue_id": 123,
+  "status_id": 3,
+  "notes": "作業完了"
+}
+```
+
+### delete_redmine_issue
+
+Redmineチケットを削除します。
+
+**パラメータ:**
+- `issue_id` (required): 削除するチケットID
+
+**レスポンス:**
+- 削除成功メッセージ
+
+**使用例:**
+```json
+{
+  "issue_id": 123
+}
 ```
 
 ## 開発

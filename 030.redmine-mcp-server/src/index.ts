@@ -28,6 +28,12 @@ import {
   ListRedminePrioritiesInput,
   ListRedmineIssueStatusesSchema,
   ListRedmineIssueStatusesInput,
+  CreateRedmineIssueSchema,
+  CreateRedmineIssueInput,
+  UpdateRedmineIssueSchema,
+  UpdateRedmineIssueInput,
+  DeleteRedmineIssueSchema,
+  DeleteRedmineIssueInput,
 } from './schemas.js';
 import {
   RedmineIssuesResponse,
@@ -140,14 +146,14 @@ export class RedmineMCPServer {
     }
   }
 
-  private async makeRedmineRequest<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+  private async makeRedmineRequest<T>(endpoint: string, params?: Record<string, any>, method: string = 'GET', body?: any): Promise<T> {
     const apiKey = await this.getApiKey();
     const baseUrl = await this.getRedmineBaseUrl();
 
     const url = new URL(`${baseUrl}${endpoint}`);
     url.searchParams.append('key', apiKey);
     
-    if (params) {
+    if (method === 'GET' && params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           url.searchParams.append(key, value.toString());
@@ -155,13 +161,19 @@ export class RedmineMCPServer {
       });
     }
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
+    const requestOptions: any = {
+      method,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-    });
+    };
+
+    if (body && (method === 'POST' || method === 'PUT')) {
+      requestOptions.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(url.toString(), requestOptions);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -178,6 +190,10 @@ export class RedmineMCPServer {
       }
       
       throw new Error(errorMessage);
+    }
+
+    if (method === 'DELETE') {
+      return {} as T;
     }
 
     const data = await response.json() as T;
@@ -298,6 +314,96 @@ export class RedmineMCPServer {
               properties: {},
             },
           },
+          {
+            name: 'create_redmine_issue',
+            description: 'Create a new Redmine issue',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                project_id: {
+                  type: 'number',
+                  description: 'Project ID (required)',
+                },
+                tracker_id: {
+                  type: 'number',
+                  description: 'Tracker ID (required)',
+                },
+                subject: {
+                  type: 'string',
+                  description: 'Issue subject (required)',
+                },
+                description: {
+                  type: 'string',
+                  description: 'Issue description (optional)',
+                },
+                status_id: {
+                  type: 'number',
+                  description: 'Status ID (optional)',
+                },
+                priority_id: {
+                  type: 'number',
+                  description: 'Priority ID (optional)',
+                },
+                assigned_to_id: {
+                  type: 'number',
+                  description: 'Assigned user ID (optional)',
+                },
+              },
+              required: ['project_id', 'tracker_id', 'subject'],
+            },
+          },
+          {
+            name: 'update_redmine_issue',
+            description: 'Update an existing Redmine issue',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                issue_id: {
+                  type: 'number',
+                  description: 'Issue ID to update (required)',
+                },
+                subject: {
+                  type: 'string',
+                  description: 'New subject (optional)',
+                },
+                description: {
+                  type: 'string',
+                  description: 'New description (optional)',
+                },
+                status_id: {
+                  type: 'number',
+                  description: 'New status ID (optional)',
+                },
+                priority_id: {
+                  type: 'number',
+                  description: 'New priority ID (optional)',
+                },
+                assigned_to_id: {
+                  type: 'number',
+                  description: 'New assigned user ID (optional)',
+                },
+                notes: {
+                  type: 'string',
+                  description: 'Update notes (optional)',
+                },
+              },
+              required: ['issue_id'],
+            },
+          },
+          {
+            name: 'delete_redmine_issue',
+            description: 'Delete a Redmine issue',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                issue_id: {
+                  type: 'number',
+                  description: 'Issue ID to delete (required)',
+                },
+              },
+              required: ['issue_id'],
+            },
+          },
         ],
       };
     });
@@ -330,6 +436,15 @@ export class RedmineMCPServer {
 
           case 'list_redmine_issue_statuses':
             return await this.handleListIssueStatuses(args as ListRedmineIssueStatusesInput);
+
+          case 'create_redmine_issue':
+            return await this.handleCreateIssue(args as CreateRedmineIssueInput);
+
+          case 'update_redmine_issue':
+            return await this.handleUpdateIssue(args as UpdateRedmineIssueInput);
+
+          case 'delete_redmine_issue':
+            return await this.handleDeleteIssue(args as DeleteRedmineIssueInput);
           
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -545,6 +660,75 @@ export class RedmineMCPServer {
         {
           type: 'text',
           text: JSON.stringify({ statuses }, null, 2),
+        },
+      ],
+    };
+  }
+
+  async handleCreateIssue(args: CreateRedmineIssueInput) {
+    // Validate input using Zod
+    const validatedArgs = CreateRedmineIssueSchema.parse(args);
+
+    const issueData = {
+      issue: {
+        project_id: validatedArgs.project_id,
+        tracker_id: validatedArgs.tracker_id,
+        subject: validatedArgs.subject,
+        description: validatedArgs.description,
+        status_id: validatedArgs.status_id,
+        priority_id: validatedArgs.priority_id,
+        assigned_to_id: validatedArgs.assigned_to_id,
+      }
+    };
+
+    const response = await this.makeRedmineRequest<RedmineIssueResponse>('/issues.json', undefined, 'POST', issueData);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ message: 'Issue created successfully', issue: response.issue }, null, 2),
+        },
+      ],
+    };
+  }
+
+  async handleUpdateIssue(args: UpdateRedmineIssueInput) {
+    // Validate input using Zod
+    const validatedArgs = UpdateRedmineIssueSchema.parse(args);
+
+    const updateData: any = { issue: {} };
+    
+    if (validatedArgs.subject) updateData.issue.subject = validatedArgs.subject;
+    if (validatedArgs.description) updateData.issue.description = validatedArgs.description;
+    if (validatedArgs.status_id) updateData.issue.status_id = validatedArgs.status_id;
+    if (validatedArgs.priority_id) updateData.issue.priority_id = validatedArgs.priority_id;
+    if (validatedArgs.assigned_to_id) updateData.issue.assigned_to_id = validatedArgs.assigned_to_id;
+    if (validatedArgs.notes) updateData.issue.notes = validatedArgs.notes;
+
+    await this.makeRedmineRequest(`/issues/${validatedArgs.issue_id}.json`, undefined, 'PUT', updateData);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ message: `Issue ${validatedArgs.issue_id} updated successfully` }, null, 2),
+        },
+      ],
+    };
+  }
+
+  async handleDeleteIssue(args: DeleteRedmineIssueInput) {
+    // Validate input using Zod
+    const validatedArgs = DeleteRedmineIssueSchema.parse(args);
+
+    await this.makeRedmineRequest(`/issues/${validatedArgs.issue_id}.json`, undefined, 'DELETE');
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ message: `Issue ${validatedArgs.issue_id} deleted successfully` }, null, 2),
         },
       ],
     };

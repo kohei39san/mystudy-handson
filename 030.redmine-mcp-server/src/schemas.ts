@@ -49,3 +49,34 @@ export type ListRedminePrioritiesInput = z.infer<typeof ListRedminePrioritiesSch
 export const ListRedmineIssueStatusesSchema = z.object({});
 
 export type ListRedmineIssueStatusesInput = z.infer<typeof ListRedmineIssueStatusesSchema>;
+
+// Schema for creating issues
+export const CreateRedmineIssueSchema = z.object({
+  project_id: z.number().int().positive(),
+  tracker_id: z.number().int().positive(),
+  subject: z.string().min(1),
+  description: z.string().optional(),
+  status_id: z.number().int().positive().optional(),
+  priority_id: z.number().int().positive().optional(),
+  assigned_to_id: z.number().int().positive().optional(),
+});
+
+// Schema for updating issues
+export const UpdateRedmineIssueSchema = z.object({
+  issue_id: z.number().int().positive(),
+  subject: z.string().min(1).optional(),
+  description: z.string().optional(),
+  status_id: z.number().int().positive().optional(),
+  priority_id: z.number().int().positive().optional(),
+  assigned_to_id: z.number().int().positive().optional(),
+  notes: z.string().optional(),
+});
+
+// Schema for deleting issues
+export const DeleteRedmineIssueSchema = z.object({
+  issue_id: z.number().int().positive(),
+});
+
+export type CreateRedmineIssueInput = z.infer<typeof CreateRedmineIssueSchema>;
+export type UpdateRedmineIssueInput = z.infer<typeof UpdateRedmineIssueSchema>;
+export type DeleteRedmineIssueInput = z.infer<typeof DeleteRedmineIssueSchema>;

@@ -1,4 +1,4 @@
-import { SearchRedmineTicketsSchema, GetRedmineTicketDetailSchema, ListRedmineProjectsSchema, ListRedmineRolesSchema, GetRedmineRoleDetailSchema, ListRedmineTrackersSchema, ListRedminePrioritiesSchema, ListRedmineIssueStatusesSchema } from './schemas';
+import { SearchRedmineTicketsSchema, GetRedmineTicketDetailSchema, ListRedmineProjectsSchema, ListRedmineRolesSchema, GetRedmineRoleDetailSchema, ListRedmineTrackersSchema, ListRedminePrioritiesSchema, ListRedmineIssueStatusesSchema, CreateRedmineIssueSchema, UpdateRedmineIssueSchema, DeleteRedmineIssueSchema } from './schemas';
 
 // Mock AWS SDK
 jest.mock('@aws-sdk/client-ssm', () => ({
@@ -154,6 +154,56 @@ describe('Redmine MCP Server Schemas', () => {
       const input = {};
       const result = ListRedmineIssueStatusesSchema.parse(input);
       expect(result).toEqual({});
+    });
+  });
+
+  describe('CreateRedmineIssueSchema', () => {
+    it('should validate valid create issue input', () => {
+      const validInput = {
+        project_id: 1,
+        tracker_id: 2,
+        subject: 'Test Issue',
+        description: 'Test Description'
+      };
+      const result = CreateRedmineIssueSchema.parse(validInput);
+      expect(result).toEqual(validInput);
+    });
+
+    it('should reject invalid input', () => {
+      expect(() => {
+        CreateRedmineIssueSchema.parse({ project_id: 1 });
+      }).toThrow();
+    });
+  });
+
+  describe('UpdateRedmineIssueSchema', () => {
+    it('should validate valid update issue input', () => {
+      const validInput = {
+        issue_id: 123,
+        subject: 'Updated Subject'
+      };
+      const result = UpdateRedmineIssueSchema.parse(validInput);
+      expect(result).toEqual(validInput);
+    });
+
+    it('should reject invalid issue_id', () => {
+      expect(() => {
+        UpdateRedmineIssueSchema.parse({ issue_id: -1 });
+      }).toThrow();
+    });
+  });
+
+  describe('DeleteRedmineIssueSchema', () => {
+    it('should validate valid delete issue input', () => {
+      const validInput = { issue_id: 123 };
+      const result = DeleteRedmineIssueSchema.parse(validInput);
+      expect(result).toEqual(validInput);
+    });
+
+    it('should reject invalid issue_id', () => {
+      expect(() => {
+        DeleteRedmineIssueSchema.parse({ issue_id: 0 });
+      }).toThrow();
     });
   });
 });
