@@ -194,6 +194,164 @@ describe('Redmine API Handlers', () => {
     });
   });
 
+  describe('handleGetTicketDetail', () => {
+    it('should make GET request to /issues/{id}.json', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          issue: {
+            id: 123,
+            subject: 'Test Issue Detail',
+            description: 'Detailed description'
+          }
+        })
+      };
+
+      mockFetch.mockResolvedValue(mockResponse);
+
+      const result = await server.handleGetTicketDetail({ ticket_id: 123 });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/issues/123.json'),
+        expect.objectContaining({ method: 'GET' })
+      );
+
+      const responseData = JSON.parse(result.content[0].text);
+      expect(responseData.id).toBe(123);
+    });
+  });
+
+  describe('handleListRoles', () => {
+    it('should make GET request to /roles.json', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          roles: [{ id: 1, name: 'Manager', assignable: true }]
+        })
+      };
+
+      mockFetch.mockResolvedValue(mockResponse);
+
+      const result = await server.handleListRoles({});
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/roles.json'),
+        expect.objectContaining({ method: 'GET' })
+      );
+
+      const responseData = JSON.parse(result.content[0].text);
+      expect(responseData.roles).toHaveLength(1);
+    });
+  });
+
+  describe('handleGetRoleDetail', () => {
+    it('should make GET request to /roles/{id}.json', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          role: {
+            id: 5,
+            name: 'Developer',
+            permissions: ['view_issues', 'add_issues']
+          }
+        })
+      };
+
+      mockFetch.mockResolvedValue(mockResponse);
+
+      const result = await server.handleGetRoleDetail({ role_id: 5 });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/roles/5.json'),
+        expect.objectContaining({ method: 'GET' })
+      );
+
+      const responseData = JSON.parse(result.content[0].text);
+      expect(responseData.id).toBe(5);
+    });
+  });
+
+  describe('handleListTrackers', () => {
+    it('should make GET request to /trackers.json', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          trackers: [{
+            id: 1,
+            name: 'Bug',
+            default_status: { name: 'New' }
+          }]
+        })
+      };
+
+      mockFetch.mockResolvedValue(mockResponse);
+
+      const result = await server.handleListTrackers({});
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/trackers.json'),
+        expect.objectContaining({ method: 'GET' })
+      );
+
+      const responseData = JSON.parse(result.content[0].text);
+      expect(responseData.trackers).toHaveLength(1);
+    });
+  });
+
+  describe('handleListPriorities', () => {
+    it('should make GET request to /enumerations/issue_priorities.json', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          issue_priorities: [{
+            id: 1,
+            name: 'Normal',
+            is_default: true
+          }]
+        })
+      };
+
+      mockFetch.mockResolvedValue(mockResponse);
+
+      const result = await server.handleListPriorities({});
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/enumerations/issue_priorities.json'),
+        expect.objectContaining({ method: 'GET' })
+      );
+
+      const responseData = JSON.parse(result.content[0].text);
+      expect(responseData.priorities).toHaveLength(1);
+    });
+  });
+
+  describe('handleListIssueStatuses', () => {
+    it('should make GET request to /issue_statuses.json', async () => {
+      const mockResponse = {
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          issue_statuses: [{
+            id: 1,
+            name: 'New',
+            is_closed: false
+          }]
+        })
+      };
+
+      mockFetch.mockResolvedValue(mockResponse);
+
+      const result = await server.handleListIssueStatuses({});
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/issue_statuses.json'),
+        expect.objectContaining({ method: 'GET' })
+      );
+
+      const responseData = JSON.parse(result.content[0].text);
+      expect(responseData.statuses).toHaveLength(1);
+    });
+  });
+
   describe('Error Handling', () => {
     it('should handle API errors', async () => {
       const mockResponse = {
