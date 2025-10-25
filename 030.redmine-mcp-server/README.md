@@ -13,6 +13,9 @@ RedmineのチケットAPIを利用したMCPサーバーの実装
 - **プロジェクト一覧取得**: Redmineのプロジェクト一覧を取得
 - **ロール一覧取得**: Redmineのロール一覧を取得
 - **ロール詳細取得**: 指定されたロールIDの詳細情報を取得
+- **トラッカー一覧取得**: Redmineのトラッカー一覧を取得
+- **優先度一覧取得**: Redmineのチケット優先度一覧を取得
+- **ステータス一覧取得**: Redmineのチケットステータス一覧を取得
 - **AWS Parameter Store統合**: APIキーとベースURLの安全な管理
 - **Zod入力検証**: 型安全な入力パラメータ検証
 
@@ -174,6 +177,51 @@ Redmineのロール一覧を取得します。
 }
 ```
 
+### list_redmine_trackers
+
+Redmineのトラッカー一覧を取得します。
+
+**パラメータ:**
+- なし
+
+**レスポンス:**
+- トラッカー一覧（ID、名前、デフォルトステータス、説明）
+
+**使用例:**
+```json
+{}
+```
+
+### list_redmine_priorities
+
+Redmineのチケット優先度一覧を取得します。
+
+**パラメータ:**
+- なし
+
+**レスポンス:**
+- 優先度一覧（ID、名前、デフォルトフラグ、有効フラグ）
+
+**使用例:**
+```json
+{}
+```
+
+### list_redmine_issue_statuses
+
+Redmineのチケットステータス一覧を取得します。
+
+**パラメータ:**
+- なし
+
+**レスポンス:**
+- ステータス一覧（ID、名前、クローズフラグ、デフォルトフラグ）
+
+**使用例:**
+```json
+{}
+```
+
 ## 開発
 
 ### 開発モード
@@ -193,6 +241,27 @@ npm run build
 ```bash
 npm run clean
 ```
+
+### テスト
+
+```bash
+npm test
+```
+
+**テスト内容:**
+- **スキーマバリデーション**: 各ツールの入力パラメータ検証
+- **AWS SDK統合**: Parameter Store連携のモック検証
+
+**テストファイル:**
+- `src/server.test.ts`: 全テストケースを含む統合テストファイル
+
+**テスト対象:**
+- `SearchRedmineTicketsSchema`: チケット検索パラメータの検証
+- `GetRedmineTicketDetailSchema`: チケットID検証
+- `ListRedmineProjectsSchema`: プロジェクト一覧パラメータ検証
+- `ListRedmineRolesSchema`: ロール一覧パラメータ検証
+- `GetRedmineRoleDetailSchema`: ロールID検証
+- AWS SSMClient/GetParameterCommandのモック動作
 
 ## 構成
 

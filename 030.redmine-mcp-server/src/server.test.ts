@@ -1,4 +1,4 @@
-import { SearchRedmineTicketsSchema, GetRedmineTicketDetailSchema, ListRedmineProjectsSchema, ListRedmineRolesSchema, GetRedmineRoleDetailSchema } from './schemas';
+import { SearchRedmineTicketsSchema, GetRedmineTicketDetailSchema, ListRedmineProjectsSchema, ListRedmineRolesSchema, GetRedmineRoleDetailSchema, ListRedmineTrackersSchema, ListRedminePrioritiesSchema, ListRedmineIssueStatusesSchema } from './schemas';
 
 // Mock AWS SDK
 jest.mock('@aws-sdk/client-ssm', () => ({
@@ -130,6 +130,30 @@ describe('Redmine MCP Server Schemas', () => {
       expect(() => {
         GetRedmineRoleDetailSchema.parse({});
       }).toThrow();
+    });
+  });
+
+  describe('ListRedmineTrackersSchema', () => {
+    it('should validate empty input', () => {
+      const input = {};
+      const result = ListRedmineTrackersSchema.parse(input);
+      expect(result).toEqual({});
+    });
+  });
+
+  describe('ListRedminePrioritiesSchema', () => {
+    it('should validate empty input', () => {
+      const input = {};
+      const result = ListRedminePrioritiesSchema.parse(input);
+      expect(result).toEqual({});
+    });
+  });
+
+  describe('ListRedmineIssueStatusesSchema', () => {
+    it('should validate empty input', () => {
+      const input = {};
+      const result = ListRedmineIssueStatusesSchema.parse(input);
+      expect(result).toEqual({});
     });
   });
 });

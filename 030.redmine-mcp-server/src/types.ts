@@ -148,3 +148,39 @@ export interface RedmineRolesResponse {
 export interface RedmineRoleResponse {
   role: RedmineRole;
 }
+
+// Trackers
+export interface RedmineTrackerSummary {
+  id: number;
+  name: string;
+  default_status?: RedmineStatus;
+  description?: string;
+}
+
+export interface RedmineTrackersResponse {
+  trackers: RedmineTrackerSummary[];
+}
+
+// Priorities
+export interface RedminePrioritySummary {
+  id: number;
+  name: string;
+  is_default?: boolean;
+  active?: boolean;
+}
+
+export interface RedminePrioritiesResponse {
+  issue_priorities: RedminePrioritySummary[];
+}
+
+// Issue Statuses
+export interface RedmineIssueStatusSummary {
+  id: number;
+  name: string;
+  is_closed?: boolean;
+  is_default?: boolean;
+}
+
+export interface RedmineIssueStatusesResponse {
+  issue_statuses: RedmineIssueStatusSummary[];
+}

@@ -34,3 +34,18 @@ export const GetRedmineRoleDetailSchema = z.object({
 
 export type ListRedmineRolesInput = z.infer<typeof ListRedmineRolesSchema>;
 export type GetRedmineRoleDetailInput = z.infer<typeof GetRedmineRoleDetailSchema>;
+
+// Schema for listing trackers
+export const ListRedmineTrackersSchema = z.object({});
+
+export type ListRedmineTrackersInput = z.infer<typeof ListRedmineTrackersSchema>;
+
+// Schema for listing priorities
+export const ListRedminePrioritiesSchema = z.object({});
+
+export type ListRedminePrioritiesInput = z.infer<typeof ListRedminePrioritiesSchema>;
+
+// Schema for listing issue statuses
+export const ListRedmineIssueStatusesSchema = z.object({});
+
+export type ListRedmineIssueStatusesInput = z.infer<typeof ListRedmineIssueStatusesSchema>;

@@ -22,6 +22,12 @@ import {
   ListRedmineRolesInput,
   GetRedmineRoleDetailSchema,
   GetRedmineRoleDetailInput,
+  ListRedmineTrackersSchema,
+  ListRedmineTrackersInput,
+  ListRedminePrioritiesSchema,
+  ListRedminePrioritiesInput,
+  ListRedmineIssueStatusesSchema,
+  ListRedmineIssueStatusesInput,
 } from './schemas.js';
 import {
   RedmineIssuesResponse,
@@ -31,6 +37,9 @@ import {
   RedmineProjectsResponse,
   RedmineRolesResponse,
   RedmineRoleResponse,
+  RedmineTrackersResponse,
+  RedminePrioritiesResponse,
+  RedmineIssueStatusesResponse,
 } from './types.js';
 
 export class RedmineMCPServer {
@@ -265,6 +274,30 @@ export class RedmineMCPServer {
               required: ['role_id'],
             },
           },
+          {
+            name: 'list_redmine_trackers',
+            description: 'List all Redmine trackers',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+            },
+          },
+          {
+            name: 'list_redmine_priorities',
+            description: 'List all Redmine issue priorities',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+            },
+          },
+          {
+            name: 'list_redmine_issue_statuses',
+            description: 'List all Redmine issue statuses',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+            },
+          },
         ],
       };
     });
@@ -288,6 +321,15 @@ export class RedmineMCPServer {
 
           case 'get_redmine_role_detail':
             return await this.handleGetRoleDetail(args as GetRedmineRoleDetailInput);
+
+          case 'list_redmine_trackers':
+            return await this.handleListTrackers(args as ListRedmineTrackersInput);
+
+          case 'list_redmine_priorities':
+            return await this.handleListPriorities(args as ListRedminePrioritiesInput);
+
+          case 'list_redmine_issue_statuses':
+            return await this.handleListIssueStatuses(args as ListRedmineIssueStatusesInput);
           
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -434,6 +476,75 @@ export class RedmineMCPServer {
         {
           type: 'text',
           text: JSON.stringify(response.role, null, 2),
+        },
+      ],
+    };
+  }
+
+  async handleListTrackers(args: ListRedmineTrackersInput) {
+    // Validate input using Zod
+    const validatedArgs = ListRedmineTrackersSchema.parse(args);
+
+    const response = await this.makeRedmineRequest<RedmineTrackersResponse>('/trackers.json');
+
+    const trackers = response.trackers.map(t => ({
+      id: t.id,
+      name: t.name,
+      default_status: t.default_status?.name,
+      description: t.description || '',
+    }));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ trackers }, null, 2),
+        },
+      ],
+    };
+  }
+
+  async handleListPriorities(args: ListRedminePrioritiesInput) {
+    // Validate input using Zod
+    const validatedArgs = ListRedminePrioritiesSchema.parse(args);
+
+    const response = await this.makeRedmineRequest<RedminePrioritiesResponse>('/enumerations/issue_priorities.json');
+
+    const priorities = response.issue_priorities.map(p => ({
+      id: p.id,
+      name: p.name,
+      is_default: p.is_default ?? false,
+      active: p.active ?? true,
+    }));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ priorities }, null, 2),
+        },
+      ],
+    };
+  }
+
+  async handleListIssueStatuses(args: ListRedmineIssueStatusesInput) {
+    // Validate input using Zod
+    const validatedArgs = ListRedmineIssueStatusesSchema.parse(args);
+
+    const response = await this.makeRedmineRequest<RedmineIssueStatusesResponse>('/issue_statuses.json');
+
+    const statuses = response.issue_statuses.map(s => ({
+      id: s.id,
+      name: s.name,
+      is_closed: s.is_closed ?? false,
+      is_default: s.is_default ?? false,
+    }));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ statuses }, null, 2),
         },
       ],
     };
