@@ -462,6 +462,1029 @@ class RedmineSeleniumScraper:
                 'message': f'Logged out (with warning: {str(e)})'
             }
     
+    def search_issues(self, **kwargs) -> Dict[str, Any]:
+        """
+        Search for issues in Redmine
+        
+        Args:
+            status_id: Status ID or name
+            tracker_id: Tracker ID or name
+            assigned_to_id: Assigned user ID or name
+            parent_id: Parent issue ID
+            project_id: Project ID or identifier
+            subject: Subject text search
+            description: Description text search
+            notes: Notes text search
+            q: General text search (searches across multiple fields)
+            page: Page number for pagination (default: 1)
+            per_page: Items per page (default: 25)
+            
+        Returns:
+            Dict with search results and pagination info
+        """
+        if not self.is_authenticated or not self.driver:
+            return {
+                'success': False,
+                'message': 'Not authenticated. Please login first.',
+                'issues': [],
+                'total_count': 0,
+                'page': 1,
+                'per_page': 25,
+                'total_pages': 0
+            }
+        
+        try:
+            logger.info("Searching for issues")
+            
+            # Validate tracker_id if provided
+            if kwargs.get('tracker_id'):
+                tracker_validation = self._validate_tracker(kwargs['tracker_id'])
+                if not tracker_validation['valid']:
+                    return {
+                        'success': False,
+                        'message': tracker_validation['message'],
+                        'available_trackers': tracker_validation.get('available_trackers', []),
+                        'issues': [],
+                        'total_count': 0,
+                        'page': kwargs.get('page', 1),
+                        'per_page': kwargs.get('per_page', 25),
+                        'total_pages': 0
+                    }
+            
+            # Build search URL with parameters
+            search_params = []
+            
+            # Add search parameters
+            if kwargs.get('status_id'):
+                search_params.append(f"status_id={kwargs['status_id']}")
+            if kwargs.get('tracker_id'):
+                search_params.append(f"tracker_id={kwargs['tracker_id']}")
+            if kwargs.get('assigned_to_id'):
+                search_params.append(f"assigned_to_id={kwargs['assigned_to_id']}")
+            if kwargs.get('parent_id'):
+                search_params.append(f"parent_id={kwargs['parent_id']}")
+            if kwargs.get('project_id'):
+                search_params.append(f"project_id={kwargs['project_id']}")
+            if kwargs.get('subject'):
+                search_params.append(f"subject={kwargs['subject']}")
+            if kwargs.get('description'):
+                search_params.append(f"description={kwargs['description']}")
+            if kwargs.get('notes'):
+                search_params.append(f"notes={kwargs['notes']}")
+            if kwargs.get('q'):
+                search_params.append(f"q={kwargs['q']}")
+            
+            # Pagination parameters
+            page = kwargs.get('page', 1)
+            per_page = kwargs.get('per_page', 25)
+            search_params.append(f"page={page}")
+            search_params.append(f"per_page_option={per_page}")
+            
+            # Build issues URL
+            issues_url = f"{config.base_url}/issues"
+            if search_params:
+                issues_url += "?" + "&".join(search_params)
+            
+            logger.debug(f"Issues search URL: {issues_url}")
+            
+            # Navigate to issues page
+            self.driver.get(issues_url)
+            
+            # Wait for page to load
+            time.sleep(2)
+            
+            # Check if redirected to login page
+            if 'login' in self.driver.current_url.lower():
+                logger.warning("Redirected to login page - session expired")
+                self.is_authenticated = False
+                return {
+                    'success': False,
+                    'message': 'Session expired. Please login again.',
+                    'issues': [],
+                    'total_count': 0,
+                    'page': page,
+                    'per_page': per_page,
+                    'total_pages': 0
+                }
+            
+            issues = []
+            
+            # Extract total count from page
+            total_count = 0
+            try:
+                # Method 1: Look for pagination info with pattern (1-25/101)
+                pagination_elements = self.driver.find_elements(By.CSS_SELECTOR, 
+                    ".pagination, .paginator, .page-info, .items-info")
+                
+                for element in pagination_elements:
+                    text = element.text.strip()
+                    logger.debug(f"Pagination text: {text}")
+                    # Look for patterns like "(1-25/101)" or "1-25/101"
+                    match = re.search(r'\(?\d+-\d+/(\d+)\)?', text)
+                    if match:
+                        total_count = int(match.group(1))
+                        logger.debug(f"Found total count from pagination: {total_count}")
+                        break
+                
+                # Method 2: Look for "X issues" text
+                if total_count == 0:
+                    count_elements = self.driver.find_elements(By.CSS_SELECTOR, 
+                        ".count, .total-count, .issue-count, .results-info")
+                    
+                    for element in count_elements:
+                        text = element.text.strip()
+                        # Extract number from text like "101 issues" or "101件"
+                        count_match = re.search(r'(\d+)\s*(?:issues?|件|個|results?)', text, re.IGNORECASE)
+                        if count_match:
+                            total_count = int(count_match.group(1))
+                            logger.debug(f"Found total count from text: {total_count}")
+                            break
+                
+                # Method 3: Look in page source for pagination info
+                if total_count == 0:
+                    page_source = self.driver.page_source
+                    # Look for pagination patterns in HTML
+                    match = re.search(r'\((\d+)-(\d+)/(\d+)\)', page_source)
+                    if match:
+                        total_count = int(match.group(3))
+                        logger.debug(f"Found total count from page source: {total_count}")
+                            
+            except Exception as e:
+                logger.debug(f"Could not extract total count: {e}")
+            
+            # Extract issues from table
+            try:
+                # Look for issues table with multiple selectors
+                issues_table = None
+                table_selectors = [
+                    "table.issues",
+                    "table.list", 
+                    "table.list.issues",
+                    "#content table",
+                    ".issues table",
+                    "table"
+                ]
+                
+                for selector in table_selectors:
+                    try:
+                        tables = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                        for table in tables:
+                            # Check if this table contains issue data
+                            issue_links = table.find_elements(By.CSS_SELECTOR, "a[href*='/issues/']")
+                            if issue_links:
+                                issues_table = table
+                                logger.debug(f"Found issues table with selector: {selector}")
+                                break
+                        if issues_table:
+                            break
+                    except Exception as e:
+                        logger.debug(f"Selector {selector} failed: {e}")
+                        continue
+                
+                if issues_table:
+                    rows = issues_table.find_elements(By.TAG_NAME, "tr")
+                    logger.debug(f"Found {len(rows)} rows in issues table")
+                    
+                    # Skip header row(s) - look for rows with td elements
+                    data_rows = []
+                    for row in rows:
+                        cells = row.find_elements(By.TAG_NAME, "td")
+                        if cells:  # Has td elements, likely a data row
+                            data_rows.append(row)
+                    
+                    logger.debug(f"Found {len(data_rows)} data rows")
+                    
+                    for row_idx, row in enumerate(data_rows):
+                        cells = row.find_elements(By.TAG_NAME, "td")
+                        logger.debug(f"Row {row_idx}: {len(cells)} cells")
+                        
+                        if len(cells) >= 1:  # At least one cell
+                            issue_data = {}
+                            
+                            try:
+                                # Look for issue ID link in any cell
+                                issue_link = None
+                                issue_id = None
+                                issue_url = None
+                                
+                                for cell_idx, cell in enumerate(cells):
+                                    # Look for issue links
+                                    links = cell.find_elements(By.CSS_SELECTOR, "a[href*='/issues/']")
+                                    for link in links:
+                                        href = link.get_attribute("href")
+                                        # Extract issue ID from URL
+                                        id_match = re.search(r'/issues/(\d+)', href)
+                                        if id_match:
+                                            issue_id = id_match.group(1)
+                                            issue_url = href
+                                            issue_link = link
+                                            logger.debug(f"Found issue #{issue_id} in cell {cell_idx}")
+                                            break
+                                    if issue_link:
+                                        break
+                                
+                                if issue_id and issue_url:
+                                    issue_data['id'] = issue_id
+                                    issue_data['url'] = issue_url
+                                    
+                                    # Try to get subject from the link text or nearby elements
+                                    subject = issue_link.text.strip()
+                                    if subject and not subject.startswith('#') and subject != issue_id:
+                                        issue_data['subject'] = subject
+                                    else:
+                                        # Link text is just the ID, look for subject elsewhere
+                                        subject_found = False
+                                        
+                                        # Method 1: Look for other links in the same cell
+                                        try:
+                                            parent_cell = issue_link.find_element(By.XPATH, "..")
+                                            other_links = parent_cell.find_elements(By.TAG_NAME, "a")
+                                            for other_link in other_links:
+                                                if other_link != issue_link:
+                                                    other_text = other_link.text.strip()
+                                                    if other_text and not other_text.startswith('#') and other_text != issue_id:
+                                                        issue_data['subject'] = other_text
+                                                        subject_found = True
+                                                        break
+                                        except Exception:
+                                            pass
+                                        
+                                        # Method 2: Look for subject in adjacent cells (skip project column)
+                                        if not subject_found:
+                                            try:
+                                                # Find the cell containing the issue link
+                                                link_cell = issue_link.find_element(By.XPATH, "ancestor::td[1]")
+                                                # Look for subject in next cells
+                                                next_cells = link_cell.find_elements(By.XPATH, "following-sibling::td")
+                                                for cell_idx, next_cell in enumerate(next_cells[:5]):  # Check first 5 following cells
+                                                    cell_text = next_cell.text.strip()
+                                                    # Skip empty cells, status/priority keywords, and project names
+                                                    skip_keywords = ['New', 'Open', 'Closed', 'Resolved', 'In Progress', 'Low', 'Normal', 'High', 'Urgent', 'Immediate', 
+                                                                   'hoge-project', 'fuga-project', 'Bug', 'Feature', 'Task', 'Support']
+                                                    
+                                                    if (cell_text and len(cell_text) > 3 and 
+                                                        cell_text not in skip_keywords and
+                                                        not cell_text.endswith('-project')):
+                                                        
+                                                        # Check if this cell contains a subject link (likely the actual issue title)
+                                                        subject_links = next_cell.find_elements(By.TAG_NAME, "a")
+                                                        if subject_links:
+                                                            for subj_link in subject_links:
+                                                                subj_text = subj_link.text.strip()
+                                                                # Make sure it's not just the issue ID or project name
+                                                                if (subj_text and not subj_text.startswith('#') and 
+                                                                    subj_text != issue_id and 
+                                                                    not subj_text.endswith('-project') and
+                                                                    subj_text not in skip_keywords):
+                                                                    issue_data['subject'] = subj_text
+                                                                    subject_found = True
+                                                                    logger.debug(f"Found subject from link in cell {cell_idx}: {subj_text}")
+                                                                    break
+                                                        
+                                                        # If no links but cell has meaningful text (not project name)
+                                                        if not subject_found and cell_idx > 0:  # Skip first cell which might be project
+                                                            issue_data['subject'] = cell_text
+                                                            subject_found = True
+                                                            logger.debug(f"Found subject from cell text {cell_idx}: {cell_text}")
+                                                        
+                                                        if subject_found:
+                                                            break
+                                            except Exception:
+                                                pass
+                                        
+                                        # Method 3: Look for the actual issue title link in the row
+                                        if not subject_found:
+                                            try:
+                                                row = issue_link.find_element(By.XPATH, "ancestor::tr[1]")
+                                                # Look specifically for links that go to the same issue (title links)
+                                                all_links = row.find_elements(By.TAG_NAME, "a")
+                                                for link in all_links:
+                                                    if link != issue_link:
+                                                        link_href = link.get_attribute("href")
+                                                        link_text = link.text.strip()
+                                                        
+                                                        # Check if this link also points to the same issue (title link)
+                                                        if (link_href and f'/issues/{issue_id}' in link_href and 
+                                                            link_text and len(link_text) > 3 and 
+                                                            not link_text.startswith('#') and 
+                                                            not link_text.isdigit() and
+                                                            not link_text.endswith('-project') and
+                                                            link_text not in ['Edit', 'Delete', 'View', 'Copy', 'hoge-project', 'fuga-project']):
+                                                            issue_data['subject'] = link_text
+                                                            subject_found = True
+                                                            logger.debug(f"Found subject from issue title link: {link_text}")
+                                                            break
+                                                        
+                                                        # Also check for any meaningful text that's not project/system related
+                                                        elif (link_text and len(link_text) > 5 and 
+                                                              not link_text.startswith('#') and 
+                                                              not link_text.isdigit() and
+                                                              not link_text.endswith('-project') and
+                                                              'project' not in link_text.lower() and
+                                                              link_text not in ['Edit', 'Delete', 'View', 'Copy', 'New', 'Open', 'Closed']):
+                                                            issue_data['subject'] = link_text
+                                                            subject_found = True
+                                                            logger.debug(f"Found subject from meaningful link: {link_text}")
+                                                            break
+                                            except Exception:
+                                                pass
+                                    
+                                    # Extract other information from cells
+                                    for cell_idx, cell in enumerate(cells):
+                                        cell_text = cell.text.strip()
+                                        if cell_text:
+                                            # Try to identify cell content by position or content
+                                            if cell_idx == 0 and not issue_data.get('tracker'):
+                                                # First cell might be tracker or checkbox
+                                                if not cell_text.startswith('#') and cell_text not in ['', '✓']:
+                                                    issue_data['tracker'] = cell_text
+                                            elif 'status' not in issue_data and cell_text in ['New', 'Open', 'Closed', 'Resolved', 'In Progress', '新規', '進行中', '完了']:
+                                                issue_data['status'] = cell_text
+                                            elif 'priority' not in issue_data and cell_text in ['Low', 'Normal', 'High', 'Urgent', 'Immediate', '低', '通常', '高', '緊急']:
+                                                issue_data['priority'] = cell_text
+                                    
+                                    # If we still don't have a subject, use a default
+                                    if 'subject' not in issue_data:
+                                        issue_data['subject'] = f"Issue #{issue_id}"
+                                    
+                                    issues.append(issue_data)
+                                    logger.debug(f"Added issue: {issue_data}")
+                                
+                            except Exception as e:
+                                logger.debug(f"Error processing row {row_idx}: {e}")
+                                continue
+                else:
+                    logger.debug("No issues table found with any selector")
+                            
+            except Exception as e:
+                logger.debug(f"Error processing issues table: {e}")
+            
+            # Alternative method: look for any issue links on the page
+            if not issues:
+                logger.debug("No issues found in table, trying alternative methods")
+                try:
+                    # Look for any issue links on the page
+                    issue_links = self.driver.find_elements(By.CSS_SELECTOR, "a[href*='/issues/']")
+                    logger.debug(f"Found {len(issue_links)} issue links on page")
+                    
+                    seen_ids = set()
+                    for link in issue_links:
+                        try:
+                            href = link.get_attribute("href")
+                            issue_id_match = re.search(r'/issues/(\d+)', href)
+                            if issue_id_match:
+                                issue_id = issue_id_match.group(1)
+                                if issue_id not in seen_ids:
+                                    seen_ids.add(issue_id)
+                                    
+                                    link_text = link.text.strip()
+                                    subject = link_text if link_text and not link_text.startswith('#') else f"Issue #{issue_id}"
+                                    
+                                    issues.append({
+                                        'id': issue_id,
+                                        'subject': subject,
+                                        'url': href
+                                    })
+                                    logger.debug(f"Added issue from link: #{issue_id} - {subject}")
+                        except Exception as e:
+                            logger.debug(f"Error processing issue link: {e}")
+                            continue
+                            
+                except Exception as e:
+                    logger.debug(f"Error finding issue links: {e}")
+            
+            # If still no issues but we have a total count, there might be a parsing issue
+            if not issues and total_count > 0:
+                logger.warning(f"Found {total_count} issues according to count, but could not parse any issue data")
+                # Add debug information
+                try:
+                    page_source_snippet = self.driver.page_source[:2000]  # First 2000 chars
+                    logger.debug(f"Page source snippet: {page_source_snippet}")
+                except Exception:
+                    pass
+            
+            # Calculate pagination info
+            total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
+            
+            logger.info(f"Found {len(issues)} issues on page {page}, total: {total_count}")
+            
+            # If we have issues but no total count, estimate from issues found
+            if issues and total_count == 0:
+                total_count = len(issues)
+                logger.debug(f"Estimated total count from found issues: {total_count}")
+            
+            return {
+                'success': True,
+                'message': f'Found {total_count} issues (showing page {page})',
+                'issues': issues,
+                'total_count': total_count,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': total_pages
+            }
+            
+        except Exception as e:
+            logger.error(f"Error searching issues: {e}")
+            return {
+                'success': False,
+                'message': f"Error searching issues: {str(e)}",
+                'issues': [],
+                'total_count': 0,
+                'page': kwargs.get('page', 1),
+                'per_page': kwargs.get('per_page', 25),
+                'total_pages': 0
+            }
+    
+    def get_issue_details(self, issue_id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific issue
+        
+        Args:
+            issue_id: Issue ID to retrieve details for
+            
+        Returns:
+            Dict with issue details
+        """
+        if not self.is_authenticated or not self.driver:
+            return {
+                'success': False,
+                'message': 'Not authenticated. Please login first.',
+                'issue': {}
+            }
+        
+        try:
+            logger.info(f"Fetching details for issue #{issue_id}")
+            
+            # Navigate to issue page
+            issue_url = f"{config.base_url}/issues/{issue_id}"
+            self.driver.get(issue_url)
+            
+            # Wait for page to load
+            time.sleep(2)
+            
+            # Check if redirected to login page
+            if 'login' in self.driver.current_url.lower():
+                logger.warning("Redirected to login page - session expired")
+                self.is_authenticated = False
+                return {
+                    'success': False,
+                    'message': 'Session expired. Please login again.',
+                    'issue': {}
+                }
+            
+            # Check if issue exists
+            if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
+                return {
+                    'success': False,
+                    'message': f'Issue #{issue_id} not found.',
+                    'issue': {}
+                }
+            
+            issue_details = {'id': issue_id}
+            
+            # Extract issue details
+            try:
+                # Subject
+                subject_elem = self.driver.find_element(By.CSS_SELECTOR, "h2, .subject h3, .issue .subject")
+                issue_details['subject'] = subject_elem.text.strip()
+            except NoSuchElementException:
+                pass
+            
+            # Status, Priority, Assignee, etc. from the details table
+            try:
+                # Try multiple selectors for issue details
+                detail_selectors = [
+                    ".details tr", 
+                    ".attributes tr", 
+                    ".issue-attributes tr",
+                    ".splitcontent .splitcontentleft tr",
+                    "#content .details tr"
+                ]
+                
+                detail_rows = []
+                for selector in detail_selectors:
+                    try:
+                        rows = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                        if rows:
+                            detail_rows = rows
+                            logger.debug(f"Found details with selector: {selector}")
+                            break
+                    except Exception:
+                        continue
+                
+                for row in detail_rows:
+                    try:
+                        cells = row.find_elements(By.TAG_NAME, "td")
+                        if len(cells) >= 2:
+                            field_name = cells[0].text.strip().lower().replace(':', '')
+                            field_value = cells[1].text.strip()
+                            
+                            logger.debug(f"Field: '{field_name}' = '{field_value}'")
+                            
+                            if field_name in ['status', 'ステータス', 'state']:
+                                issue_details['status'] = field_value
+                            elif field_name in ['priority', '優先度']:
+                                issue_details['priority'] = field_value
+                            elif field_name in ['assigned to', 'assignee', '担当者']:
+                                issue_details['assigned_to'] = field_value
+                            elif field_name in ['category', 'カテゴリ']:
+                                issue_details['category'] = field_value
+                            elif field_name in ['tracker', 'トラッカー']:
+                                issue_details['tracker'] = field_value
+                            elif field_name in ['start date', '開始日']:
+                                issue_details['start_date'] = field_value
+                            elif field_name in ['due date', '期日']:
+                                issue_details['due_date'] = field_value
+                            elif field_name in ['% done', '進捗率', 'progress']:
+                                issue_details['done_ratio'] = field_value
+                    except Exception as e:
+                        logger.debug(f"Error processing row: {e}")
+                        continue
+            except Exception as e:
+                logger.debug(f"Error finding detail rows: {e}")
+            
+            # Description
+            try:
+                desc_elem = self.driver.find_element(By.CSS_SELECTOR, ".description .wiki, .issue-description .wiki")
+                issue_details['description'] = desc_elem.text.strip()
+            except NoSuchElementException:
+                pass
+            
+            # Created and Updated dates
+            try:
+                created_elem = self.driver.find_element(By.CSS_SELECTOR, ".created-on, .author")
+                issue_details['created_on'] = created_elem.text.strip()
+            except NoSuchElementException:
+                pass
+            
+            try:
+                updated_elem = self.driver.find_element(By.CSS_SELECTOR, ".updated-on")
+                issue_details['updated_on'] = updated_elem.text.strip()
+            except NoSuchElementException:
+                pass
+            
+            logger.info(f"Successfully retrieved details for issue #{issue_id}: {list(issue_details.keys())}")
+            
+            return {
+                'success': True,
+                'message': f'Successfully retrieved details for issue #{issue_id}',
+                'issue': issue_details
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching issue details: {e}")
+            return {
+                'success': False,
+                'message': f"Error fetching issue details: {str(e)}",
+                'issue': {}
+            }
+    
+    def get_available_trackers(self, project_id: str = None) -> Dict[str, Any]:
+        """
+        Get available tracker options from issue creation page
+        
+        Args:
+            project_id: Project ID to get trackers for (optional)
+            
+        Returns:
+            Dict with available tracker options
+        """
+        if not self.is_authenticated or not self.driver:
+            return {
+                'success': False,
+                'message': 'Not authenticated. Please login first.',
+                'trackers': []
+            }
+        
+        try:
+            logger.info(f"Getting available trackers for project: {project_id or 'all'}")
+            
+            # Navigate to new issue page
+            if project_id:
+                new_issue_url = f"{config.base_url}/projects/{project_id}/issues/new"
+            else:
+                new_issue_url = f"{config.base_url}/issues/new"
+            
+            self.driver.get(new_issue_url)
+            
+            # Wait for page to load
+            time.sleep(2)
+            
+            # Check if redirected to login page
+            if 'login' in self.driver.current_url.lower():
+                logger.warning("Redirected to login page - session expired")
+                self.is_authenticated = False
+                return {
+                    'success': False,
+                    'message': 'Session expired. Please login again.',
+                    'trackers': []
+                }
+            
+            # Get tracker options
+            try:
+                tracker_select = self.driver.find_element(By.ID, "issue_tracker_id")
+                from selenium.webdriver.support.ui import Select
+                select = Select(tracker_select)
+                
+                available_trackers = []
+                for option in select.options:
+                    value = option.get_attribute('value')
+                    text = option.text.strip()
+                    if value:  # Skip empty values
+                        available_trackers.append({
+                            'value': value,
+                            'text': text
+                        })
+                
+                logger.info(f"Found {len(available_trackers)} available trackers")
+                
+                return {
+                    'success': True,
+                    'message': f'Found {len(available_trackers)} available trackers',
+                    'trackers': available_trackers
+                }
+                
+            except NoSuchElementException:
+                return {
+                    'success': False,
+                    'message': 'Tracker field not found on new issue page.',
+                    'trackers': []
+                }
+            
+        except Exception as e:
+            logger.error(f"Error getting available trackers: {e}")
+            return {
+                'success': False,
+                'message': f"Error getting available trackers: {str(e)}",
+                'trackers': []
+            }
+    
+    def get_available_statuses(self, issue_id: str) -> Dict[str, Any]:
+        """
+        Get available status options for a specific issue
+        
+        Args:
+            issue_id: Issue ID to get available statuses for
+            
+        Returns:
+            Dict with available status options
+        """
+        if not self.is_authenticated or not self.driver:
+            return {
+                'success': False,
+                'message': 'Not authenticated. Please login first.',
+                'statuses': []
+            }
+        
+        try:
+            logger.info(f"Getting available statuses for issue #{issue_id}")
+            
+            # Navigate to issue edit page
+            edit_url = f"{config.base_url}/issues/{issue_id}/edit"
+            self.driver.get(edit_url)
+            
+            # Wait for page to load
+            time.sleep(2)
+            
+            # Check if redirected to login page
+            if 'login' in self.driver.current_url.lower():
+                logger.warning("Redirected to login page - session expired")
+                self.is_authenticated = False
+                return {
+                    'success': False,
+                    'message': 'Session expired. Please login again.',
+                    'statuses': []
+                }
+            
+            # Check if edit page is accessible
+            if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
+                return {
+                    'success': False,
+                    'message': f'Issue #{issue_id} not found or not editable.',
+                    'statuses': []
+                }
+            
+            # Get status options
+            try:
+                status_select = self.driver.find_element(By.ID, "issue_status_id")
+                from selenium.webdriver.support.ui import Select
+                select = Select(status_select)
+                
+                available_statuses = []
+                for option in select.options:
+                    value = option.get_attribute('value')
+                    text = option.text.strip()
+                    if value:  # Skip empty values
+                        available_statuses.append({
+                            'value': value,
+                            'text': text
+                        })
+                
+                logger.info(f"Found {len(available_statuses)} available statuses")
+                
+                return {
+                    'success': True,
+                    'message': f'Found {len(available_statuses)} available statuses for issue #{issue_id}',
+                    'statuses': available_statuses
+                }
+                
+            except NoSuchElementException:
+                return {
+                    'success': False,
+                    'message': 'Status field not found on edit page.',
+                    'statuses': []
+                }
+            
+        except Exception as e:
+            logger.error(f"Error getting available statuses: {e}")
+            return {
+                'success': False,
+                'message': f"Error getting available statuses: {str(e)}",
+                'statuses': []
+            }
+    
+    def update_issue(self, issue_id: str, **kwargs) -> Dict[str, Any]:
+        """
+        Update an issue with new field values
+        
+        Args:
+            issue_id: Issue ID to update
+            subject: New subject
+            description: New description
+            status_id: New status ID
+            priority_id: New priority ID
+            assigned_to_id: New assignee ID
+            done_ratio: Progress percentage (0-100)
+            notes: Update notes/comment
+            
+        Returns:
+            Dict with update status
+        """
+        if not self.is_authenticated or not self.driver:
+            return {
+                'success': False,
+                'message': 'Not authenticated. Please login first.'
+            }
+        
+        try:
+            logger.info(f"Updating issue #{issue_id} with params: {list(kwargs.keys())}")
+            
+            # Navigate to issue edit page
+            edit_url = f"{config.base_url}/issues/{issue_id}/edit"
+            self.driver.get(edit_url)
+            
+            # Wait for page to load
+            time.sleep(2)
+            
+            # Check if redirected to login page
+            if 'login' in self.driver.current_url.lower():
+                logger.warning("Redirected to login page - session expired")
+                self.is_authenticated = False
+                return {
+                    'success': False,
+                    'message': 'Session expired. Please login again.'
+                }
+            
+            # Check if edit page is accessible
+            if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
+                return {
+                    'success': False,
+                    'message': f'Issue #{issue_id} not found or not editable.'
+                }
+            
+            updated_fields = []
+            
+            # Update subject
+            if kwargs.get('subject'):
+                try:
+                    subject_field = self.driver.find_element(By.ID, "issue_subject")
+                    subject_field.clear()
+                    subject_field.send_keys(kwargs['subject'])
+                    updated_fields.append('subject')
+                except NoSuchElementException:
+                    logger.debug("Subject field not found")
+            
+            # Update description
+            if kwargs.get('description'):
+                try:
+                    desc_field = self.driver.find_element(By.ID, "issue_description")
+                    desc_field.clear()
+                    desc_field.send_keys(kwargs['description'])
+                    updated_fields.append('description')
+                except NoSuchElementException:
+                    logger.debug("Description field not found")
+            
+            # Update status with validation
+            if kwargs.get('status_id'):
+                try:
+                    status_select = self.driver.find_element(By.ID, "issue_status_id")
+                    from selenium.webdriver.support.ui import Select
+                    select = Select(status_select)
+                    
+                    # Get available status options
+                    available_statuses = []
+                    for option in select.options:
+                        value = option.get_attribute('value')
+                        text = option.text.strip()
+                        if value:  # Skip empty values
+                            available_statuses.append({
+                                'value': value,
+                                'text': text
+                            })
+                    
+                    logger.debug(f"Available statuses: {available_statuses}")
+                    
+                    # Check if requested status is available
+                    requested_status = str(kwargs['status_id'])
+                    status_found = False
+                    
+                    # Try to find by value or text
+                    for status in available_statuses:
+                        if (status['value'] == requested_status or 
+                            status['text'] == requested_status or
+                            status['text'].lower() == requested_status.lower()):
+                            status_found = True
+                            break
+                    
+                    if not status_found:
+                        # Return error with available options
+                        available_options = [f"{s['value']}:{s['text']}" for s in available_statuses]
+                        return {
+                            'success': False,
+                            'message': f"Status '{requested_status}' is not available for this issue. Available statuses: {', '.join(available_options)}",
+                            'available_statuses': available_statuses
+                        }
+                    
+                    # Try to select by value first, then by visible text
+                    try:
+                        select.select_by_value(requested_status)
+                        updated_fields.append('status')
+                        logger.debug(f"Status updated by value: {requested_status}")
+                    except Exception:
+                        try:
+                            # Try selecting by visible text
+                            select.select_by_visible_text(requested_status)
+                            updated_fields.append('status')
+                            logger.debug(f"Status updated by text: {requested_status}")
+                        except Exception as e:
+                            return {
+                                'success': False,
+                                'message': f"Failed to select status '{requested_status}': {str(e)}"
+                            }
+                        
+                except (NoSuchElementException, Exception) as e:
+                    logger.debug(f"Status field not found: {e}")
+                    return {
+                        'success': False,
+                        'message': f"Status field not found or not accessible: {str(e)}"
+                    }
+            
+            # Update priority
+            if kwargs.get('priority_id'):
+                try:
+                    priority_select = self.driver.find_element(By.ID, "issue_priority_id")
+                    from selenium.webdriver.support.ui import Select
+                    select = Select(priority_select)
+                    select.select_by_value(str(kwargs['priority_id']))
+                    updated_fields.append('priority')
+                except (NoSuchElementException, Exception):
+                    logger.debug("Priority field not found or invalid value")
+            
+            # Update assignee
+            if kwargs.get('assigned_to_id'):
+                try:
+                    assignee_select = self.driver.find_element(By.ID, "issue_assigned_to_id")
+                    from selenium.webdriver.support.ui import Select
+                    select = Select(assignee_select)
+                    select.select_by_value(str(kwargs['assigned_to_id']))
+                    updated_fields.append('assigned_to')
+                except (NoSuchElementException, Exception):
+                    logger.debug("Assignee field not found or invalid value")
+            
+            # Update progress
+            if kwargs.get('done_ratio') is not None:
+                try:
+                    progress_select = self.driver.find_element(By.ID, "issue_done_ratio")
+                    from selenium.webdriver.support.ui import Select
+                    select = Select(progress_select)
+                    select.select_by_value(str(kwargs['done_ratio']))
+                    updated_fields.append('done_ratio')
+                except (NoSuchElementException, Exception):
+                    logger.debug("Progress field not found or invalid value")
+            
+            # Add notes/comment
+            if kwargs.get('notes'):
+                try:
+                    notes_field = self.driver.find_element(By.ID, "issue_notes")
+                    notes_field.clear()
+                    notes_field.send_keys(kwargs['notes'])
+                    updated_fields.append('notes')
+                except NoSuchElementException:
+                    logger.debug("Notes field not found")
+            
+            if not updated_fields:
+                return {
+                    'success': False,
+                    'message': 'No valid fields provided for update.'
+                }
+            
+            # Submit the form
+            try:
+                submit_button = self.driver.find_element(By.CSS_SELECTOR, "input[type='submit'][name='commit'], button[type='submit']")
+                submit_button.click()
+                
+                # Wait for redirect
+                time.sleep(3)
+                
+                # Check if update was successful
+                current_url = self.driver.current_url
+                if f'/issues/{issue_id}' in current_url or 'issues' in current_url:
+                    logger.info(f"Successfully updated issue #{issue_id}, fields: {updated_fields}")
+                    
+                    # Check for success message or flash notice
+                    success_indicators = [
+                        "successfully updated", "更新しました", "flash notice", 
+                        "notice", "success"
+                    ]
+                    
+                    page_source = self.driver.page_source.lower()
+                    update_confirmed = any(indicator in page_source for indicator in success_indicators)
+                    
+                    return {
+                        'success': True,
+                        'message': f'Successfully updated issue #{issue_id}' + (' (confirmed)' if update_confirmed else ''),
+                        'updated_fields': updated_fields,
+                        'redirect_url': current_url
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'message': f'Update may have failed - unexpected redirect to: {current_url}'
+                    }
+                    
+            except NoSuchElementException:
+                return {
+                    'success': False,
+                    'message': 'Submit button not found.'
+                }
+            
+        except Exception as e:
+            logger.error(f"Error updating issue: {e}")
+            return {
+                'success': False,
+                'message': f"Error updating issue: {str(e)}"
+            }
+    
+    def _validate_tracker(self, tracker_id: str) -> Dict[str, Any]:
+        """
+        Validate if tracker_id is available
+        
+        Args:
+            tracker_id: Tracker ID or name to validate
+            
+        Returns:
+            Dict with validation result
+        """
+        try:
+            # Get available trackers
+            trackers_result = self.get_available_trackers()
+            
+            if not trackers_result.get('success'):
+                return {
+                    'valid': False,
+                    'message': f"Could not validate tracker: {trackers_result.get('message')}"
+                }
+            
+            available_trackers = trackers_result.get('trackers', [])
+            
+            # Check if requested tracker is available
+            requested_tracker = str(tracker_id)
+            tracker_found = False
+            
+            for tracker in available_trackers:
+                if (tracker['value'] == requested_tracker or 
+                    tracker['text'] == requested_tracker or
+                    tracker['text'].lower() == requested_tracker.lower()):
+                    tracker_found = True
+                    break
+            
+            if tracker_found:
+                return {'valid': True}
+            else:
+                available_options = [f"{t['value']}:{t['text']}" for t in available_trackers]
+                return {
+                    'valid': False,
+                    'message': f"Tracker '{requested_tracker}' is not available. Available trackers: {', '.join(available_options)}",
+                    'available_trackers': available_trackers
+                }
+                
+        except Exception as e:
+            logger.debug(f"Error validating tracker: {e}")
+            return {
+                'valid': True,  # Allow search to proceed if validation fails
+                'message': f"Tracker validation failed: {str(e)}"
+            }
+    
     def __del__(self):
         """Cleanup when object is destroyed"""
         if self.driver:

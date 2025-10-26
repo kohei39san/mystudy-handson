@@ -109,6 +109,149 @@ class RedmineMCPServer:
                         "properties": {},
                         "required": []
                     }
+                ),
+                Tool(
+                    name="search_issues",
+                    description="Search for issues in Redmine with various filters",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "status_id": {
+                                "type": "string",
+                                "description": "Status ID or name (e.g., 'open', 'closed', '1')"
+                            },
+                            "tracker_id": {
+                                "type": "string",
+                                "description": "Tracker ID or name (e.g., 'bug', 'feature', '1')"
+                            },
+                            "assigned_to_id": {
+                                "type": "string",
+                                "description": "Assigned user ID or name"
+                            },
+                            "parent_id": {
+                                "type": "string",
+                                "description": "Parent issue ID"
+                            },
+                            "project_id": {
+                                "type": "string",
+                                "description": "Project ID or identifier"
+                            },
+                            "subject": {
+                                "type": "string",
+                                "description": "Search text in issue subject"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "Search text in issue description"
+                            },
+                            "notes": {
+                                "type": "string",
+                                "description": "Search text in issue notes"
+                            },
+                            "q": {
+                                "type": "string",
+                                "description": "General text search across multiple fields"
+                            },
+                            "page": {
+                                "type": "integer",
+                                "description": "Page number for pagination (default: 1)",
+                                "minimum": 1
+                            },
+                            "per_page": {
+                                "type": "integer",
+                                "description": "Items per page (default: 25)",
+                                "minimum": 1,
+                                "maximum": 100
+                            }
+                        },
+                        "required": []
+                    }
+                ),
+                Tool(
+                    name="get_issue_details",
+                    description="Get detailed information about a specific issue",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "issue_id": {
+                                "type": "string",
+                                "description": "Issue ID to retrieve details for"
+                            }
+                        },
+                        "required": ["issue_id"]
+                    }
+                ),
+                Tool(
+                    name="get_available_trackers",
+                    description="Get available tracker options from issue creation page",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_id": {
+                                "type": "string",
+                                "description": "Project ID to get trackers for (optional)"
+                            }
+                        },
+                        "required": []
+                    }
+                ),
+                Tool(
+                    name="get_available_statuses",
+                    description="Get available status options for a specific issue",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "issue_id": {
+                                "type": "string",
+                                "description": "Issue ID to get available statuses for"
+                            }
+                        },
+                        "required": ["issue_id"]
+                    }
+                ),
+                Tool(
+                    name="update_issue",
+                    description="Update an issue with new field values",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "issue_id": {
+                                "type": "string",
+                                "description": "Issue ID to update"
+                            },
+                            "subject": {
+                                "type": "string",
+                                "description": "New subject/title for the issue"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "New description for the issue"
+                            },
+                            "status_id": {
+                                "type": "string",
+                                "description": "New status ID (e.g., '1', '2', '3')"
+                            },
+                            "priority_id": {
+                                "type": "string",
+                                "description": "New priority ID (e.g., '1', '2', '3')"
+                            },
+                            "assigned_to_id": {
+                                "type": "string",
+                                "description": "New assignee user ID"
+                            },
+                            "done_ratio": {
+                                "type": "integer",
+                                "description": "Progress percentage (0-100)",
+                                "minimum": 0,
+                                "maximum": 100
+                            },
+                            "notes": {
+                                "type": "string",
+                                "description": "Update notes/comment to add to the issue"
+                            }
+                        },
+                        "required": ["issue_id"]
+                    }
                 )
             ]
         
@@ -124,6 +267,16 @@ class RedmineMCPServer:
                     return await self._handle_logout(arguments)
                 elif name == "get_server_info":
                     return await self._handle_get_server_info(arguments)
+                elif name == "search_issues":
+                    return await self._handle_search_issues(arguments)
+                elif name == "get_issue_details":
+                    return await self._handle_get_issue_details(arguments)
+                elif name == "get_available_trackers":
+                    return await self._handle_get_available_trackers(arguments)
+                elif name == "get_available_statuses":
+                    return await self._handle_get_available_statuses(arguments)
+                elif name == "update_issue":
+                    return await self._handle_update_issue(arguments)
                 else:
                     return [TextContent(
                         type="text",
@@ -243,6 +396,261 @@ class RedmineMCPServer:
             text=response_text
         )]
     
+    async def _handle_search_issues(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle search issues tool call"""
+        logger.info("Searching for issues")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        # Extract search parameters
+        search_params = {}
+        for key in ['status_id', 'tracker_id', 'assigned_to_id', 'parent_id', 'project_id',
+                   'subject', 'description', 'notes', 'q', 'page', 'per_page']:
+            if key in arguments and arguments[key] is not None:
+                search_params[key] = arguments[key]
+        
+        result = self.scraper.search_issues(**search_params)
+        
+        if result["success"]:
+            issues = result["issues"]
+            total_count = result["total_count"]
+            page = result["page"]
+            per_page = result["per_page"]
+            total_pages = result["total_pages"]
+            
+            if not issues:
+                response_text = "[SUCCESS] No issues found matching the search criteria."
+            else:
+                response_text = f"[SUCCESS] {result['message']}\n\n"
+                response_text += "**Search Results:**\n"
+                response_text += "=" * 50 + "\n"
+                
+                for i, issue in enumerate(issues, 1):
+                    response_text += f"{i}. **#{issue.get('id', 'N/A')}** - {issue.get('subject', 'No subject')}\n"
+                    if issue.get('tracker'):
+                        response_text += f"   Tracker: {issue['tracker']}\n"
+                    if issue.get('status'):
+                        response_text += f"   Status: {issue['status']}\n"
+                    if issue.get('priority'):
+                        response_text += f"   Priority: {issue['priority']}\n"
+                    if issue.get('assigned_to'):
+                        response_text += f"   Assigned to: {issue['assigned_to']}\n"
+                    if issue.get('updated_on'):
+                        response_text += f"   Updated: {issue['updated_on']}\n"
+                    if issue.get('url'):
+                        response_text += f"   URL: {issue['url']}\n"
+                    response_text += "\n"
+                
+                # Add pagination info
+                response_text += "**Pagination:**\n"
+                response_text += f"- Total issues: {total_count}\n"
+                response_text += f"- Current page: {page} of {total_pages}\n"
+                response_text += f"- Issues per page: {per_page}\n"
+                response_text += f"- Showing issues: {len(issues)}\n"
+        else:
+            response_text = f"[ERROR] {result['message']}"
+        
+        return [TextContent(
+            type="text",
+            text=response_text
+        )]
+    
+    async def _handle_get_issue_details(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle get issue details tool call"""
+        issue_id = arguments.get("issue_id")
+        
+        if not issue_id:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Issue ID is required"
+            )]
+        
+        logger.info(f"Fetching details for issue #{issue_id}")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        result = self.scraper.get_issue_details(issue_id)
+        
+        if result["success"]:
+            issue = result["issue"]
+            response_text = f"[SUCCESS] {result['message']}\n\n"
+            response_text += "**Issue Details:**\n"
+            response_text += "=" * 50 + "\n"
+            
+            response_text += f"**ID:** #{issue.get('id', 'N/A')}\n"
+            if issue.get('subject'):
+                response_text += f"**Subject:** {issue['subject']}\n"
+            if issue.get('tracker'):
+                response_text += f"**Tracker:** {issue['tracker']}\n"
+            if issue.get('status'):
+                response_text += f"**Status:** {issue['status']}\n"
+            if issue.get('priority'):
+                response_text += f"**Priority:** {issue['priority']}\n"
+            if issue.get('assigned_to'):
+                response_text += f"**Assigned to:** {issue['assigned_to']}\n"
+            if issue.get('category'):
+                response_text += f"**Category:** {issue['category']}\n"
+            if issue.get('start_date'):
+                response_text += f"**Start Date:** {issue['start_date']}\n"
+            if issue.get('due_date'):
+                response_text += f"**Due Date:** {issue['due_date']}\n"
+            if issue.get('done_ratio'):
+                response_text += f"**Progress:** {issue['done_ratio']}\n"
+            if issue.get('created_on'):
+                response_text += f"**Created:** {issue['created_on']}\n"
+            if issue.get('updated_on'):
+                response_text += f"**Updated:** {issue['updated_on']}\n"
+            
+            if issue.get('description'):
+                response_text += f"\n**Description:**\n{issue['description']}\n"
+        else:
+            response_text = f"[ERROR] {result['message']}"
+        
+        return [TextContent(
+            type="text",
+            text=response_text
+        )]
+    
+    async def _handle_get_available_trackers(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle get available trackers tool call"""
+        project_id = arguments.get("project_id")
+        
+        logger.info(f"Getting available trackers for project: {project_id or 'all'}")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        result = self.scraper.get_available_trackers(project_id)
+        
+        if result["success"]:
+            trackers = result["trackers"]
+            response_text = f"[SUCCESS] {result['message']}\n\n"
+            response_text += "**Available Trackers:**\n"
+            response_text += "=" * 40 + "\n"
+            
+            if trackers:
+                for i, tracker in enumerate(trackers, 1):
+                    response_text += f"{i}. **{tracker['text']}** (ID: {tracker['value']})\n"
+                
+                response_text += "\n**Usage:**\n"
+                response_text += "Use either the ID or text when searching issues by tracker:\n"
+                response_text += f"- search_issues(tracker_id='1')\n"
+                response_text += f"- search_issues(tracker_id='課題')\n"
+            else:
+                response_text += "No tracker options available.\n"
+        else:
+            response_text = f"[ERROR] {result['message']}"
+        
+        return [TextContent(
+            type="text",
+            text=response_text
+        )]
+    
+    async def _handle_get_available_statuses(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle get available statuses tool call"""
+        issue_id = arguments.get("issue_id")
+        
+        if not issue_id:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Issue ID is required"
+            )]
+        
+        logger.info(f"Getting available statuses for issue #{issue_id}")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        result = self.scraper.get_available_statuses(issue_id)
+        
+        if result["success"]:
+            statuses = result["statuses"]
+            response_text = f"[SUCCESS] {result['message']}\n\n"
+            response_text += "**Available Statuses:**\n"
+            response_text += "=" * 40 + "\n"
+            
+            if statuses:
+                for i, status in enumerate(statuses, 1):
+                    response_text += f"{i}. **{status['text']}** (ID: {status['value']})\n"
+                
+                response_text += "\n**Usage:**\n"
+                response_text += "Use either the ID or text when updating issue status:\n"
+                response_text += f"- update_issue(issue_id='{issue_id}', status_id='2')\n"
+                response_text += f"- update_issue(issue_id='{issue_id}', status_id='In Progress')\n"
+            else:
+                response_text += "No status options available for this issue.\n"
+        else:
+            response_text = f"[ERROR] {result['message']}"
+        
+        return [TextContent(
+            type="text",
+            text=response_text
+        )]
+    
+    async def _handle_update_issue(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle update issue tool call"""
+        issue_id = arguments.get("issue_id")
+        
+        if not issue_id:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Issue ID is required"
+            )]
+        
+        logger.info(f"Updating issue #{issue_id}")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        # Extract update parameters
+        update_params = {}
+        for key in ['subject', 'description', 'status_id', 'priority_id', 'assigned_to_id', 'done_ratio', 'notes']:
+            if key in arguments and arguments[key] is not None:
+                update_params[key] = arguments[key]
+        
+        if not update_params:
+            return [TextContent(
+                type="text",
+                text="[ERROR] At least one field to update must be provided"
+            )]
+        
+        result = self.scraper.update_issue(issue_id, **update_params)
+        
+        if result["success"]:
+            response_text = f"[SUCCESS] {result['message']}\n\n"
+            if 'updated_fields' in result:
+                response_text += "**Updated Fields:**\n"
+                for field in result['updated_fields']:
+                    response_text += f"- {field}\n"
+        else:
+            response_text = f"[ERROR] {result['message']}"
+        
+        return [TextContent(
+            type="text",
+            text=response_text
+        )]
 
     async def run(self):
         """Run the MCP server"""

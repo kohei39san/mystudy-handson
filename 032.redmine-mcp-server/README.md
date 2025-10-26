@@ -91,13 +91,20 @@ python src\redmine_mcp_server.py
 ```bash
 # Seleniumスクレイピング機能のテスト（2FA対応）
 python test_selenium.py
+
+# チケット検索機能のテスト
+python test_search.py
 ```
+
+**注意**: テストスクリプトは環境変数に認証情報がない場合、手動入力を求めます。
 
 ## 使用方法
 
 ### 1. 認証
 
 MCPクライアントから`redmine_login`ツールを使用してRedmineにログイン：
+
+**注意**: 環境変数に認証情報を設定していない場合でも、MCPツールやテストスクリプトで手動入力できます。
 
 ```json
 {
@@ -143,6 +150,22 @@ MCPクライアントから`redmine_login`ツールを使用してRedmineにロ�
 - **説明**: Redmineサーバーの設定情報と認証状態を取得
 - **引数**: なし
 - **戻り値**: サーバー情報（URL、認証状態等）
+
+### search_issues
+- **説明**: 様々な条件でRedmineのチケットを検索
+- **引数**:
+  - `status_id` (string): ステータスIDまたは名前
+  - `tracker_id` (string): トラッカーIDまたは名前
+  - `assigned_to_id` (string): 担当者IDまたは名前
+  - `parent_id` (string): 親チケットID
+  - `project_id` (string): プロジェクトIDまたは識別子
+  - `subject` (string): 件名テキスト検索
+  - `description` (string): 説明テキスト検索
+  - `notes` (string): ノートテキスト検索
+  - `q` (string): 全般テキスト検索
+  - `page` (integer): ページ番号
+  - `per_page` (integer): 1ページあたりの件数
+- **戻り値**: チケット一覧、総数、ページネーション情報
 
 ## トラブルシューティング
 
@@ -215,12 +238,12 @@ python src\redmine_mcp_server.py
 
 ## 今後の拡張可能性
 
-- チケット一覧取得
 - チケット詳細取得
 - チケット作成・更新
 - ファイルダウンロード
 - キャッシュ機能
 - 並列処理
+- 高度な検索フィルター
 
 ## 対応環境
 
