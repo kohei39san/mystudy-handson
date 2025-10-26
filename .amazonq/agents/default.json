@@ -1,0 +1,55 @@
+{
+  "name": "q_ide_default",
+  "description": "Default agent configuration",
+  "prompt": "",
+  "mcpServers": {
+    "redmine-mcp-server": {
+      "command": "python",
+      "disabled": false,
+      "timeout": 60000,
+      "args": [
+        "032.redmine-mcp-server/src/redmine_mcp_server.py"
+      ],
+      "env": {
+        "SESSION_TIMEOUT": "3600",
+        "REQUEST_TIMEOUT": "30",
+        "MAX_RETRIES": "3",
+        "RETRY_DELAY": "1.0"
+      }
+    }
+  },
+  "tools": [
+    "fs_read",
+    "execute_bash",
+    "fs_write",
+    "report_issue",
+    "use_aws",
+    "@redmine-mcp-server"
+  ],
+  "toolAliases": {},
+  "allowedTools": [
+    "fs_read",
+    "report_issue",
+    "use_aws",
+    "execute_bash",
+    "fs_write"
+  ],
+  "toolsSettings": {
+    "use_aws": {
+      "preset": "readOnly"
+    },
+    "execute_bash": {
+      "preset": "readOnly"
+    }
+  },
+  "resources": [
+    "file://AmazonQ.md",
+    "file://README.md",
+    "file://.amazonq/rules/**/*.md"
+  ],
+  "hooks": {
+    "agentSpawn": [],
+    "userPromptSubmit": []
+  },
+  "useLegacyMcpJson": true
+}

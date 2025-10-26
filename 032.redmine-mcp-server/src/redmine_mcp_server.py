@@ -10,6 +10,10 @@ import logging
 from typing import Any, Dict, List, Optional
 import sys
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add the src directory to the path so we can import our modules
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,18 +27,19 @@ from mcp.types import (
     TextContent,
     ImageContent,
     EmbeddedResource,
-    LoggingLevel
+    LoggingLevel,
+    ServerCapabilities
 )
 from pydantic import BaseModel, Field
 
 # Import our modules with proper error handling
 try:
-    from redmine_scraper import RedmineScraper, RedmineScrapingError
+    from redmine_selenium import RedmineSeleniumScraper
     from config import config
 except ImportError:
     # Try relative imports if absolute imports fail
     try:
-        from .redmine_scraper import RedmineScraper, RedmineScrapingError
+        from .redmine_selenium import RedmineSeleniumScraper
         from .config import config
     except ImportError as e:
         print(f"Failed to import required modules: {e}")
@@ -50,8 +55,9 @@ class RedmineMCPServer:
     
     def __init__(self):
         self.server = Server("redmine-mcp-server")
-        self.scraper = RedmineScraper()
+        self.scraper = RedmineSeleniumScraper()
         self._setup_handlers()
+        self._login_on_startup = True
     
     def _setup_handlers(self):
         """Set up MCP server handlers"""
@@ -146,11 +152,11 @@ class RedmineMCPServer:
         result = self.scraper.login(username, password)
         
         if result["success"]:
-            response_text = f"✅ {result['message']}"
+            response_text = f"[SUCCESS] {result['message']}"
             if "redirect_url" in result:
                 response_text += f"\nRedirected to: {result['redirect_url']}"
         else:
-            response_text = f"❌ {result['message']}"
+            response_text = f"[ERROR] {result['message']}"
         
         return [TextContent(
             type="text",
@@ -161,11 +167,11 @@ class RedmineMCPServer:
         """Handle get projects tool call"""
         logger.info("Fetching projects list")
         
-        # Check if session is still valid
-        if not self.scraper.is_session_valid():
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
             return [TextContent(
                 type="text",
-                text="❌ Session expired or not authenticated. Please login first using the redmine_login tool."
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
             )]
         
         result = self.scraper.get_projects()
@@ -173,10 +179,10 @@ class RedmineMCPServer:
         if result["success"]:
             projects = result["projects"]
             if not projects:
-                response_text = "✅ Successfully connected, but no projects found or user has no access to projects."
+                response_text = "[SUCCESS] Successfully connected, but no projects found or user has no access to projects."
             else:
-                response_text = f"✅ {result['message']}\n\n"
-                response_text += "📋 **Projects List:**\n"
+                response_text = f"[SUCCESS] {result['message']}\n\n"
+                response_text += "**Projects List:**\n"
                 response_text += "=" * 50 + "\n"
                 
                 for i, project in enumerate(projects, 1):
@@ -190,9 +196,9 @@ class RedmineMCPServer:
                     response_text += "\n"
                 
                 # Add summary
-                response_text += f"📊 **Summary:** {len(projects)} project(s) found"
+                response_text += f"**Summary:** {len(projects)} project(s) found"
         else:
-            response_text = f"❌ {result['message']}"
+            response_text = f"[ERROR] {result['message']}"
         
         return [TextContent(
             type="text",
@@ -204,7 +210,7 @@ class RedmineMCPServer:
         logger.info("Logout requested")
         result = self.scraper.logout()
         
-        response_text = f"✅ {result['message']}" if result["success"] else f"❌ {result['message']}"
+        response_text = f"[SUCCESS] {result['message']}" if result["success"] else f"[ERROR] {result['message']}"
         
         return [TextContent(
             type="text",
@@ -220,27 +226,53 @@ class RedmineMCPServer:
             "session_timeout": config.session_timeout,
             "request_timeout": config.request_timeout,
             "authenticated": self.scraper.is_authenticated,
-            "session_valid": self.scraper.is_session_valid()
+            "session_valid": self.scraper.is_authenticated
         }
         
-        response_text = "🔧 **Redmine Server Information:**\n"
+        response_text = "**Redmine Server Information:**\n"
         response_text += "=" * 40 + "\n"
         response_text += f"Server URL: {info['server_url']}\n"
         response_text += f"Login URL: {info['login_url']}\n"
         response_text += f"Projects URL: {info['projects_url']}\n"
         response_text += f"Session Timeout: {info['session_timeout']} seconds\n"
         response_text += f"Request Timeout: {info['request_timeout']} seconds\n"
-        response_text += f"Authentication Status: {'✅ Authenticated' if info['authenticated'] else '❌ Not Authenticated'}\n"
-        response_text += f"Session Valid: {'✅ Valid' if info['session_valid'] else '❌ Invalid/Expired'}\n"
+        response_text += f"Authentication Status: {'[AUTH] Authenticated' if info['authenticated'] else '[NO-AUTH] Not Authenticated'}\n"
+        response_text += f"Session Valid: {'[VALID] Valid' if info['session_valid'] else '[INVALID] Invalid/Expired'}\n"
         
         return [TextContent(
             type="text",
             text=response_text
         )]
     
+    async def _perform_startup_login(self):
+        """Perform login on server startup"""
+        username = os.getenv('REDMINE_USERNAME')
+        password = os.getenv('REDMINE_PASSWORD')
+        
+        if not username or not password:
+            logger.warning("No credentials found in environment variables (REDMINE_USERNAME, REDMINE_PASSWORD)")
+            logger.warning("Server will start without authentication. Use redmine_login tool to authenticate.")
+            return False
+        
+        logger.info(f"Attempting startup login for user: {username}")
+        
+        # Use Selenium scraper for login
+        result = self.scraper.login(username, password)
+        
+        if result.get('success'):
+            logger.info("Startup login successful with Selenium")
+            return True
+        else:
+            logger.error(f"Startup login failed: {result.get('message')}")
+            return False
+    
     async def run(self):
         """Run the MCP server"""
         logger.info(f"Starting Redmine MCP Server for {config.base_url}")
+        
+        # Perform startup login if enabled
+        if self._login_on_startup:
+            await self._perform_startup_login()
         
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
@@ -249,9 +281,8 @@ class RedmineMCPServer:
                 InitializationOptions(
                     server_name="redmine-mcp-server",
                     server_version="1.0.0",
-                    capabilities=self.server.get_capabilities(
-                        notification_options=None,
-                        experimental_capabilities={}
+                    capabilities=ServerCapabilities(
+                        tools={}
                     )
                 )
             )
@@ -268,4 +299,6 @@ if __name__ == "__main__":
         logger.info("Server stopped by user")
     except Exception as e:
         logger.error(f"Server error: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
