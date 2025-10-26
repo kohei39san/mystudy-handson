@@ -155,7 +155,7 @@ class RedmineScraper:
                 if actual_password_field != 'password':
                     del login_data['password']
             
-            logger.debug(f"Login data keys: {list(login_data.keys())}")
+            logger.debug(f"Prepared login data for Redmine login form (number of fields: {len(login_data)})")
             
             # Submit login form
             login_response = self._make_request('POST', config.login_url, data=login_data)
