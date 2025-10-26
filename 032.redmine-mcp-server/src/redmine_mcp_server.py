@@ -57,7 +57,6 @@ class RedmineMCPServer:
         self.server = Server("redmine-mcp-server")
         self.scraper = RedmineSeleniumScraper()
         self._setup_handlers()
-        self._login_on_startup = True
     
     def _setup_handlers(self):
         """Set up MCP server handlers"""
@@ -244,35 +243,10 @@ class RedmineMCPServer:
             text=response_text
         )]
     
-    async def _perform_startup_login(self):
-        """Perform login on server startup"""
-        username = os.getenv('REDMINE_USERNAME')
-        password = os.getenv('REDMINE_PASSWORD')
-        
-        if not username or not password:
-            logger.warning("No credentials found in environment variables (REDMINE_USERNAME, REDMINE_PASSWORD)")
-            logger.warning("Server will start without authentication. Use redmine_login tool to authenticate.")
-            return False
-        
-        logger.info(f"Attempting startup login for user: {username}")
-        
-        # Use Selenium scraper for login
-        result = self.scraper.login(username, password)
-        
-        if result.get('success'):
-            logger.info("Startup login successful with Selenium")
-            return True
-        else:
-            logger.error(f"Startup login failed: {result.get('message')}")
-            return False
-    
+
     async def run(self):
         """Run the MCP server"""
         logger.info(f"Starting Redmine MCP Server for {config.base_url}")
-        
-        # Perform startup login if enabled
-        if self._login_on_startup:
-            await self._perform_startup_login()
         
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(

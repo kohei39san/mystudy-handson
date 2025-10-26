@@ -17,17 +17,16 @@
 ```
 032.redmine-mcp-server/
 ├── README.md                 # このファイル
-├── TROUBLESHOOTING.md        # トラブルシューティングガイド
 ├── requirements.txt          # Python依存関係
 ├── setup.py                  # セットアップスクリプト
 ├── .env.example              # 環境変数設定例
 ├── install.sh                # インストールスクリプト
 ├── run.sh                    # 実行スクリプト
 ├── test_selenium.py          # Seleniumテストスクリプト
+├── validate.py               # 実装検証スクリプト
 ├── src/
 │   ├── __init__.py           # パッケージ初期化
 │   ├── redmine_mcp_server.py # MCPサーバーのメイン実装
-│   ├── redmine_scraper.py    # Redmineスクレイピング機能（requests版）
 │   ├── redmine_selenium.py   # Redmineスクレイピング機能（Selenium版）
 │   └── config.py             # 設定ファイル
 └── examples/
@@ -38,10 +37,7 @@
 ## 依存関係
 
 - `mcp`: Model Context Protocol実装
-- `requests`: HTTP通信
-- `beautifulsoup4`: HTMLパース
-- `lxml`: XMLパーサー
-- `selenium`: Webブラウザ自動化（2FA対応用）
+- `selenium`: Webブラウザ自動化（2FA対応）
 - `webdriver-manager`: ChromeDriver自動管理
 - `python-dotenv`: 環境変数管理
 
@@ -99,22 +95,9 @@ python test_selenium.py
 
 ## 使用方法
 
-### 自動ログイン（推奨）
+### 1. 認証
 
-環境変数に認証情報を設定することで、サーバー起動時に自動的にログインします：
-
-```bash
-# .envファイルに設定
-REDMINE_USERNAME=your_username
-REDMINE_PASSWORD=your_password
-
-# 2FA有効な場合はSeleniumを使用
-USE_SELENIUM=true
-```
-
-### 1. 手動認証（オプション）
-
-自動ログインが設定されていない場合、MCPクライアントから`redmine_login`ツールを使用：
+MCPクライアントから`redmine_login`ツールを使用してRedmineにログイン：
 
 ```json
 {
@@ -156,15 +139,38 @@ USE_SELENIUM=true
 - **引数**: なし
 - **戻り値**: ログアウト成功のステータス
 
-## トラブルシューティング
+### get_server_info
+- **説明**: Redmineサーバーの設定情報と認証状態を取得
+- **引数**: なし
+- **戻り値**: サーバー情報（URL、認証状態等）
 
-詳細なトラブルシューティング情報については、[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)を参照してください。
+## トラブルシューティング
 
 ### よくある問題
 
-- **ログインに失敗する**: ユーザー名・パスワード、RedmineのURL設定を確認
-- **プロジェクトが取得できない**: ユーザーの権限、Redmineのバージョンを確認
-- **セッションタイムアウト**: 環境変数`SESSION_TIMEOUT`で調整可能
+#### ログインに失敗する
+- ユーザー名・パスワードが正しいか確認
+- RedmineのURL設定を確認
+- Redmineのバージョンやカスタマイズを確認
+- 2FA認証が有効な場合、ブラウザで手動認証を完了
+
+#### プロジェクトが取得できない
+- ユーザーにプロジェクト閲覧権限があるか確認
+- Redmineのバージョンを確認（4.0以降推奨）
+- プロジェクトページの構造をデバッグモードで確認
+
+#### セッションタイムアウト
+- 環境変数`SESSION_TIMEOUT`で調整可能
+- 長時間使用しない場合は再ログインが必要
+
+#### 接続エラー
+- ネットワーク接続を確認
+- `REQUEST_TIMEOUT`を延長
+- プロキシ設定が必要な場合は環境変数で設定
+
+#### SSL証明書エラー
+- 証明書が有効か確認
+- 自己署名証明書の場合は適切な設定が必要
 
 ### デバッグモード
 
@@ -188,9 +194,6 @@ python src\redmine_mcp_server.py
 | `MAX_RETRIES` | 最大リトライ回数 | `3` |
 | `RETRY_DELAY` | リトライ間隔（秒） | `1.0` |
 | `DEBUG` | デバッグモード | `false` |
-| `REDMINE_USERNAME` | 自動ログイン用ユーザー名 | なし |
-| `REDMINE_PASSWORD` | 自動ログイン用パスワード | なし |
-| `USE_SELENIUM` | Selenium使用フラグ（2FA対応） | `false` |
 | `TWOFA_WAIT` | 2FA認証待機時間（秒） | `300` |
 | `TWOFA_POLL_INTERVAL` | 2FA認証確認間隔（秒） | `3` |
 
@@ -202,6 +205,22 @@ python src\redmine_mcp_server.py
 - 過度なリクエストを避けるため、適切な間隔でアクセスしてください
 - セキュリティ上の理由から、本番環境では適切な認証情報管理を行ってください
 - Chromeブラウザがインストールされていることを確認してください（Selenium使用時）
+
+## 制限事項
+
+- **Redmine依存**: HTMLの構造変更に影響を受ける可能性
+- **認証方式**: フォーム認証のみサポート（LDAP、OAuth等は未対応）
+- **パフォーマンス**: APIと比較して処理速度が劣る
+- **ブラウザ依存**: Chromeブラウザが必要
+
+## 今後の拡張可能性
+
+- チケット一覧取得
+- チケット詳細取得
+- チケット作成・更新
+- ファイルダウンロード
+- キャッシュ機能
+- 並列処理
 
 ## 対応環境
 
