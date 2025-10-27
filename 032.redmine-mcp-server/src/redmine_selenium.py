@@ -511,41 +511,85 @@ class RedmineSeleniumScraper:
                         'total_pages': 0
                     }
             
-            # Build search URL with parameters
-            search_params = []
+            from urllib.parse import urlencode, quote
             
-            # Add search parameters
+            # Build search URL with Redmine filter format
+            search_params = ["set_filter=1", "sort=id:desc"]
+            
+            # Add filter parameters in Redmine format
             if kwargs.get('status_id'):
-                search_params.append(f"status_id={kwargs['status_id']}")
+                search_params.extend([
+                    "f[]=status_id",
+                    "op[status_id]=",
+                    f"v[status_id][]={kwargs['status_id']}"
+                ])
+            
             if kwargs.get('tracker_id'):
-                search_params.append(f"tracker_id={kwargs['tracker_id']}")
+                search_params.extend([
+                    "f[]=tracker_id",
+                    "op[tracker_id]=",
+                    f"v[tracker_id][]={kwargs['tracker_id']}"
+                ])
+            
             if kwargs.get('assigned_to_id'):
-                search_params.append(f"assigned_to_id={kwargs['assigned_to_id']}")
+                assigned_value = "me" if kwargs['assigned_to_id'].lower() == "me" else kwargs['assigned_to_id']
+                search_params.extend([
+                    "f[]=assigned_to_id",
+                    "op[assigned_to_id]=",
+                    f"v[assigned_to_id][]={assigned_value}"
+                ])
+            
             if kwargs.get('parent_id'):
-                search_params.append(f"parent_id={kwargs['parent_id']}")
+                search_params.extend([
+                    "f[]=parent_id",
+                    "op[parent_id]=",
+                    f"v[parent_id][]={kwargs['parent_id']}"
+                ])
+            
+            if kwargs.get('q') or kwargs.get('subject') or kwargs.get('description') or kwargs.get('notes'):
+                # Use any_searchable for general text search
+                search_text = kwargs.get('q') or kwargs.get('subject') or kwargs.get('description') or kwargs.get('notes')
+                search_params.extend([
+                    "f[]=any_searchable",
+                    "op[any_searchable]=~",
+                    f"v[any_searchable][]={search_text}"
+                ])
+            
+            # Add empty filter field
+            search_params.append("f[]=")
+            
+            # Add column configuration
+            search_params.extend([
+                "c[]=tracker",
+                "c[]=status", 
+                "c[]=priority",
+                "c[]=subject",
+                "c[]=assigned_to",
+                "c[]=updated_on"
+            ])
+            
+            # Add grouping and other parameters
+            search_params.extend(["group_by=", "t[]="])
+            
+            # Build issues URL - use project-specific URL if project_id is provided
             if kwargs.get('project_id'):
-                search_params.append(f"project_id={kwargs['project_id']}")
-            if kwargs.get('subject'):
-                search_params.append(f"subject={kwargs['subject']}")
-            if kwargs.get('description'):
-                search_params.append(f"description={kwargs['description']}")
-            if kwargs.get('notes'):
-                search_params.append(f"notes={kwargs['notes']}")
-            if kwargs.get('q'):
-                search_params.append(f"q={kwargs['q']}")
+                issues_url = f"{config.base_url}/projects/{kwargs['project_id']}/issues"
+            else:
+                issues_url = f"{config.base_url}/issues"
             
-            # Pagination parameters
-            page = kwargs.get('page', 1)
-            per_page = kwargs.get('per_page', 25)
-            search_params.append(f"page={page}")
-            search_params.append(f"per_page_option={per_page}")
-            
-            # Build issues URL
-            issues_url = f"{config.base_url}/issues"
+            # URL encode the parameters
             if search_params:
-                issues_url += "?" + "&".join(search_params)
+                encoded_params = []
+                for param in search_params:
+                    if '=' in param:
+                        key, value = param.split('=', 1)
+                        encoded_params.append(f"{quote(key, safe='[]')}={quote(value, safe='')}") 
+                    else:
+                        encoded_params.append(quote(param, safe='[]'))
+                issues_url += "?" + "&".join(encoded_params)
             
             logger.debug(f"Issues search URL: {issues_url}")
+            logger.debug(f"Search parameters: {kwargs}")
             
             # Navigate to issues page
             self.driver.get(issues_url)
@@ -562,8 +606,8 @@ class RedmineSeleniumScraper:
                     'message': 'Session expired. Please login again.',
                     'issues': [],
                     'total_count': 0,
-                    'page': page,
-                    'per_page': per_page,
+                    'page': kwargs.get('page', 1),
+                    'per_page': kwargs.get('per_page', 25),
                     'total_pages': 0
                 }
             
@@ -862,6 +906,10 @@ class RedmineSeleniumScraper:
                     logger.debug(f"Page source snippet: {page_source_snippet}")
                 except Exception:
                     pass
+            
+            # Get pagination parameters
+            page = kwargs.get('page', 1)
+            per_page = kwargs.get('per_page', 25)
             
             # Calculate pagination info
             total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
