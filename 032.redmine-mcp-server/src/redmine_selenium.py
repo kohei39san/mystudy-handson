@@ -520,14 +520,14 @@ class RedmineSeleniumScraper:
             if kwargs.get('status_id'):
                 search_params.extend([
                     "f[]=status_id",
-                    "op[status_id]=",
+                    "op[status_id]==",
                     f"v[status_id][]={kwargs['status_id']}"
                 ])
             
             if kwargs.get('tracker_id'):
                 search_params.extend([
                     "f[]=tracker_id",
-                    "op[tracker_id]=",
+                    "op[tracker_id]==",
                     f"v[tracker_id][]={kwargs['tracker_id']}"
                 ])
             
@@ -535,14 +535,14 @@ class RedmineSeleniumScraper:
                 assigned_value = "me" if kwargs['assigned_to_id'].lower() == "me" else kwargs['assigned_to_id']
                 search_params.extend([
                     "f[]=assigned_to_id",
-                    "op[assigned_to_id]=",
+                    "op[assigned_to_id]==",
                     f"v[assigned_to_id][]={assigned_value}"
                 ])
             
             if kwargs.get('parent_id'):
                 search_params.extend([
                     "f[]=parent_id",
-                    "op[parent_id]=",
+                    "op[parent_id]==",
                     f"v[parent_id][]={kwargs['parent_id']}"
                 ])
             
@@ -596,6 +596,10 @@ class RedmineSeleniumScraper:
             
             # Wait for page to load
             time.sleep(2)
+            
+            # Debug: Log page title and current URL
+            logger.debug(f"Page title: {self.driver.title}")
+            logger.debug(f"Current URL after navigation: {self.driver.current_url}")
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():

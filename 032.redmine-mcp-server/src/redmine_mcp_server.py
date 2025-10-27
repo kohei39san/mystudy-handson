@@ -117,20 +117,20 @@ class RedmineMCPServer:
                         "type": "object",
                         "properties": {
                             "status_id": {
-                                "type": "string",
-                                "description": "Status ID or name (e.g., 'open', 'closed', '1')"
+                                "type": "integer",
+                                "description": "Status ID (numeric only, e.g., 1, 2, 3)"
                             },
                             "tracker_id": {
-                                "type": "string",
-                                "description": "Tracker ID or name (e.g., 'bug', 'feature', '1')"
+                                "type": "integer",
+                                "description": "Tracker ID (numeric only, e.g., 1, 2)"
                             },
                             "assigned_to_id": {
                                 "type": "string",
                                 "description": "Assigned user ID or name"
                             },
                             "parent_id": {
-                                "type": "string",
-                                "description": "Parent issue ID"
+                                "type": "integer",
+                                "description": "Parent issue ID (numeric only)"
                             },
                             "project_id": {
                                 "type": "string",
