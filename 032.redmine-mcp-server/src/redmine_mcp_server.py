@@ -210,6 +210,69 @@ class RedmineMCPServer:
                     }
                 ),
                 Tool(
+                    name="create_issue",
+                    description="Create a new issue in Redmine",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_id": {
+                                "type": "string",
+                                "description": "Project ID to create issue in"
+                            },
+                            "tracker_id": {
+                                "type": "integer",
+                                "description": "Tracker ID (numeric only)"
+                            },
+                            "subject": {
+                                "type": "string",
+                                "description": "Issue subject/title"
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "Issue description"
+                            },
+                            "status_id": {
+                                "type": "integer",
+                                "description": "Status ID (numeric only)"
+                            },
+                            "priority_id": {
+                                "type": "integer",
+                                "description": "Priority ID (numeric only)"
+                            },
+                            "assigned_to_id": {
+                                "type": "integer",
+                                "description": "Assignee user ID (numeric only)"
+                            },
+                            "parent_issue_id": {
+                                "type": "integer",
+                                "description": "Parent issue ID (numeric only)"
+                            },
+                            "start_date": {
+                                "type": "string",
+                                "description": "Start date (YYYY-MM-DD format)",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "due_date": {
+                                "type": "string",
+                                "description": "Due date (YYYY-MM-DD format)",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "estimated_hours": {
+                                "type": "number",
+                                "description": "Estimated hours",
+                                "minimum": 0
+                            },
+                            "done_ratio": {
+                                "type": "integer",
+                                "description": "Progress percentage (0-100)",
+                                "minimum": 0,
+                                "maximum": 100
+                            }
+                        },
+                        "required": ["project_id", "subject"]
+                    }
+                ),
+                Tool(
                     name="update_issue",
                     description="Update an issue with new field values",
                     inputSchema={
@@ -275,6 +338,8 @@ class RedmineMCPServer:
                     return await self._handle_get_available_trackers(arguments)
                 elif name == "get_available_statuses":
                     return await self._handle_get_available_statuses(arguments)
+                elif name == "create_issue":
+                    return await self._handle_create_issue(arguments)
                 elif name == "update_issue":
                     return await self._handle_update_issue(arguments)
                 else:
@@ -599,6 +664,53 @@ class RedmineMCPServer:
                 response_text += "No status options available for this issue.\n"
         else:
             response_text = f"[ERROR] {result['message']}"
+        
+        return [TextContent(
+            type="text",
+            text=response_text
+        )]
+    
+    async def _handle_create_issue(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle create issue tool call"""
+        project_id = arguments.get("project_id")
+        subject = arguments.get("subject")
+        
+        if not project_id or not subject:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Project ID and subject are required"
+            )]
+        
+        logger.info(f"Creating issue in project {project_id}")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        # Extract creation parameters
+        create_params = {}
+        for key in ['tracker_id', 'description', 'status_id', 'priority_id', 'assigned_to_id', 
+                   'parent_issue_id', 'start_date', 'due_date', 'estimated_hours', 'done_ratio']:
+            if key in arguments and arguments[key] is not None:
+                create_params[key] = arguments[key]
+        
+        result = self.scraper.create_issue(project_id, subject=subject, **create_params)
+        
+        if result["success"]:
+            response_text = f"[SUCCESS] {result['message']}\n\n"
+            if 'issue_id' in result:
+                response_text += f"**Issue ID:** #{result['issue_id']}\n"
+            if 'issue_url' in result:
+                response_text += f"**Issue URL:** {result['issue_url']}\n"
+        else:
+            response_text = f"[ERROR] {result['message']}"
+            if 'available_trackers' in result:
+                response_text += "\n\n**Available Trackers:**\n"
+                for tracker in result['available_trackers']:
+                    response_text += f"- {tracker['text']} (ID: {tracker['value']})\n"
         
         return [TextContent(
             type="text",

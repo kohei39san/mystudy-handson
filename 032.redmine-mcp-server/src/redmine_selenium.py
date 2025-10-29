@@ -1255,6 +1255,343 @@ class RedmineSeleniumScraper:
                 'statuses': []
             }
     
+    def create_issue(self, project_id: str, **kwargs) -> Dict[str, Any]:
+        """
+        Create a new issue in Redmine
+        
+        Args:
+            project_id: Project ID to create issue in
+            tracker_id: Tracker ID
+            subject: Issue subject/title
+            description: Issue description
+            status_id: Status ID
+            priority_id: Priority ID
+            assigned_to_id: Assignee user ID
+            parent_issue_id: Parent issue ID
+            start_date: Start date (YYYY-MM-DD)
+            due_date: Due date (YYYY-MM-DD)
+            estimated_hours: Estimated hours
+            done_ratio: Progress percentage (0-100)
+            
+        Returns:
+            Dict with creation status
+        """
+        if not self.is_authenticated or not self.driver:
+            return {
+                'success': False,
+                'message': 'Not authenticated. Please login first.'
+            }
+        
+        try:
+            logger.info(f"Creating issue in project {project_id}")
+            
+            # Navigate to new issue page
+            new_issue_url = f"{config.base_url}/projects/{project_id}/issues/new"
+            self.driver.get(new_issue_url)
+            
+            # Wait for page to load
+            time.sleep(2)
+            
+            # Check if redirected to login page
+            if 'login' in self.driver.current_url.lower():
+                logger.warning("Redirected to login page - session expired")
+                self.is_authenticated = False
+                return {
+                    'success': False,
+                    'message': 'Session expired. Please login again.'
+                }
+            
+            # Check if new issue page is accessible
+            if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
+                return {
+                    'success': False,
+                    'message': f'Project {project_id} not found or not accessible.'
+                }
+            
+            # Debug: Log page title and form elements
+            logger.debug(f"New issue page title: {self.driver.title}")
+            logger.debug(f"Current URL: {self.driver.current_url}")
+            
+            # 必須フィールドの検証
+            logger.info("=== 必須フィールドの検証 ===")
+            
+            # Check for form elements
+            forms = self.driver.find_elements(By.TAG_NAME, "form")
+            logger.debug(f"Found {len(forms)} forms on page")
+            
+            # 必須フィールドを検出
+            required_fields = []
+            
+            # フォーム内の必須フィールドを検索
+            form_elements = self.driver.find_elements(By.CSS_SELECTOR, "input[required], select[required], textarea[required]")
+            for element in form_elements:
+                field_name = element.get_attribute('name') or element.get_attribute('id')
+                field_type = element.tag_name
+                if field_name:
+                    required_fields.append(f"{field_name} ({field_type})")
+            
+            # ラベルで必須マークがあるフィールドも確認
+            required_labels = self.driver.find_elements(By.CSS_SELECTOR, "label .required, label.required")
+            for label in required_labels:
+                label_text = label.text.strip()
+                if label_text:
+                    required_fields.append(f"Label: {label_text}")
+            
+            logger.info("検出された必須フィールド:")
+            for field in required_fields:
+                logger.info(f"  - {field}")
+            
+            # Look for input fields
+            inputs = self.driver.find_elements(By.TAG_NAME, "input")
+            selects = self.driver.find_elements(By.TAG_NAME, "select")
+            textareas = self.driver.find_elements(By.TAG_NAME, "textarea")
+            logger.debug(f"Found {len(inputs)} inputs, {len(selects)} selects, {len(textareas)} textareas")
+            
+            # Log some field IDs/names for debugging
+            for i, inp in enumerate(inputs[:10]):  # First 10 inputs
+                inp_id = inp.get_attribute('id')
+                inp_name = inp.get_attribute('name')
+                inp_type = inp.get_attribute('type')
+                logger.debug(f"Input {i}: id='{inp_id}', name='{inp_name}', type='{inp_type}'")
+            
+            # 必須フィールドチェック: subjectが提供されているか確認
+            if not kwargs.get('subject'):
+                return {
+                    'success': False,
+                    'message': 'Subject is required for creating an issue.',
+                    'required_fields': required_fields
+                }
+            
+            # Validate and set tracker
+            if kwargs.get('tracker_id'):
+                try:
+                    # Try multiple selectors for tracker field
+                    tracker_select = None
+                    tracker_selectors = [
+                        "issue_tracker_id",
+                        "tracker_id", 
+                        "issue[tracker_id]"
+                    ]
+                    
+                    for selector in tracker_selectors:
+                        try:
+                            tracker_select = self.driver.find_element(By.ID, selector)
+                            logger.debug(f"Found tracker field with ID: {selector}")
+                            break
+                        except:
+                            try:
+                                tracker_select = self.driver.find_element(By.NAME, selector)
+                                logger.debug(f"Found tracker field with NAME: {selector}")
+                                break
+                            except:
+                                continue
+                    
+                    if not tracker_select:
+                        # Try CSS selector as fallback
+                        tracker_select = self.driver.find_element(By.CSS_SELECTOR, "select[name*='tracker']")
+                    from selenium.webdriver.support.ui import Select
+                    select = Select(tracker_select)
+                    
+                    # Get available trackers
+                    available_trackers = []
+                    for option in select.options:
+                        value = option.get_attribute('value')
+                        text = option.text.strip()
+                        if value:
+                            available_trackers.append({'value': value, 'text': text})
+                    
+                    # Validate tracker
+                    tracker_id = str(kwargs['tracker_id'])
+                    tracker_found = any(t['value'] == tracker_id for t in available_trackers)
+                    
+                    if not tracker_found:
+                        available_options = [f"{t['value']}:{t['text']}" for t in available_trackers]
+                        return {
+                            'success': False,
+                            'message': f"Tracker ID '{tracker_id}' is not available. Available trackers: {', '.join(available_options)}",
+                            'available_trackers': available_trackers
+                        }
+                    
+                    select.select_by_value(tracker_id)
+                    
+                except Exception as e:
+                    logger.debug(f"Tracker field not found or not accessible: {e}")
+                    # Continue without setting tracker if field not found
+            
+            # Set subject (required)
+            if kwargs.get('subject'):
+                try:
+                    # Try multiple selectors for subject field
+                    subject_field = None
+                    subject_selectors = [
+                        "issue_subject",
+                        "subject",
+                        "issue[subject]"
+                    ]
+                    
+                    for selector in subject_selectors:
+                        try:
+                            subject_field = self.driver.find_element(By.ID, selector)
+                            logger.debug(f"Found subject field with ID: {selector}")
+                            break
+                        except:
+                            try:
+                                subject_field = self.driver.find_element(By.NAME, selector)
+                                logger.debug(f"Found subject field with NAME: {selector}")
+                                break
+                            except:
+                                continue
+                    
+                    if not subject_field:
+                        # Try CSS selector as fallback
+                        subject_field = self.driver.find_element(By.CSS_SELECTOR, "input[name*='subject']")
+                    
+                    subject_field.clear()
+                    subject_field.send_keys(kwargs['subject'])
+                    logger.debug(f"Successfully set subject: {kwargs['subject']}")
+                    
+                except Exception as e:
+                    return {
+                        'success': False,
+                        'message': f"Error setting subject: {str(e)}"
+                    }
+            
+            # Set description
+            if kwargs.get('description'):
+                try:
+                    desc_field = self.driver.find_element(By.ID, "issue_description")
+                    desc_field.clear()
+                    desc_field.send_keys(kwargs['description'])
+                except Exception:
+                    logger.debug("Description field not found or not accessible")
+            
+            # Set status
+            if kwargs.get('status_id'):
+                try:
+                    status_select = self.driver.find_element(By.ID, "issue_status_id")
+                    from selenium.webdriver.support.ui import Select
+                    select = Select(status_select)
+                    select.select_by_value(str(kwargs['status_id']))
+                except Exception:
+                    logger.debug("Status field not found or invalid value")
+            
+            # Set priority
+            if kwargs.get('priority_id'):
+                try:
+                    priority_select = self.driver.find_element(By.ID, "issue_priority_id")
+                    from selenium.webdriver.support.ui import Select
+                    select = Select(priority_select)
+                    select.select_by_value(str(kwargs['priority_id']))
+                except Exception:
+                    logger.debug("Priority field not found or invalid value")
+            
+            # Set assignee
+            if kwargs.get('assigned_to_id'):
+                try:
+                    assignee_select = self.driver.find_element(By.ID, "issue_assigned_to_id")
+                    from selenium.webdriver.support.ui import Select
+                    select = Select(assignee_select)
+                    select.select_by_value(str(kwargs['assigned_to_id']))
+                except Exception:
+                    logger.debug("Assignee field not found or invalid value")
+            
+            # Set parent issue
+            if kwargs.get('parent_issue_id'):
+                try:
+                    parent_field = self.driver.find_element(By.ID, "issue_parent_issue_id")
+                    parent_field.clear()
+                    parent_field.send_keys(str(kwargs['parent_issue_id']))
+                except Exception:
+                    logger.debug("Parent issue field not found")
+            
+            # Set start date
+            if kwargs.get('start_date'):
+                try:
+                    start_date_field = self.driver.find_element(By.ID, "issue_start_date")
+                    start_date_field.clear()
+                    start_date_field.send_keys(kwargs['start_date'])
+                except Exception:
+                    logger.debug("Start date field not found")
+            
+            # Set due date
+            if kwargs.get('due_date'):
+                try:
+                    due_date_field = self.driver.find_element(By.ID, "issue_due_date")
+                    due_date_field.clear()
+                    due_date_field.send_keys(kwargs['due_date'])
+                except Exception:
+                    logger.debug("Due date field not found")
+            
+            # Set estimated hours
+            if kwargs.get('estimated_hours'):
+                try:
+                    estimated_hours_field = self.driver.find_element(By.ID, "issue_estimated_hours")
+                    estimated_hours_field.clear()
+                    estimated_hours_field.send_keys(str(kwargs['estimated_hours']))
+                except Exception:
+                    logger.debug("Estimated hours field not found")
+            
+            # Set progress
+            if kwargs.get('done_ratio') is not None:
+                try:
+                    progress_select = self.driver.find_element(By.ID, "issue_done_ratio")
+                    from selenium.webdriver.support.ui import Select
+                    select = Select(progress_select)
+                    select.select_by_value(str(kwargs['done_ratio']))
+                except Exception:
+                    logger.debug("Progress field not found or invalid value")
+            
+            # Submit the form
+            try:
+                submit_button = self.driver.find_element(By.CSS_SELECTOR, "input[type='submit'][name='commit'], button[type='submit']")
+                submit_button.click()
+                
+                # Wait for redirect
+                time.sleep(3)
+                
+                # Check if creation was successful
+                current_url = self.driver.current_url
+                if '/issues/' in current_url and 'new' not in current_url:
+                    # Extract issue ID from URL
+                    issue_id_match = re.search(r'/issues/(\d+)', current_url)
+                    if issue_id_match:
+                        issue_id = issue_id_match.group(1)
+                        logger.info(f"Successfully created issue #{issue_id}")
+                        
+                        return {
+                            'success': True,
+                            'message': f'Successfully created issue #{issue_id}',
+                            'issue_id': issue_id,
+                            'issue_url': current_url
+                        }
+                
+                # Check for error messages
+                error_elements = self.driver.find_elements(By.CSS_SELECTOR, ".flash.error, .errorExplanation, #errorExplanation")
+                if error_elements:
+                    error_messages = [elem.text.strip() for elem in error_elements if elem.text.strip()]
+                    return {
+                        'success': False,
+                        'message': f'Issue creation failed: {"; ".join(error_messages)}'
+                    }
+                
+                return {
+                    'success': False,
+                    'message': f'Issue creation may have failed - unexpected redirect to: {current_url}'
+                }
+                    
+            except Exception as e:
+                return {
+                    'success': False,
+                    'message': f'Error submitting form: {str(e)}'
+                }
+            
+        except Exception as e:
+            logger.error(f"Error creating issue: {e}")
+            return {
+                'success': False,
+                'message': f"Error creating issue: {str(e)}"
+            }
+    
     def update_issue(self, issue_id: str, **kwargs) -> Dict[str, Any]:
         """
         Update an issue with new field values
