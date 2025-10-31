@@ -273,6 +273,24 @@ class RedmineMCPServer:
                     }
                 ),
                 Tool(
+                    name="get_tracker_fields",
+                    description="Get available fields for a specific tracker from new issue page",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_id": {
+                                "type": "string",
+                                "description": "Project ID"
+                            },
+                            "tracker_id": {
+                                "type": "string",
+                                "description": "Tracker ID (optional)"
+                            }
+                        },
+                        "required": ["project_id"]
+                    }
+                ),
+                Tool(
                     name="update_issue",
                     description="Update an issue with new field values",
                     inputSchema={
@@ -338,6 +356,8 @@ class RedmineMCPServer:
                     return await self._handle_get_available_trackers(arguments)
                 elif name == "get_available_statuses":
                     return await self._handle_get_available_statuses(arguments)
+                elif name == "get_tracker_fields":
+                    return await self._handle_get_tracker_fields(arguments)
                 elif name == "create_issue":
                     return await self._handle_create_issue(arguments)
                 elif name == "update_issue":
@@ -662,6 +682,84 @@ class RedmineMCPServer:
                 response_text += f"- update_issue(issue_id='{issue_id}', status_id='In Progress')\n"
             else:
                 response_text += "No status options available for this issue.\n"
+        else:
+            response_text = f"[ERROR] {result['message']}"
+        
+        return [TextContent(
+            type="text",
+            text=response_text
+        )]
+    
+    async def _handle_get_tracker_fields(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle get tracker fields tool call"""
+        project_id = arguments.get("project_id")
+        tracker_id = arguments.get("tracker_id")
+        
+        if not project_id:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Project ID is required"
+            )]
+        
+        logger.info(f"Getting tracker fields for project {project_id}, tracker {tracker_id or 'default'}")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        result = self.scraper.get_tracker_fields(project_id, tracker_id)
+        
+        if result["success"]:
+            fields = result["fields"]
+            required_fields = result["required_fields"]
+            optional_fields = result["optional_fields"]
+            
+            response_text = f"[SUCCESS] {result['message']}\n\n"
+            
+            if tracker_id:
+                response_text += f"**Tracker ID:** {tracker_id}\n\n"
+            
+            # Required fields
+            if required_fields:
+                response_text += "**Required Fields:**\n"
+                response_text += "=" * 30 + "\n"
+                for field in required_fields:
+                    response_text += f"- **{field['name']}** ({field['type']})\n"
+                    response_text += f"  ID: {field['id']}\n"
+                    if field['type'] == 'select' and field.get('options'):
+                        response_text += f"  Options: {len(field['options'])} available\n"
+                    elif field['type'] == 'input' and field.get('input_type'):
+                        response_text += f"  Input Type: {field['input_type']}\n"
+                    response_text += "\n"
+            
+            # Optional fields
+            if optional_fields:
+                response_text += "**Optional Fields:**\n"
+                response_text += "=" * 30 + "\n"
+                for field in optional_fields:
+                    response_text += f"- **{field['name']}** ({field['type']})\n"
+                    response_text += f"  ID: {field['id']}\n"
+                    if field['type'] == 'select' and field.get('options'):
+                        response_text += f"  Options: {len(field['options'])} available\n"
+                        # Show first few options
+                        for opt in field['options'][:3]:
+                            response_text += f"    - {opt['text']} (ID: {opt['value']})\n"
+                        if len(field['options']) > 3:
+                            response_text += f"    ... and {len(field['options']) - 3} more\n"
+                    elif field['type'] == 'input' and field.get('input_type'):
+                        response_text += f"  Input Type: {field['input_type']}\n"
+                    if field.get('placeholder'):
+                        response_text += f"  Placeholder: {field['placeholder']}\n"
+                    response_text += "\n"
+            
+            # Summary
+            response_text += "**Summary:**\n"
+            response_text += f"- Total fields: {len(fields)}\n"
+            response_text += f"- Required: {len(required_fields)}\n"
+            response_text += f"- Optional: {len(optional_fields)}\n"
         else:
             response_text = f"[ERROR] {result['message']}"
         
