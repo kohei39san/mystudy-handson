@@ -1293,13 +1293,13 @@ class RedmineSeleniumScraper:
                 'trackers': []
             }
     
-    def get_tracker_fields(self, project_id: str, tracker_id: str = None) -> Dict[str, Any]:
+    def get_tracker_fields(self, project_id: str, tracker_id: str) -> Dict[str, Any]:
         """
         Get available fields for a specific tracker from new issue page
         
         Args:
             project_id: Project ID
-            tracker_id: Tracker ID (optional, if not provided, uses default)
+            tracker_id: Tracker ID (required)
             
         Returns:
             Dict with field information including required/optional status and input types
@@ -1312,10 +1312,11 @@ class RedmineSeleniumScraper:
             }
         
         try:
-            logger.info(f"Getting tracker fields for project {project_id}, tracker {tracker_id or 'default'}")
+            logger.info(f"Getting tracker fields for project {project_id}, tracker {tracker_id}")
             
-            # Navigate to new issue page
-            new_issue_url = f"{config.base_url}/projects/{project_id}/issues/new"
+            # Navigate to new issue page with tracker_id in URL
+            new_issue_url = f"{config.base_url}/projects/{project_id}/issues/new?issue[tracker_id]={tracker_id}"
+            
             self.driver.get(new_issue_url)
             
             # Wait for page to load
@@ -1330,17 +1331,6 @@ class RedmineSeleniumScraper:
                     'message': 'Session expired. Please login again.',
                     'fields': []
                 }
-            
-            # Set tracker if specified
-            if tracker_id:
-                try:
-                    tracker_select = self.driver.find_element(By.ID, "issue_tracker_id")
-                    from selenium.webdriver.support.ui import Select
-                    select = Select(tracker_select)
-                    select.select_by_value(str(tracker_id))
-                    time.sleep(2)  # Wait for page to update and show tracker-specific fields
-                except Exception as e:
-                    logger.debug(f"Could not set tracker: {e}")
             
             fields = []
             
@@ -1619,23 +1609,23 @@ class RedmineSeleniumScraper:
                 'statuses': []
             }
     
-    def create_issue(self, project_id: str, **kwargs) -> Dict[str, Any]:
+    def create_issue(self, project_id: str, issue_tracker_id: str, **kwargs) -> Dict[str, Any]:
         """
         Create a new issue in Redmine
         
         Args:
             project_id: Project ID to create issue in
-            tracker_id: Tracker ID
-            subject: Issue subject/title
-            description: Issue description
-            status_id: Status ID
-            priority_id: Priority ID
-            assigned_to_id: Assignee user ID
-            parent_issue_id: Parent issue ID
-            start_date: Start date (YYYY-MM-DD)
-            due_date: Due date (YYYY-MM-DD)
-            estimated_hours: Estimated hours
-            done_ratio: Progress percentage (0-100)
+            issue_tracker_id: Tracker ID (required)
+            issue_subject: Issue subject/title (text)
+            issue_description: Issue description (textarea)
+            issue_status_id: Status ID (select-one)
+            issue_priority_id: Priority ID (select-one)
+            issue_assigned_to_id: Assignee user ID (select-one)
+            issue_parent_issue_id: Parent issue ID (text)
+            issue_start_date: Start date YYYY-MM-DD (date)
+            issue_due_date: Due date YYYY-MM-DD (date)
+            issue_is_private: Private flag (checkbox)
+            issue[watcher_user_ids][]: Watcher user IDs (checkbox)
             
         Returns:
             Dict with creation status
@@ -1649,8 +1639,28 @@ class RedmineSeleniumScraper:
         try:
             logger.info(f"Creating issue in project {project_id}")
             
-            # Navigate to new issue page
-            new_issue_url = f"{config.base_url}/projects/{project_id}/issues/new"
+            # トラッカーIDバリデーション
+            tracker_validation = self._validate_tracker_for_project(project_id, issue_tracker_id)
+            if not tracker_validation['valid']:
+                return {
+                    'success': False,
+                    'message': f"Invalid tracker ID: {tracker_validation['message']}"
+                }
+            
+            # Add tracker_id to kwargs before validation
+            kwargs['issue_tracker_id'] = issue_tracker_id
+            
+            # Validate fields BEFORE navigating to create page
+            validation_result = self._validate_fields(project_id, issue_tracker_id, kwargs)
+            if not validation_result['valid']:
+                return {
+                    'success': False,
+                    'message': f"Field validation failed: {validation_result['message']}"
+                }
+            
+            # Navigate to new issue page with tracker_id in URL
+            new_issue_url = f"{config.base_url}/projects/{project_id}/issues/new?issue[tracker_id]={issue_tracker_id}"
+            
             self.driver.get(new_issue_url)
             
             # Wait for page to load
@@ -1676,77 +1686,14 @@ class RedmineSeleniumScraper:
             logger.debug(f"New issue page title: {self.driver.title}")
             logger.debug(f"Current URL: {self.driver.current_url}")
             
-            # 必須フィールドの検証
-            logger.info("=== 必須フィールドの検証 ===")
-            
-            # Check for form elements
-            forms = self.driver.find_elements(By.TAG_NAME, "form")
-            logger.debug(f"Found {len(forms)} forms on page")
-            
-            # 必須フィールドを検出
-            required_fields = []
-            
-            # フォーム内の必須フィールドを検索
-            form_elements = self.driver.find_elements(By.CSS_SELECTOR, "input[required], select[required], textarea[required]")
-            for element in form_elements:
-                field_name = element.get_attribute('name') or element.get_attribute('id')
-                field_type = element.tag_name
-                if field_name:
-                    required_fields.append(f"{field_name} ({field_type})")
-            
-            # ラベルで必須マークがあるフィールドも確認
-            required_labels = self.driver.find_elements(By.CSS_SELECTOR, "label .required, label.required")
-            for label in required_labels:
-                label_text = label.text.strip()
-                if label_text:
-                    required_fields.append(f"Label: {label_text}")
-            
-            logger.info("検出された必須フィールド:")
-            for field in required_fields:
-                logger.info(f"  - {field}")
-            
-            # Look for input fields
-            inputs = self.driver.find_elements(By.TAG_NAME, "input")
-            selects = self.driver.find_elements(By.TAG_NAME, "select")
-            textareas = self.driver.find_elements(By.TAG_NAME, "textarea")
-            logger.debug(f"Found {len(inputs)} inputs, {len(selects)} selects, {len(textareas)} textareas")
-            
-            # Log some field IDs/names for debugging
-            for i, inp in enumerate(inputs[:10]):  # First 10 inputs
-                inp_id = inp.get_attribute('id')
-                inp_name = inp.get_attribute('name')
-                inp_type = inp.get_attribute('type')
-                logger.debug(f"Input {i}: id='{inp_id}', name='{inp_name}', type='{inp_type}'")
-            
-            # 必須フィールドチェック: subjectが提供されているか確認
-            if not kwargs.get('subject'):
-                return {
-                    'success': False,
-                    'message': 'Subject is required for creating an issue.',
-                    'required_fields': required_fields
-                }
-            
-            # トラッカーIDバリデーション
-            if kwargs.get('tracker_id'):
-                # まずトラッカーIDが有効かチェック
-                tracker_validation = self._validate_tracker_for_project(project_id, kwargs['tracker_id'])
-                if not tracker_validation['valid']:
-                    return {
-                        'success': False,
-                        'message': f"Invalid tracker ID: {tracker_validation['message']}"
-                    }
-                
-                # フィールドバリデーション
-                validation_result = self._validate_fields(project_id, kwargs['tracker_id'], kwargs)
-                if not validation_result['valid']:
-                    return {
-                        'success': False,
-                        'message': f"Field validation failed: {validation_result['message']}"
-                    }
-            
             # Set fields dynamically based on provided field IDs
+            fields_set = []
+            fields_failed = []
+            
             for field_id, field_value in kwargs.items():
-                if field_id in ['subject', 'tracker_id']:  # Skip special handling fields
+                # Skip tracker as it's already set via URL
+                if field_id == 'issue_tracker_id':
+                    fields_set.append(f"{field_id}={field_value}")
                     continue
                     
                 try:
@@ -1757,45 +1704,57 @@ class RedmineSeleniumScraper:
                         from selenium.webdriver.support.ui import Select
                         select = Select(element)
                         select.select_by_value(str(field_value))
+                        fields_set.append(f"{field_id}={field_value}")
                     elif element_type in ['input', 'textarea']:
-                        element.clear()
-                        element.send_keys(str(field_value))
+                        if element.get_attribute('type') == 'checkbox':
+                            if field_value:
+                                if not element.is_selected():
+                                    element.click()
+                                    fields_set.append(f"{field_id}=checked")
+                        else:
+                            element.clear()
+                            element.send_keys(str(field_value))
+                            fields_set.append(f"{field_id}={field_value}")
                     
                     logger.debug(f"Set field {field_id} = {field_value}")
                 except Exception as e:
+                    fields_failed.append(f"{field_id}({e})")
                     logger.debug(f"Could not set field {field_id}: {e}")
             
-            # Handle special fields
-            if kwargs.get('tracker_id'):
-                try:
-                    tracker_select = self.driver.find_element(By.CSS_SELECTOR, "#issue_tracker_id")
-                    from selenium.webdriver.support.ui import Select
-                    select = Select(tracker_select)
-                    select.select_by_value(str(kwargs['tracker_id']))
-                except Exception as e:
-                    logger.debug(f"Tracker field not found: {e}")
-            
-            if kwargs.get('subject'):
-                try:
-                    subject_field = self.driver.find_element(By.CSS_SELECTOR, "#issue_subject")
-                    subject_field.clear()
-                    subject_field.send_keys(kwargs['subject'])
-                except Exception as e:
-                    return {
-                        'success': False,
-                        'message': f"Could not find subject field: {str(e)}"
-                    }
+            logger.info(f"Fields set: {fields_set}")
+            if fields_failed:
+                logger.warning(f"Fields failed: {fields_failed}")
             
             # Submit the form
             try:
-                submit_button = self.driver.find_element(By.CSS_SELECTOR, "input[type='submit'][name='commit'], button[type='submit']")
+                logger.debug("Looking for submit button...")
+                
+                # Find submit button
+                submit_button = self.driver.find_element(By.CSS_SELECTOR, "input[name=commit]")
+                
+                logger.debug(f"Submit button found: {submit_button.get_attribute('value')}")
+                
+                # Submit form
                 submit_button.click()
+                logger.debug("Submit button clicked")
                 
                 # Wait for redirect
                 time.sleep(3)
                 
                 # Check if creation was successful
                 current_url = self.driver.current_url
+                logger.info(f"URL after submit: {current_url}")
+                logger.info(f"Page title after submit: {self.driver.title}")
+                
+                # Check for error messages first
+                error_elements = self.driver.find_elements(By.CSS_SELECTOR, ".flash.error, .errorExplanation, #errorExplanation")
+                if error_elements:
+                    error_messages = [elem.text.strip() for elem in error_elements if elem.text.strip()]
+                    return {
+                        'success': False,
+                        'message': f'Issue creation failed: {"; ".join(error_messages)}'
+                    }
+                
                 if '/issues/' in current_url and 'new' not in current_url:
                     # Extract issue ID from URL
                     issue_id_match = re.search(r'/issues/(\d+)', current_url)
@@ -1809,15 +1768,6 @@ class RedmineSeleniumScraper:
                             'issue_id': issue_id,
                             'issue_url': current_url
                         }
-                
-                # Check for error messages
-                error_elements = self.driver.find_elements(By.CSS_SELECTOR, ".flash.error, .errorExplanation, #errorExplanation")
-                if error_elements:
-                    error_messages = [elem.text.strip() for elem in error_elements if elem.text.strip()]
-                    return {
-                        'success': False,
-                        'message': f'Issue creation failed: {"; ".join(error_messages)}'
-                    }
                 
                 return {
                     'success': False,
@@ -2042,7 +1992,7 @@ class RedmineSeleniumScraper:
     
     def _validate_fields(self, project_id: str, tracker_id: str, fields: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate fields against tracker field definitions
+        Validate fields against tracker field definitions including required field validation
         
         Args:
             project_id: Project ID
@@ -2050,7 +2000,7 @@ class RedmineSeleniumScraper:
             fields: Fields to validate
             
         Returns:
-            Dict with validation result
+            Dict with validation result including required field checks
         """
         try:
             # Get tracker fields
@@ -2073,19 +2023,34 @@ class RedmineSeleniumScraper:
                 field_map[clean_id] = field
                 field_map[field_id] = field  # Also keep original ID
             
+            # Check required fields
+            required_fields = [f for f in all_fields if f.get('required', False)]
+            missing_required = []
+            
+            for req_field in required_fields:
+                field_id = req_field['id']
+                clean_id = field_id.replace('issue_', '') if field_id.startswith('issue_') else field_id
+                
+                # Check if required field is provided
+                if field_id not in fields and clean_id not in fields:
+                    missing_required.append(f"{req_field.get('name', field_id)} ({field_id})")
+            
+            if missing_required:
+                return {
+                    'valid': False,
+                    'message': f"Missing required fields: {', '.join(missing_required)}"
+                }
+            
             # Validate each provided field
             invalid_fields = []
             for field_name, field_value in fields.items():
-                # Skip special fields that are always valid
-                if field_name in ['subject', 'tracker_id', 'project_id']:
-                    continue
-                
+
                 if field_name not in field_map:
                     invalid_fields.append(f"{field_name} (not available for this tracker)")
                     continue
                 
                 # Special validation for assignee field
-                if field_name in ['assigned_to_id', 'assignee'] and field_value:
+                if field_name == 'issue_assigned_to_id' and field_value:
                     assignee_validation = self._validate_assignee(project_id, field_value)
                     if not assignee_validation['valid']:
                         invalid_fields.append(f"{field_name}: {assignee_validation['message']}")
@@ -2118,8 +2083,8 @@ class RedmineSeleniumScraper:
             Dict with validation result
         """
         try:
-            # Skip validation for special values
-            if assignee_value.lower() in ['me', 'myself', '']:
+            # Skip validation for empty values
+            if not assignee_value:
                 return {'valid': True}
             
             # Get project members
