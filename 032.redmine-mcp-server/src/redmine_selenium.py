@@ -464,37 +464,13 @@ class RedmineSeleniumScraper:
             
             # Look for members table
             try:
-                # Try multiple selectors for members table
-                table_selectors = [
-                    "table.members",
-                    "table.list",
-                    "#tab-content-members table",
-                    ".members table",
-                    "table"
-                ]
+                members_table = self.driver.find_element(By.CSS_SELECTOR, "#tab-content-members > table > tbody")
                 
-                members_table = None
-                for selector in table_selectors:
-                    try:
-                        tables = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                        for table in tables:
-                            # Check if this table contains member data
-                            member_rows = table.find_elements(By.TAG_NAME, "tr")
-                            if len(member_rows) > 1:  # Has header + data rows
-                                members_table = table
-                                logger.debug(f"Found members table with selector: {selector}")
-                                break
-                        if members_table:
-                            break
-                    except Exception:
-                        continue
+                rows = members_table.find_elements(By.TAG_NAME, "tr")
+                logger.debug(f"Found {len(rows)} rows in members table")
                 
-                if members_table:
-                    rows = members_table.find_elements(By.TAG_NAME, "tr")
-                    logger.debug(f"Found {len(rows)} rows in members table")
-                    
-                    # Skip header row - look for rows with td elements
-                    for row in rows[1:]:
+                # Process all rows (tbody doesn't include header)
+                for row in rows:
                         cells = row.find_elements(By.TAG_NAME, "td")
                         if len(cells) >= 2:  # At least user and role columns
                             try:
@@ -526,9 +502,7 @@ class RedmineSeleniumScraper:
                             except Exception as e:
                                 logger.debug(f"Error processing member row: {e}")
                                 continue
-                
-                else:
-                    logger.debug("No members table found")
+
                     
             except Exception as e:
                 logger.debug(f"Error processing members table: {e}")
@@ -815,32 +789,14 @@ class RedmineSeleniumScraper:
             
             # Extract issues from table
             try:
-                # Look for issues table with multiple selectors
+                # Look for issues table with specific selector
                 issues_table = None
-                table_selectors = [
-                    "table.issues",
-                    "table.list", 
-                    "table.list.issues",
-                    "#content table",
-                    ".issues table",
-                    "table"
-                ]
-                
-                for selector in table_selectors:
-                    try:
-                        tables = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                        for table in tables:
-                            # Check if this table contains issue data
-                            issue_links = table.find_elements(By.CSS_SELECTOR, "a[href*='/issues/']")
-                            if issue_links:
-                                issues_table = table
-                                logger.debug(f"Found issues table with selector: {selector}")
-                                break
-                        if issues_table:
-                            break
-                    except Exception as e:
-                        logger.debug(f"Selector {selector} failed: {e}")
-                        continue
+                try:
+                    issues_table = self.driver.find_element(By.CSS_SELECTOR, "#content table.list.issues")
+                    logger.debug("Found issues table with selector: #content table.list.issues")
+                except Exception as e:
+                    logger.debug(f"Issues table selector failed: {e}")
+                    issues_table = None
                 
                 if issues_table:
                     rows = issues_table.find_elements(By.TAG_NAME, "tr")
@@ -1147,32 +1103,16 @@ class RedmineSeleniumScraper:
             
             issue_details = {'id': issue_id}
             
-            # Extract issue details
+            # Extract subject from specific selector
             try:
-                # Subject - try new HTML structure first
-                subject_selectors = [
-                    ".subject[data-sticky-issue-header-target='original'] h3",  # New structure
-                    "h2.inline-block",  # Tracker with ID structure
-                    "h2, .subject h3, .issue .subject"  # Fallback to old selectors
-                ]
-                
-                for selector in subject_selectors:
-                    try:
-                        subject_elem = self.driver.find_element(By.CSS_SELECTOR, selector)
-                        subject_text = subject_elem.text.strip()
-                        
-                        if subject_text:
-                            issue_details['subject'] = subject_text
-                            break
-                    except NoSuchElementException:
-                        continue
-                        
-            except Exception as e:
-                logger.debug(f"Error extracting subject: {e}")
+                subject_elem = self.driver.find_element(By.CSS_SELECTOR, ".subject h3")
+                issue_details['subject'] = subject_elem.text.strip()
+            except NoSuchElementException:
+                pass
             
             # Extract tracker from specific selector
             try:
-                tracker_elem = self.driver.find_element(By.CSS_SELECTOR, "#content > h2:nth-child(2)")
+                tracker_elem = self.driver.find_element(By.CSS_SELECTOR, "#content > h2")
                 tracker_text = tracker_elem.text.strip()
                 # Extract tracker name from "トラッカー名 #チケットID" format
                 tracker_match = re.match(r'^([^#]+)\s*#\d+', tracker_text)
@@ -1197,30 +1137,7 @@ class RedmineSeleniumScraper:
             
             # Status, Priority, Assignee, etc. from the details table
             try:
-                # Try multiple selectors for issue details
-                detail_selectors = [
-                    ".details tr", 
-                    ".attributes tr", 
-                    ".issue-attributes tr",
-                    ".splitcontent .splitcontentleft tr",
-                    "#content .details tr",
-                    "table.attributes tr",
-                    ".issue .attributes tr"
-                ]
-                
-                detail_rows = []
-                for selector in detail_selectors:
-                    try:
-                        rows = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                        if rows:
-                            detail_rows = rows
-                            logger.debug(f"Found details with selector: {selector}")
-                            break
-                    except Exception:
-                        continue
-                
-
-                
+                detail_rows = self.driver.find_elements(By.CSS_SELECTOR, "#content > div.issue.details > div.attributes tr")
                 # Process table rows
                 for row in detail_rows:
                     try:
@@ -1798,57 +1715,14 @@ class RedmineSeleniumScraper:
             
             # Set subject (required)
             if kwargs.get('subject'):
-                subject_set = False
-                subject_selectors = [
-                    "#issue_subject",
-                    "input[name='issue[subject]']",
-                    "input[id*='subject']",
-                    "input[name*='subject']"
-                ]
-                
-                for selector in subject_selectors:
-                    try:
-                        subject_field = self.driver.find_element(By.CSS_SELECTOR, selector)
-                        subject_field.clear()
-                        subject_field.send_keys(kwargs['subject'])
-                        subject_set = True
-                        logger.debug(f"Subject set using selector: {selector}")
-                        break
-                    except Exception as e:
-                        logger.debug(f"Subject selector {selector} failed: {e}")
-                        continue
-                
-                if not subject_set:
-                    # Debug: Log all input fields on the page
-                    logger.debug("=== DEBUG: All input fields on page ===")
-                    all_inputs = self.driver.find_elements(By.TAG_NAME, "input")
-                    for i, inp in enumerate(all_inputs):
-                        inp_id = inp.get_attribute('id') or 'no-id'
-                        inp_name = inp.get_attribute('name') or 'no-name'
-                        inp_type = inp.get_attribute('type') or 'no-type'
-                        inp_class = inp.get_attribute('class') or 'no-class'
-                        logger.debug(f"Input {i}: id='{inp_id}', name='{inp_name}', type='{inp_type}', class='{inp_class}'")
-                    
-                    # Try to find any input that might be the subject field
-                    logger.debug("=== Trying alternative subject field detection ===")
-                    for inp in all_inputs:
-                        inp_id = inp.get_attribute('id') or ''
-                        inp_name = inp.get_attribute('name') or ''
-                        if ('subject' in inp_id.lower() or 'subject' in inp_name.lower()):
-                            try:
-                                inp.clear()
-                                inp.send_keys(kwargs['subject'])
-                                subject_set = True
-                                logger.debug(f"Subject set using alternative detection: id='{inp_id}', name='{inp_name}'")
-                                break
-                            except Exception as e:
-                                logger.debug(f"Alternative subject field failed: {e}")
-                                continue
-                
-                if not subject_set:
+                try:
+                    subject_field = self.driver.find_element(By.ID, "issue_subject")
+                    subject_field.clear()
+                    subject_field.send_keys(kwargs['subject'])
+                except Exception as e:
                     return {
                         'success': False,
-                        'message': f"Could not find subject field. Tried selectors: {', '.join(subject_selectors)}"
+                        'message': f"Could not find subject field: {str(e)}"
                     }
             
             # Set description
