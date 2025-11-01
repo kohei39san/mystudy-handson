@@ -1744,20 +1744,40 @@ class RedmineSeleniumScraper:
                         'message': f"Field validation failed: {validation_result['message']}"
                     }
             
-            # Set tracker
+            # Set fields dynamically based on provided field IDs
+            for field_id, field_value in kwargs.items():
+                if field_id in ['subject', 'tracker_id']:  # Skip special handling fields
+                    continue
+                    
+                try:
+                    element = self.driver.find_element(By.CSS_SELECTOR, f"#{field_id}")
+                    element_type = element.tag_name.lower()
+                    
+                    if element_type == 'select':
+                        from selenium.webdriver.support.ui import Select
+                        select = Select(element)
+                        select.select_by_value(str(field_value))
+                    elif element_type in ['input', 'textarea']:
+                        element.clear()
+                        element.send_keys(str(field_value))
+                    
+                    logger.debug(f"Set field {field_id} = {field_value}")
+                except Exception as e:
+                    logger.debug(f"Could not set field {field_id}: {e}")
+            
+            # Handle special fields
             if kwargs.get('tracker_id'):
                 try:
-                    tracker_select = self.driver.find_element(By.ID, "issue_tracker_id")
+                    tracker_select = self.driver.find_element(By.CSS_SELECTOR, "#issue_tracker_id")
                     from selenium.webdriver.support.ui import Select
                     select = Select(tracker_select)
                     select.select_by_value(str(kwargs['tracker_id']))
                 except Exception as e:
-                    logger.debug(f"Tracker field not found or not accessible: {e}")
+                    logger.debug(f"Tracker field not found: {e}")
             
-            # Set subject (required)
             if kwargs.get('subject'):
                 try:
-                    subject_field = self.driver.find_element(By.ID, "issue_subject")
+                    subject_field = self.driver.find_element(By.CSS_SELECTOR, "#issue_subject")
                     subject_field.clear()
                     subject_field.send_keys(kwargs['subject'])
                 except Exception as e:
@@ -1765,91 +1785,6 @@ class RedmineSeleniumScraper:
                         'success': False,
                         'message': f"Could not find subject field: {str(e)}"
                     }
-            
-            # Set description
-            if kwargs.get('description'):
-                try:
-                    desc_field = self.driver.find_element(By.ID, "issue_description")
-                    desc_field.clear()
-                    desc_field.send_keys(kwargs['description'])
-                except Exception:
-                    logger.debug("Description field not found or not accessible")
-            
-            # Set status
-            if kwargs.get('status_id'):
-                try:
-                    status_select = self.driver.find_element(By.ID, "issue_status_id")
-                    from selenium.webdriver.support.ui import Select
-                    select = Select(status_select)
-                    select.select_by_value(str(kwargs['status_id']))
-                except Exception:
-                    logger.debug("Status field not found or invalid value")
-            
-            # Set priority
-            if kwargs.get('priority_id'):
-                try:
-                    priority_select = self.driver.find_element(By.ID, "issue_priority_id")
-                    from selenium.webdriver.support.ui import Select
-                    select = Select(priority_select)
-                    select.select_by_value(str(kwargs['priority_id']))
-                except Exception:
-                    logger.debug("Priority field not found or invalid value")
-            
-            # Set assignee
-            if kwargs.get('assigned_to_id'):
-                try:
-                    assignee_select = self.driver.find_element(By.ID, "issue_assigned_to_id")
-                    from selenium.webdriver.support.ui import Select
-                    select = Select(assignee_select)
-                    select.select_by_value(str(kwargs['assigned_to_id']))
-                except Exception:
-                    logger.debug("Assignee field not found or invalid value")
-            
-            # Set parent issue
-            if kwargs.get('parent_issue_id'):
-                try:
-                    parent_field = self.driver.find_element(By.ID, "issue_parent_issue_id")
-                    parent_field.clear()
-                    parent_field.send_keys(str(kwargs['parent_issue_id']))
-                except Exception:
-                    logger.debug("Parent issue field not found")
-            
-            # Set start date
-            if kwargs.get('start_date'):
-                try:
-                    start_date_field = self.driver.find_element(By.ID, "issue_start_date")
-                    start_date_field.clear()
-                    start_date_field.send_keys(kwargs['start_date'])
-                except Exception:
-                    logger.debug("Start date field not found")
-            
-            # Set due date
-            if kwargs.get('due_date'):
-                try:
-                    due_date_field = self.driver.find_element(By.ID, "issue_due_date")
-                    due_date_field.clear()
-                    due_date_field.send_keys(kwargs['due_date'])
-                except Exception:
-                    logger.debug("Due date field not found")
-            
-            # Set estimated hours
-            if kwargs.get('estimated_hours'):
-                try:
-                    estimated_hours_field = self.driver.find_element(By.ID, "issue_estimated_hours")
-                    estimated_hours_field.clear()
-                    estimated_hours_field.send_keys(str(kwargs['estimated_hours']))
-                except Exception:
-                    logger.debug("Estimated hours field not found")
-            
-            # Set progress
-            if kwargs.get('done_ratio') is not None:
-                try:
-                    progress_select = self.driver.find_element(By.ID, "issue_done_ratio")
-                    from selenium.webdriver.support.ui import Select
-                    select = Select(progress_select)
-                    select.select_by_value(str(kwargs['done_ratio']))
-                except Exception:
-                    logger.debug("Progress field not found or invalid value")
             
             # Submit the form
             try:
