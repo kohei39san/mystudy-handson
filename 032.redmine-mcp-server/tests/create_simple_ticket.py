@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Check available trackers for the project
+Create a simple ticket without validation to test basic functionality
 """
 
 import os
@@ -15,8 +15,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from redmine_selenium import RedmineSeleniumScraper
 
-def check_trackers():
-    """Check available trackers"""
+def create_simple_ticket():
+    """Create a simple ticket"""
     
     # Get credentials from environment
     username = os.getenv('REDMINE_USERNAME')
@@ -31,19 +31,20 @@ def check_trackers():
             print(f"Login failed: {login_result['message']}")
             return
         
-        # Get available trackers
-        project_id = 'hoge-project'
-        trackers_result = scraper.get_available_trackers(project_id)
+        # Create ticket with minimal parameters
+        create_result = scraper.create_issue(
+            project_id='hoge-project',
+            subject='テストチケット - 修正トラッカー'
+        )
         
-        if trackers_result['success']:
-            print(f"Available trackers for project {project_id}:")
-            for tracker in trackers_result['trackers']:
-                print(f"  ID: {tracker['value']} - Name: {tracker['text']}")
+        if create_result['success']:
+            print(f"OK 作成成功: チケット#{create_result['issue_id']}")
+            print(f"URL: {create_result['issue_url']}")
         else:
-            print(f"Failed to get trackers: {trackers_result['message']}")
+            print(f"NG 作成失敗: {create_result['message']}")
         
     finally:
         scraper.logout()
 
 if __name__ == "__main__":
-    check_trackers()
+    create_simple_ticket()

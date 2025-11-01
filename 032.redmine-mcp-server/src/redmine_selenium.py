@@ -2239,21 +2239,16 @@ class RedmineSeleniumScraper:
             Dict with validation result
         """
         try:
-            # Get tracker fields for the project to see available trackers
-            tracker_fields_result = self.get_tracker_fields(project_id)
+            # Get available trackers for the project
+            trackers_result = self.get_available_trackers(project_id)
             
-            if not tracker_fields_result.get('success'):
+            if not trackers_result.get('success'):
                 return {
                     'valid': False,
-                    'message': f"Could not get tracker options for project {project_id}: {tracker_fields_result.get('message')}"
+                    'message': f"Could not get tracker options for project {project_id}: {trackers_result.get('message')}"
                 }
             
-            # Find tracker field and its options
-            tracker_options = []
-            for field in tracker_fields_result.get('fields', []):
-                if field.get('id') == 'issue_tracker_id':
-                    tracker_options = field.get('options', [])
-                    break
+            tracker_options = trackers_result.get('trackers', [])
             
             if not tracker_options:
                 return {
@@ -2289,56 +2284,7 @@ class RedmineSeleniumScraper:
                 'message': f"Tracker validation failed: {str(e)}"
             }
     
-    def _validate_tracker(self, tracker_id: str) -> Dict[str, Any]:
-        """
-        Validate if tracker_id is available
-        
-        Args:
-            tracker_id: Tracker ID or name to validate
-            
-        Returns:
-            Dict with validation result
-        """
-        try:
-            # Get available trackers
-            trackers_result = self.get_available_trackers()
-            
-            if not trackers_result.get('success'):
-                return {
-                    'valid': False,
-                    'message': f"Could not validate tracker: {trackers_result.get('message')}"
-                }
-            
-            available_trackers = trackers_result.get('trackers', [])
-            
-            # Check if requested tracker is available
-            requested_tracker = str(tracker_id)
-            tracker_found = False
-            
-            for tracker in available_trackers:
-                if (tracker['value'] == requested_tracker or 
-                    tracker['text'] == requested_tracker or
-                    tracker['text'].lower() == requested_tracker.lower()):
-                    tracker_found = True
-                    break
-            
-            if tracker_found:
-                return {'valid': True}
-            else:
-                available_options = [f"{t['value']}:{t['text']}" for t in available_trackers]
-                return {
-                    'valid': False,
-                    'message': f"Tracker '{requested_tracker}' is not available. Available trackers: {', '.join(available_options)}",
-                    'available_trackers': available_trackers
-                }
-                
-        except Exception as e:
-            logger.debug(f"Error validating tracker: {e}")
-            return {
-                'valid': True,  # Allow search to proceed if validation fails
-                'message': f"Tracker validation failed: {str(e)}"
-            }
-    
+
     def __del__(self):
         """Cleanup when object is destroyed"""
         if self.driver:
