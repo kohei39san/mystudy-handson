@@ -363,7 +363,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_get_projects(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -381,7 +381,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_logout(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -391,7 +391,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_get_server_info(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -439,7 +439,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_get_issue_details(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -465,7 +465,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_get_available_trackers(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -485,7 +485,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_get_creation_statuses(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -512,7 +512,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_get_available_statuses(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -538,7 +538,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_get_tracker_fields(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -571,7 +571,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_create_issue(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -623,7 +623,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_update_issue(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -658,7 +658,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
     
     async def _handle_get_project_members(self, arguments: Dict[str, Any]) -> List[TextContent]:
@@ -684,7 +684,7 @@ class RedmineMCPServer:
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, ensure_ascii=False, indent=2)
+            text=str(result)
         )]
 
     async def run(self):
