@@ -1575,6 +1575,83 @@ class RedmineSeleniumScraper:
         
         return False
     
+    def get_creation_statuses(self, project_id: str, tracker_id: str) -> Dict[str, Any]:
+        """
+        Get available status options from new issue creation page for a specific tracker
+        
+        Args:
+            project_id: Project ID
+            tracker_id: Tracker ID
+            
+        Returns:
+            Dict with available status options for creation
+        """
+        if not self.is_authenticated or not self.driver:
+            return {
+                'success': False,
+                'message': 'Not authenticated. Please login first.',
+                'statuses': []
+            }
+        
+        try:
+            logger.info(f"Getting creation statuses for project {project_id}, tracker {tracker_id}")
+            
+            # Navigate to new issue page with tracker_id
+            new_issue_url = f"{config.base_url}/projects/{project_id}/issues/new?issue[tracker_id]={tracker_id}"
+            self.driver.get(new_issue_url)
+            
+            # Wait for page to load
+            time.sleep(2)
+            
+            # Check if redirected to login page
+            if 'login' in self.driver.current_url.lower():
+                logger.warning("Redirected to login page - session expired")
+                self.is_authenticated = False
+                return {
+                    'success': False,
+                    'message': 'Session expired. Please login again.',
+                    'statuses': []
+                }
+            
+            # Get status options
+            try:
+                status_select = self.driver.find_element(By.ID, "issue_status_id")
+                from selenium.webdriver.support.ui import Select
+                select = Select(status_select)
+                
+                available_statuses = []
+                for option in select.options:
+                    value = option.get_attribute('value')
+                    text = option.text.strip()
+                    if value:  # Skip empty values
+                        available_statuses.append({
+                            'value': value,
+                            'text': text
+                        })
+                
+                logger.info(f"Found {len(available_statuses)} creation statuses")
+                
+                return {
+                    'success': True,
+                    'message': f'Found {len(available_statuses)} creation statuses for tracker {tracker_id}',
+                    'statuses': available_statuses
+                }
+                
+            except NoSuchElementException:
+                return {
+                    'success': False,
+                    'message': 'Status field not found on new issue page.',
+                    'statuses': []
+                }
+            
+        except Exception as e:
+            logger.error(f"Error getting creation statuses: {e}")
+            return {
+                'success': False,
+                'message': f"Error getting creation statuses: {str(e)}",
+                'statuses': []
+            }
+    
     def get_available_statuses(self, issue_id: str) -> Dict[str, Any]:
         """
         Get available status options for a specific issue

@@ -196,6 +196,24 @@ class RedmineMCPServer:
                     }
                 ),
                 Tool(
+                    name="get_creation_statuses",
+                    description="Get available status options from new issue creation page for a specific tracker",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_id": {
+                                "type": "string",
+                                "description": "Project ID"
+                            },
+                            "tracker_id": {
+                                "type": "string",
+                                "description": "Tracker ID"
+                            }
+                        },
+                        "required": ["project_id", "tracker_id"]
+                    }
+                ),
+                Tool(
                     name="get_available_statuses",
                     description="Get available status options for a specific issue",
                     inputSchema={
@@ -305,6 +323,8 @@ class RedmineMCPServer:
                     return await self._handle_get_issue_details(arguments)
                 elif name == "get_available_trackers":
                     return await self._handle_get_available_trackers(arguments)
+                elif name == "get_creation_statuses":
+                    return await self._handle_get_creation_statuses(arguments)
                 elif name == "get_available_statuses":
                     return await self._handle_get_available_statuses(arguments)
                 elif name == "get_tracker_fields":
@@ -586,6 +606,51 @@ class RedmineMCPServer:
                 response_text += f"- search_issues(tracker_id='課題')\n"
             else:
                 response_text += "No tracker options available.\n"
+        else:
+            response_text = f"[ERROR] {result['message']}"
+        
+        return [TextContent(
+            type="text",
+            text=response_text
+        )]
+    
+    async def _handle_get_creation_statuses(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle get creation statuses tool call"""
+        project_id = arguments.get("project_id")
+        tracker_id = arguments.get("tracker_id")
+        
+        if not project_id or not tracker_id:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Both project ID and tracker ID are required"
+            )]
+        
+        logger.info(f"Getting creation statuses for project {project_id}, tracker {tracker_id}")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        result = self.scraper.get_creation_statuses(project_id, tracker_id)
+        
+        if result["success"]:
+            statuses = result["statuses"]
+            response_text = f"[SUCCESS] {result['message']}\n\n"
+            response_text += "**Available Creation Statuses:**\n"
+            response_text += "=" * 40 + "\n"
+            
+            if statuses:
+                for i, status in enumerate(statuses, 1):
+                    response_text += f"{i}. **{status['text']}** (ID: {status['value']})\n"
+                
+                response_text += "\n**Usage:**\n"
+                response_text += "Use either the ID or text when creating issues:\n"
+                response_text += f"- create_issue(project_id='{project_id}', tracker_id='{tracker_id}', fields={{'issue_status_id': '1'}})\n"
+            else:
+                response_text += "No status options available for this tracker.\n"
         else:
             response_text = f"[ERROR] {result['message']}"
         
