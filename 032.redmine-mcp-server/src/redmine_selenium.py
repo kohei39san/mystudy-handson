@@ -1338,64 +1338,52 @@ class RedmineSeleniumScraper:
                     from selenium.webdriver.support.ui import Select
                     select = Select(tracker_select)
                     select.select_by_value(str(tracker_id))
-                    time.sleep(1)  # Wait for page to update
+                    time.sleep(2)  # Wait for page to update and show tracker-specific fields
                 except Exception as e:
                     logger.debug(f"Could not set tracker: {e}")
             
             fields = []
             
-            # Get all form fields
-            form_fields = [
-                ('issue_tracker_id', 'select', 'Tracker'),
-                ('issue_subject', 'input', 'Subject'),
-                ('issue_description', 'textarea', 'Description'),
-                ('issue_status_id', 'select', 'Status'),
-                ('issue_priority_id', 'select', 'Priority'),
-                ('issue_assigned_to_id', 'select', 'Assignee'),
-                ('issue_category_id', 'select', 'Category'),
-                ('issue_fixed_version_id', 'select', 'Target version'),
-                ('issue_parent_issue_id', 'input', 'Parent task'),
-                ('issue_start_date', 'input', 'Start date'),
-                ('issue_due_date', 'input', 'Due date'),
-                ('issue_estimated_hours', 'input', 'Estimated time'),
-                ('issue_done_ratio', 'select', '% Done')
-            ]
+            # Scan all form elements dynamically
+            form_elements = self.driver.find_elements(By.CSS_SELECTOR, "input, select, textarea")
             
-            for field_id, field_type, field_label in form_fields:
+            for element in form_elements:
                 try:
-                    element = self.driver.find_element(By.ID, field_id)
+                    element_id = element.get_attribute('id')
+                    element_name = element.get_attribute('name')
+                    element_type = element.get_attribute('type') or element.tag_name
+                    
+                    # Skip elements without ID or name, or system elements
+                    if not element_id and not element_name:
+                        continue
+                    if element_id and element_id.startswith(('utf8', 'authenticity_token', 'commit')):
+                        continue
+                    
+                    # Use ID if available, otherwise use name
+                    field_id = element_id or element_name
+                    
+                    # Skip if already processed
+                    if any(f['id'] == field_id for f in fields):
+                        continue
+                    
+                    # Get field label
+                    field_label = self._get_field_label(element, field_id)
                     
                     # Check if field is required
-                    is_required = False
+                    is_required = self._is_field_required(element, field_id)
                     
-                    # Method 1: Check required attribute
-                    if element.get_attribute('required'):
-                        is_required = True
-                    
-                    # Method 2: Check for required class or parent label
-                    try:
-                        # Find associated label
-                        label = self.driver.find_element(By.CSS_SELECTOR, f"label[for='{field_id}']")
-                        if label.find_elements(By.CSS_SELECTOR, ".required, .req"):
-                            is_required = True
-                        # Check for asterisk in label text
-                        if '*' in label.text:
-                            is_required = True
-                    except:
-                        pass
-                    
-                    # Get field properties
+                    # Determine field type and get additional properties
                     field_info = {
                         'id': field_id,
                         'name': field_label,
-                        'type': field_type,
+                        'type': element_type,
                         'required': is_required,
                         'visible': element.is_displayed(),
                         'enabled': element.is_enabled()
                     }
                     
                     # Get additional properties based on field type
-                    if field_type == 'select':
+                    if element_type == 'select':
                         try:
                             from selenium.webdriver.support.ui import Select
                             select = Select(element)
@@ -1403,87 +1391,77 @@ class RedmineSeleniumScraper:
                             for option in select.options:
                                 value = option.get_attribute('value')
                                 text = option.text.strip()
-                                if value:  # Skip empty values
-                                    options.append({'value': value, 'text': text})
+                                if value or text:  # Include options with value or text
+                                    options.append({'value': value or '', 'text': text})
                             field_info['options'] = options
+                            field_info['value_type'] = 'select'
                         except:
                             field_info['options'] = []
+                            field_info['value_type'] = 'select'
                     
-                    elif field_type == 'input':
+                    elif element_type in ['input', 'text', 'number', 'date', 'email', 'url']:
                         input_type = element.get_attribute('type') or 'text'
                         field_info['input_type'] = input_type
+                        field_info['value_type'] = input_type
                         
                         # Get placeholder if available
                         placeholder = element.get_attribute('placeholder')
                         if placeholder:
                             field_info['placeholder'] = placeholder
+                            
+                        # Get min/max for number fields
+                        if input_type in ['number', 'range']:
+                            min_val = element.get_attribute('min')
+                            max_val = element.get_attribute('max')
+                            if min_val:
+                                field_info['min'] = min_val
+                            if max_val:
+                                field_info['max'] = max_val
+                    
+                    elif element_type == 'textarea':
+                        field_info['value_type'] = 'text'
+                        rows = element.get_attribute('rows')
+                        cols = element.get_attribute('cols')
+                        if rows:
+                            field_info['rows'] = rows
+                        if cols:
+                            field_info['cols'] = cols
+                    
+                    elif element_type in ['checkbox', 'radio']:
+                        field_info['value_type'] = 'boolean' if element_type == 'checkbox' else 'choice'
+                    
+                    else:
+                        field_info['value_type'] = 'string'
+                    
+                    # Mark custom fields
+                    if field_id and ('custom_field' in field_id or field_id.startswith('issue_custom_field')):
+                        field_info['custom'] = True
+                    else:
+                        field_info['custom'] = False
                     
                     fields.append(field_info)
-                    logger.debug(f"Found field: {field_label} ({field_type}) - Required: {is_required}")
+                    logger.debug(f"Found field: {field_label} ({element_type}) - Required: {is_required}")
                     
-                except NoSuchElementException:
-                    logger.debug(f"Field {field_id} not found")
-                    continue
                 except Exception as e:
-                    logger.debug(f"Error processing field {field_id}: {e}")
+                    logger.debug(f"Error processing element: {e}")
                     continue
-            
-            # Get custom fields
-            try:
-                custom_fields = self.driver.find_elements(By.CSS_SELECTOR, "[id^='issue_custom_field_values_']")
-                for cf in custom_fields:
-                    cf_id = cf.get_attribute('id')
-                    cf_name = cf.get_attribute('name')
-                    
-                    # Try to find label
-                    cf_label = "Custom Field"
-                    try:
-                        label = self.driver.find_element(By.CSS_SELECTOR, f"label[for='{cf_id}']")
-                        cf_label = label.text.strip().replace('*', '').strip()
-                    except:
-                        pass
-                    
-                    # Check if required
-                    is_required = bool(cf.get_attribute('required'))
-                    try:
-                        label = self.driver.find_element(By.CSS_SELECTOR, f"label[for='{cf_id}']")
-                        if '*' in label.text or label.find_elements(By.CSS_SELECTOR, ".required"):
-                            is_required = True
-                    except:
-                        pass
-                    
-                    cf_type = cf.tag_name.lower()
-                    if cf_type == 'input':
-                        cf_type = cf.get_attribute('type') or 'text'
-                    
-                    field_info = {
-                        'id': cf_id,
-                        'name': cf_label,
-                        'type': cf_type,
-                        'required': is_required,
-                        'visible': cf.is_displayed(),
-                        'enabled': cf.is_enabled(),
-                        'custom': True
-                    }
-                    
-                    fields.append(field_info)
-                    logger.debug(f"Found custom field: {cf_label} ({cf_type}) - Required: {is_required}")
-                    
-            except Exception as e:
-                logger.debug(f"Error getting custom fields: {e}")
             
             # Separate required and optional fields
             required_fields = [f for f in fields if f['required']]
             optional_fields = [f for f in fields if not f['required']]
+            custom_fields = [f for f in fields if f.get('custom', False)]
+            standard_fields = [f for f in fields if not f.get('custom', False)]
             
-            logger.info(f"Found {len(required_fields)} required fields and {len(optional_fields)} optional fields")
+            logger.info(f"Found {len(fields)} total fields: {len(required_fields)} required, {len(optional_fields)} optional, {len(custom_fields)} custom")
             
             return {
                 'success': True,
-                'message': f'Found {len(fields)} fields ({len(required_fields)} required, {len(optional_fields)} optional)',
+                'message': f'Found {len(fields)} fields ({len(required_fields)} required, {len(optional_fields)} optional, {len(custom_fields)} custom)',
                 'fields': fields,
                 'required_fields': required_fields,
                 'optional_fields': optional_fields,
+                'custom_fields': custom_fields,
+                'standard_fields': standard_fields,
                 'tracker_id': tracker_id
             }
             
@@ -1494,6 +1472,68 @@ class RedmineSeleniumScraper:
                 'message': f"Error getting tracker fields: {str(e)}",
                 'fields': []
             }
+    
+    def _get_field_label(self, element, field_id: str) -> str:
+        """Get field label from various sources"""
+        try:
+            # Method 1: Look for label with for attribute
+            label = self.driver.find_element(By.CSS_SELECTOR, f"label[for='{field_id}']")
+            label_text = label.text.strip().replace('*', '').strip()
+            if label_text:
+                return label_text
+        except:
+            pass
+        
+        try:
+            # Method 2: Look for parent label
+            parent = element.find_element(By.XPATH, "..")
+            label = parent.find_element(By.TAG_NAME, "label")
+            label_text = label.text.strip().replace('*', '').strip()
+            if label_text:
+                return label_text
+        except:
+            pass
+        
+        try:
+            # Method 3: Look for preceding label
+            label = element.find_element(By.XPATH, "preceding-sibling::label[1]")
+            label_text = label.text.strip().replace('*', '').strip()
+            if label_text:
+                return label_text
+        except:
+            pass
+        
+        # Method 4: Use field ID as fallback
+        if field_id:
+            return field_id.replace('issue_', '').replace('_', ' ').title()
+        
+        return "Unknown Field"
+    
+    def _is_field_required(self, element, field_id: str) -> bool:
+        """Check if field is required"""
+        # Method 1: Check required attribute
+        if element.get_attribute('required'):
+            return True
+        
+        try:
+            # Method 2: Check for required class or asterisk in label
+            label = self.driver.find_element(By.CSS_SELECTOR, f"label[for='{field_id}']")
+            if label.find_elements(By.CSS_SELECTOR, ".required, .req"):
+                return True
+            if '*' in label.text:
+                return True
+        except:
+            pass
+        
+        try:
+            # Method 3: Check parent container for required class
+            parent = element.find_element(By.XPATH, "..")
+            if 'required' in parent.get_attribute('class') or '':
+                return True
+        except:
+            pass
+        
+        return False
     
     def get_available_statuses(self, issue_id: str) -> Dict[str, Any]:
         """
