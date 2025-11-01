@@ -415,6 +415,172 @@ class RedmineSeleniumScraper:
                 'projects': []
             }
     
+    def get_project_members(self, project_id: str) -> Dict[str, Any]:
+        """
+        Get project members from project settings page
+        
+        Args:
+            project_id: Project ID to get members for
+            
+        Returns:
+            Dict with project members list
+        """
+        if not self.is_authenticated or not self.driver:
+            return {
+                'success': False,
+                'message': 'Not authenticated. Please login first.',
+                'members': []
+            }
+        
+        try:
+            logger.info(f"Getting project members for project: {project_id}")
+            
+            # Navigate to project members page
+            members_url = f"{config.base_url}/projects/{project_id}/settings/members"
+            self.driver.get(members_url)
+            
+            # Wait for page to load
+            time.sleep(2)
+            
+            # Check if redirected to login page
+            if 'login' in self.driver.current_url.lower():
+                logger.warning("Redirected to login page - session expired")
+                self.is_authenticated = False
+                return {
+                    'success': False,
+                    'message': 'Session expired. Please login again.',
+                    'members': []
+                }
+            
+            # Check if members page is accessible
+            if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
+                return {
+                    'success': False,
+                    'message': f'Project {project_id} not found or members page not accessible.',
+                    'members': []
+                }
+            
+            members = []
+            
+            # Look for members table
+            try:
+                # Try multiple selectors for members table
+                table_selectors = [
+                    "table.members",
+                    "table.list",
+                    "#tab-content-members table",
+                    ".members table",
+                    "table"
+                ]
+                
+                members_table = None
+                for selector in table_selectors:
+                    try:
+                        tables = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                        for table in tables:
+                            # Check if this table contains member data
+                            member_rows = table.find_elements(By.TAG_NAME, "tr")
+                            if len(member_rows) > 1:  # Has header + data rows
+                                members_table = table
+                                logger.debug(f"Found members table with selector: {selector}")
+                                break
+                        if members_table:
+                            break
+                    except Exception:
+                        continue
+                
+                if members_table:
+                    rows = members_table.find_elements(By.TAG_NAME, "tr")
+                    logger.debug(f"Found {len(rows)} rows in members table")
+                    
+                    # Skip header row - look for rows with td elements
+                    for row in rows[1:]:
+                        cells = row.find_elements(By.TAG_NAME, "td")
+                        if len(cells) >= 2:  # At least user and role columns
+                            try:
+                                member_info = {}
+                                
+                                # Extract user name (usually first column)
+                                user_cell = cells[0]
+                                user_link = user_cell.find_element(By.TAG_NAME, "a")
+                                member_info['name'] = user_link.text.strip()
+                                
+                                # Extract user ID from link
+                                user_href = user_link.get_attribute("href")
+                                user_id_match = re.search(r'/users/(\d+)', user_href)
+                                if user_id_match:
+                                    member_info['id'] = user_id_match.group(1)
+                                
+                                # Extract roles (usually second column)
+                                if len(cells) > 1:
+                                    roles_text = cells[1].text.strip()
+                                    member_info['roles'] = [role.strip() for role in roles_text.split(',') if role.strip()]
+                                
+                                # Extract additional info if available
+                                if len(cells) > 2:
+                                    member_info['additional_info'] = cells[2].text.strip()
+                                
+                                members.append(member_info)
+                                logger.debug(f"Added member: {member_info['name']} (ID: {member_info.get('id', 'unknown')})")
+                                
+                            except Exception as e:
+                                logger.debug(f"Error processing member row: {e}")
+                                continue
+                
+                else:
+                    logger.debug("No members table found")
+                    
+            except Exception as e:
+                logger.debug(f"Error processing members table: {e}")
+            
+            # Alternative method: look for member links directly
+            if not members:
+                try:
+                    member_links = self.driver.find_elements(By.CSS_SELECTOR, "a[href*='/users/']")
+                    logger.debug(f"Found {len(member_links)} user links on page")
+                    
+                    seen_ids = set()
+                    for link in member_links:
+                        try:
+                            href = link.get_attribute("href")
+                            user_id_match = re.search(r'/users/(\d+)', href)
+                            if user_id_match:
+                                user_id = user_id_match.group(1)
+                                if user_id not in seen_ids:
+                                    seen_ids.add(user_id)
+                                    
+                                    user_name = link.text.strip()
+                                    if user_name:  # Skip empty links
+                                        members.append({
+                                            'id': user_id,
+                                            'name': user_name,
+                                            'roles': []
+                                        })
+                                        logger.debug(f"Added member from link: {user_name} (ID: {user_id})")
+                        except Exception as e:
+                            logger.debug(f"Error processing member link: {e}")
+                            continue
+                            
+                except Exception as e:
+                    logger.debug(f"Error finding member links: {e}")
+            
+            logger.info(f"Found {len(members)} project members")
+            
+            return {
+                'success': True,
+                'message': f'Successfully retrieved {len(members)} project members',
+                'members': members,
+                'project_id': project_id
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting project members: {e}")
+            return {
+                'success': False,
+                'message': f"Error getting project members: {str(e)}",
+                'members': []
+            }
+    
     def logout(self) -> Dict[str, Any]:
         """
         Logout from Redmine and close browser
@@ -1652,14 +1818,57 @@ class RedmineSeleniumScraper:
             
             # Set subject (required)
             if kwargs.get('subject'):
-                try:
-                    subject_field = self.driver.find_element(By.ID, "issue_subject")
-                    subject_field.clear()
-                    subject_field.send_keys(kwargs['subject'])
-                except Exception as e:
+                subject_set = False
+                subject_selectors = [
+                    "#issue_subject",
+                    "input[name='issue[subject]']",
+                    "input[id*='subject']",
+                    "input[name*='subject']"
+                ]
+                
+                for selector in subject_selectors:
+                    try:
+                        subject_field = self.driver.find_element(By.CSS_SELECTOR, selector)
+                        subject_field.clear()
+                        subject_field.send_keys(kwargs['subject'])
+                        subject_set = True
+                        logger.debug(f"Subject set using selector: {selector}")
+                        break
+                    except Exception as e:
+                        logger.debug(f"Subject selector {selector} failed: {e}")
+                        continue
+                
+                if not subject_set:
+                    # Debug: Log all input fields on the page
+                    logger.debug("=== DEBUG: All input fields on page ===")
+                    all_inputs = self.driver.find_elements(By.TAG_NAME, "input")
+                    for i, inp in enumerate(all_inputs):
+                        inp_id = inp.get_attribute('id') or 'no-id'
+                        inp_name = inp.get_attribute('name') or 'no-name'
+                        inp_type = inp.get_attribute('type') or 'no-type'
+                        inp_class = inp.get_attribute('class') or 'no-class'
+                        logger.debug(f"Input {i}: id='{inp_id}', name='{inp_name}', type='{inp_type}', class='{inp_class}'")
+                    
+                    # Try to find any input that might be the subject field
+                    logger.debug("=== Trying alternative subject field detection ===")
+                    for inp in all_inputs:
+                        inp_id = inp.get_attribute('id') or ''
+                        inp_name = inp.get_attribute('name') or ''
+                        if ('subject' in inp_id.lower() or 'subject' in inp_name.lower()):
+                            try:
+                                inp.clear()
+                                inp.send_keys(kwargs['subject'])
+                                subject_set = True
+                                logger.debug(f"Subject set using alternative detection: id='{inp_id}', name='{inp_name}'")
+                                break
+                            except Exception as e:
+                                logger.debug(f"Alternative subject field failed: {e}")
+                                continue
+                
+                if not subject_set:
                     return {
                         'success': False,
-                        'message': f"Error setting subject: {str(e)}"
+                        'message': f"Could not find subject field. Tried selectors: {', '.join(subject_selectors)}"
                     }
             
             # Set description
@@ -2043,6 +2252,13 @@ class RedmineSeleniumScraper:
                 
                 if field_name not in field_map:
                     invalid_fields.append(f"{field_name} (not available for this tracker)")
+                    continue
+                
+                # Special validation for assignee field
+                if field_name in ['assigned_to_id', 'assignee'] and field_value:
+                    assignee_validation = self._validate_assignee(project_id, field_value)
+                    if not assignee_validation['valid']:
+                        invalid_fields.append(f"{field_name}: {assignee_validation['message']}")
             
             if invalid_fields:
                 available_fields = [k for k in field_map.keys() if not k.startswith('issue_')]
@@ -2058,6 +2274,62 @@ class RedmineSeleniumScraper:
             return {
                 'valid': True,  # Allow operation to proceed if validation fails
                 'message': f"Validation error: {str(e)}"
+            }
+    
+    def _validate_assignee(self, project_id: str, assignee_value: str) -> Dict[str, Any]:
+        """
+        Validate if assignee exists in project members
+        
+        Args:
+            project_id: Project ID
+            assignee_value: Assignee ID or name to validate
+            
+        Returns:
+            Dict with validation result
+        """
+        try:
+            # Skip validation for special values
+            if assignee_value.lower() in ['me', 'myself', '']:
+                return {'valid': True}
+            
+            # Get project members
+            members_result = self.get_project_members(project_id)
+            
+            if not members_result.get('success'):
+                logger.debug(f"Could not get project members for assignee validation: {members_result.get('message')}")
+                return {'valid': True}  # Allow if we can't validate
+            
+            members = members_result.get('members', [])
+            assignee_str = str(assignee_value)
+            
+            # Check if assignee exists (by ID or name)
+            for member in members:
+                if (member.get('id') == assignee_str or 
+                    member.get('name', '').lower() == assignee_str.lower()):
+                    return {'valid': True}
+            
+            # Create list of available assignees
+            available_assignees = []
+            for member in members:
+                if member.get('id') and member.get('name'):
+                    available_assignees.append(f"{member['name']} (ID: {member['id']})")
+            
+            if available_assignees:
+                return {
+                    'valid': False,
+                    'message': f"Assignee '{assignee_value}' not found in project members. Available: {', '.join(available_assignees[:5])}{'...' if len(available_assignees) > 5 else ''}"
+                }
+            else:
+                return {
+                    'valid': False,
+                    'message': f"Assignee '{assignee_value}' not found (no project members available)"
+                }
+                
+        except Exception as e:
+            logger.debug(f"Error validating assignee: {e}")
+            return {
+                'valid': True,  # Allow operation to proceed if validation fails
+                'message': f"Assignee validation failed: {str(e)}"
             }
     
     def _validate_tracker_for_project(self, project_id: str, tracker_id: str) -> Dict[str, Any]:

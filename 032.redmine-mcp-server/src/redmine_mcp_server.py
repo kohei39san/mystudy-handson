@@ -254,6 +254,20 @@ class RedmineMCPServer:
                         },
                         "required": ["issue_id"]
                     }
+                ),
+                Tool(
+                    name="get_project_members",
+                    description="Get project members from project settings page",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_id": {
+                                "type": "string",
+                                "description": "Project ID to get members for"
+                            }
+                        },
+                        "required": ["project_id"]
+                    }
                 )
             ]
         
@@ -283,6 +297,8 @@ class RedmineMCPServer:
                     return await self._handle_create_issue(arguments)
                 elif name == "update_issue":
                     return await self._handle_update_issue(arguments)
+                elif name == "get_project_members":
+                    return await self._handle_get_project_members(arguments)
                 else:
                     return [TextContent(
                         type="text",
@@ -812,6 +828,57 @@ class RedmineMCPServer:
                 response_text += "**Updated Fields:**\n"
                 for field in result['updated_fields']:
                     response_text += f"- {field}\n"
+        else:
+            response_text = f"[ERROR] {result['message']}"
+        
+        return [TextContent(
+            type="text",
+            text=response_text
+        )]
+    
+    async def _handle_get_project_members(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle get project members tool call"""
+        project_id = arguments.get("project_id")
+        
+        if not project_id:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Project ID is required"
+            )]
+        
+        logger.info(f"Getting project members for project: {project_id}")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        result = self.scraper.get_project_members(project_id)
+        
+        if result["success"]:
+            members = result["members"]
+            response_text = f"[SUCCESS] {result['message']}\n\n"
+            
+            if not members:
+                response_text += "No members found for this project."
+            else:
+                response_text += "**Project Members:**\n"
+                response_text += "=" * 40 + "\n"
+                
+                for i, member in enumerate(members, 1):
+                    response_text += f"{i}. **{member.get('name', 'Unknown')}**\n"
+                    if member.get('id'):
+                        response_text += f"   User ID: {member['id']}\n"
+                    if member.get('roles'):
+                        roles_text = ", ".join(member['roles'])
+                        response_text += f"   Roles: {roles_text}\n"
+                    if member.get('additional_info'):
+                        response_text += f"   Additional Info: {member['additional_info']}\n"
+                    response_text += "\n"
+                
+                response_text += f"**Summary:** {len(members)} member(s) found"
         else:
             response_text = f"[ERROR] {result['message']}"
         
