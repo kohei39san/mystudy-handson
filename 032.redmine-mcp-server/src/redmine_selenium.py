@@ -1149,11 +1149,32 @@ class RedmineSeleniumScraper:
             
             # Extract issue details
             try:
-                # Subject
-                subject_elem = self.driver.find_element(By.CSS_SELECTOR, "h2, .subject h3, .issue .subject")
-                issue_details['subject'] = subject_elem.text.strip()
-            except NoSuchElementException:
-                pass
+                # Subject - try new HTML structure first
+                subject_selectors = [
+                    ".subject[data-sticky-issue-header-target='original'] h3",  # New structure
+                    "h2.inline-block",  # Tracker with ID structure
+                    "h2, .subject h3, .issue .subject"  # Fallback to old selectors
+                ]
+                
+                for selector in subject_selectors:
+                    try:
+                        subject_elem = self.driver.find_element(By.CSS_SELECTOR, selector)
+                        subject_text = subject_elem.text.strip()
+                        
+                        # Extract tracker info from h2.inline-block format
+                        if selector == "h2.inline-block" and not issue_details.get('tracker'):
+                            tracker_match = re.match(r'^([^#]+)\s*#\d+', subject_text)
+                            if tracker_match:
+                                issue_details['tracker'] = tracker_match.group(1).strip()
+                        
+                        if subject_text:
+                            issue_details['subject'] = subject_text
+                            break
+                    except NoSuchElementException:
+                        continue
+                        
+            except Exception as e:
+                logger.debug(f"Error extracting subject: {e}")
             
             # Status, Priority, Assignee, etc. from the details table
             try:
@@ -1195,7 +1216,10 @@ class RedmineSeleniumScraper:
                                 elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
                                 for elem in elements:
                                     text = elem.text.strip()
-                                    if text and len(text) > 0:
+                                    # Clean text - take only the first line if it's multi-line
+                                    if '\n' in text:
+                                        text = text.split('\n')[0].strip()
+                                    if text and len(text) > 0 and len(text) < 100:  # Reasonable length
                                         issue_details[field_key] = text
                                         logger.debug(f"Found {field_key} via direct selector: {text}")
                                         break
@@ -1211,6 +1235,10 @@ class RedmineSeleniumScraper:
                         if len(cells) >= 2:
                             field_name = cells[0].text.strip().lower().replace(':', '')
                             field_value = cells[1].text.strip()
+                            
+                            # Clean field value - take only the first line if it's multi-line
+                            if '\n' in field_value:
+                                field_value = field_value.split('\n')[0].strip()
                             
                             logger.debug(f"Field: '{field_name}' = '{field_value}'")
                             
@@ -1289,7 +1317,11 @@ class RedmineSeleniumScraper:
             # Created and Updated dates
             try:
                 created_elem = self.driver.find_element(By.CSS_SELECTOR, ".created-on, .author")
-                issue_details['created_on'] = created_elem.text.strip()
+                created_text = created_elem.text.strip()
+                # Clean created text - take only the first line if it's multi-line
+                if '\n' in created_text:
+                    created_text = created_text.split('\n')[0].strip()
+                issue_details['created_on'] = created_text
             except NoSuchElementException:
                 pass
             
