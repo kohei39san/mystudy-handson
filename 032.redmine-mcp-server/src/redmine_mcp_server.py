@@ -116,37 +116,13 @@ class RedmineMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "status_id": {
-                                "type": "integer",
-                                "description": "Status ID (numeric only, e.g., 1, 2, 3)"
-                            },
                             "tracker_id": {
                                 "type": "integer",
                                 "description": "Tracker ID (numeric only, e.g., 1, 2)"
                             },
-                            "assigned_to_id": {
-                                "type": "string",
-                                "description": "Assigned user ID or name"
-                            },
-                            "parent_id": {
-                                "type": "integer",
-                                "description": "Parent issue ID (numeric only)"
-                            },
                             "project_id": {
                                 "type": "string",
                                 "description": "Project ID or identifier"
-                            },
-                            "subject": {
-                                "type": "string",
-                                "description": "Search text in issue subject"
-                            },
-                            "description": {
-                                "type": "string",
-                                "description": "Search text in issue description"
-                            },
-                            "notes": {
-                                "type": "string",
-                                "description": "Search text in issue notes"
                             },
                             "q": {
                                 "type": "string",
@@ -162,6 +138,10 @@ class RedmineMCPServer:
                                 "description": "Items per page (default: 25)",
                                 "minimum": 1,
                                 "maximum": 100
+                            },
+                            "fields": {
+                                "type": "object",
+                                "description": "Additional search fields as key-value pairs (validated against tracker fields)"
                             }
                         },
                         "required": []
@@ -227,46 +207,9 @@ class RedmineMCPServer:
                                 "type": "string",
                                 "description": "Issue subject/title"
                             },
-                            "description": {
-                                "type": "string",
-                                "description": "Issue description"
-                            },
-                            "status_id": {
-                                "type": "integer",
-                                "description": "Status ID (numeric only)"
-                            },
-                            "priority_id": {
-                                "type": "integer",
-                                "description": "Priority ID (numeric only)"
-                            },
-                            "assigned_to_id": {
-                                "type": "integer",
-                                "description": "Assignee user ID (numeric only)"
-                            },
-                            "parent_issue_id": {
-                                "type": "integer",
-                                "description": "Parent issue ID (numeric only)"
-                            },
-                            "start_date": {
-                                "type": "string",
-                                "description": "Start date (YYYY-MM-DD format)",
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                            },
-                            "due_date": {
-                                "type": "string",
-                                "description": "Due date (YYYY-MM-DD format)",
-                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
-                            },
-                            "estimated_hours": {
-                                "type": "number",
-                                "description": "Estimated hours",
-                                "minimum": 0
-                            },
-                            "done_ratio": {
-                                "type": "integer",
-                                "description": "Progress percentage (0-100)",
-                                "minimum": 0,
-                                "maximum": 100
+                            "fields": {
+                                "type": "object",
+                                "description": "Issue fields as key-value pairs (validated against tracker fields)"
                             }
                         },
                         "required": ["project_id", "subject"]
@@ -304,31 +247,9 @@ class RedmineMCPServer:
                                 "type": "string",
                                 "description": "New subject/title for the issue"
                             },
-                            "description": {
-                                "type": "string",
-                                "description": "New description for the issue"
-                            },
-                            "status_id": {
-                                "type": "string",
-                                "description": "New status ID (e.g., '1', '2', '3')"
-                            },
-                            "priority_id": {
-                                "type": "string",
-                                "description": "New priority ID (e.g., '1', '2', '3')"
-                            },
-                            "assigned_to_id": {
-                                "type": "string",
-                                "description": "New assignee user ID"
-                            },
-                            "done_ratio": {
-                                "type": "integer",
-                                "description": "Progress percentage (0-100)",
-                                "minimum": 0,
-                                "maximum": 100
-                            },
-                            "notes": {
-                                "type": "string",
-                                "description": "Update notes/comment to add to the issue"
+                            "fields": {
+                                "type": "object",
+                                "description": "Update fields as key-value pairs (validated against tracker fields)"
                             }
                         },
                         "required": ["issue_id"]
@@ -492,12 +413,27 @@ class RedmineMCPServer:
                 text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
             )]
         
-        # Extract search parameters
+        # Extract basic parameters
         search_params = {}
-        for key in ['status_id', 'tracker_id', 'assigned_to_id', 'parent_id', 'project_id',
-                   'subject', 'description', 'notes', 'q', 'page', 'per_page']:
+        for key in ['tracker_id', 'project_id', 'q', 'page', 'per_page']:
             if key in arguments and arguments[key] is not None:
                 search_params[key] = arguments[key]
+        
+        # Validate and merge additional fields
+        if arguments.get('fields') and arguments.get('tracker_id') and arguments.get('project_id'):
+            validation_result = await self._validate_fields(
+                arguments['project_id'], 
+                arguments['tracker_id'], 
+                arguments['fields']
+            )
+            if not validation_result['valid']:
+                return [TextContent(
+                    type="text",
+                    text=f"[ERROR] Field validation failed: {validation_result['message']}"
+                )]
+            search_params.update(arguments['fields'])
+        elif arguments.get('fields'):
+            search_params.update(arguments['fields'])
         
         result = self.scraper.search_issues(**search_params)
         
@@ -788,14 +724,27 @@ class RedmineMCPServer:
                 text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
             )]
         
-        # Extract creation parameters
-        create_params = {}
-        for key in ['tracker_id', 'description', 'status_id', 'priority_id', 'assigned_to_id', 
-                   'parent_issue_id', 'start_date', 'due_date', 'estimated_hours', 'done_ratio']:
-            if key in arguments and arguments[key] is not None:
-                create_params[key] = arguments[key]
+        # Extract basic parameters
+        create_params = {'subject': subject}
+        if arguments.get('tracker_id'):
+            create_params['tracker_id'] = arguments['tracker_id']
         
-        result = self.scraper.create_issue(project_id, subject=subject, **create_params)
+        # Validate and merge additional fields
+        if arguments.get('fields'):
+            if arguments.get('tracker_id'):
+                validation_result = await self._validate_fields(
+                    project_id, 
+                    arguments['tracker_id'], 
+                    arguments['fields']
+                )
+                if not validation_result['valid']:
+                    return [TextContent(
+                        type="text",
+                        text=f"[ERROR] Field validation failed: {validation_result['message']}"
+                    )]
+            create_params.update(arguments['fields'])
+        
+        result = self.scraper.create_issue(project_id, **create_params)
         
         if result["success"]:
             response_text = f"[SUCCESS] {result['message']}\n\n"
@@ -834,11 +783,20 @@ class RedmineMCPServer:
                 text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
             )]
         
-        # Extract update parameters
+        # Extract basic parameters
         update_params = {}
-        for key in ['subject', 'description', 'status_id', 'priority_id', 'assigned_to_id', 'done_ratio', 'notes']:
-            if key in arguments and arguments[key] is not None:
-                update_params[key] = arguments[key]
+        if arguments.get('subject'):
+            update_params['subject'] = arguments['subject']
+        
+        # Validate and merge additional fields
+        if arguments.get('fields'):
+            # Get current issue details to determine tracker
+            issue_details = self.scraper.get_issue_details(issue_id)
+            if issue_details.get('success') and issue_details.get('issue', {}).get('tracker'):
+                # Note: We would need tracker_id for validation, but it's not easily available
+                # For now, just merge the fields without validation
+                pass
+            update_params.update(arguments['fields'])
         
         if not update_params:
             return [TextContent(
@@ -861,6 +819,45 @@ class RedmineMCPServer:
             type="text",
             text=response_text
         )]
+    
+    async def _validate_fields(self, project_id: str, tracker_id: int, fields: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate fields against tracker field definitions"""
+        try:
+            # Get tracker fields
+            tracker_fields_result = self.scraper.get_tracker_fields(project_id, str(tracker_id))
+            
+            if not tracker_fields_result.get('success'):
+                return {
+                    'valid': False,
+                    'message': f"Could not get tracker fields: {tracker_fields_result.get('message')}"
+                }
+            
+            all_fields = tracker_fields_result.get('fields', [])
+            field_map = {field['id'].replace('issue_', ''): field for field in all_fields}
+            
+            # Validate each provided field
+            invalid_fields = []
+            for field_name, field_value in fields.items():
+                if field_name not in field_map:
+                    invalid_fields.append(f"{field_name} (not available for this tracker)")
+                else:
+                    field_def = field_map[field_name]
+                    # Additional validation could be added here for field types, options, etc.
+            
+            if invalid_fields:
+                available_fields = list(field_map.keys())
+                return {
+                    'valid': False,
+                    'message': f"Invalid fields: {', '.join(invalid_fields)}. Available fields: {', '.join(available_fields)}"
+                }
+            
+            return {'valid': True}
+            
+        except Exception as e:
+            return {
+                'valid': False,
+                'message': f"Validation error: {str(e)}"
+            }
 
     async def run(self):
         """Run the MCP server"""

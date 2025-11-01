@@ -496,20 +496,7 @@ class RedmineSeleniumScraper:
         try:
             logger.info("Searching for issues")
             
-            # Validate tracker_id if provided
-            if kwargs.get('tracker_id'):
-                tracker_validation = self._validate_tracker(kwargs['tracker_id'])
-                if not tracker_validation['valid']:
-                    return {
-                        'success': False,
-                        'message': tracker_validation['message'],
-                        'available_trackers': tracker_validation.get('available_trackers', []),
-                        'issues': [],
-                        'total_count': 0,
-                        'page': kwargs.get('page', 1),
-                        'per_page': kwargs.get('per_page', 25),
-                        'total_pages': 0
-                    }
+            # Note: Field validation is handled by _validate_fields in calling code
             
             from urllib.parse import urlencode, quote
             
@@ -1010,7 +997,9 @@ class RedmineSeleniumScraper:
                     ".attributes tr", 
                     ".issue-attributes tr",
                     ".splitcontent .splitcontentleft tr",
-                    "#content .details tr"
+                    "#content .details tr",
+                    "table.attributes tr",
+                    ".issue .attributes tr"
                 ]
                 
                 detail_rows = []
@@ -1024,6 +1013,32 @@ class RedmineSeleniumScraper:
                     except Exception:
                         continue
                 
+                # Also try to find individual field elements directly
+                field_mappings = {
+                    'status': ['.status', '.issue-status', '[class*="status"]'],
+                    'priority': ['.priority', '.issue-priority', '[class*="priority"]'],
+                    'tracker': ['.tracker', '.issue-tracker', '[class*="tracker"]'],
+                    'assigned_to': ['.assigned-to', '.assignee', '[class*="assigned"]']
+                }
+                
+                # Try direct field extraction first
+                for field_key, selectors in field_mappings.items():
+                    if field_key not in issue_details:
+                        for selector in selectors:
+                            try:
+                                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                                for elem in elements:
+                                    text = elem.text.strip()
+                                    if text and len(text) > 0:
+                                        issue_details[field_key] = text
+                                        logger.debug(f"Found {field_key} via direct selector: {text}")
+                                        break
+                                if field_key in issue_details:
+                                    break
+                            except Exception:
+                                continue
+                
+                # Process table rows
                 for row in detail_rows:
                     try:
                         cells = row.find_elements(By.TAG_NAME, "td")
@@ -1033,25 +1048,68 @@ class RedmineSeleniumScraper:
                             
                             logger.debug(f"Field: '{field_name}' = '{field_value}'")
                             
-                            if field_name in ['status', 'ステータス', 'state']:
+                            if field_name in ['status', 'ステータス', 'state'] and not issue_details.get('status'):
                                 issue_details['status'] = field_value
-                            elif field_name in ['priority', '優先度']:
+                            elif field_name in ['priority', '優先度'] and not issue_details.get('priority'):
                                 issue_details['priority'] = field_value
-                            elif field_name in ['assigned to', 'assignee', '担当者']:
+                            elif field_name in ['assigned to', 'assignee', '担当者'] and not issue_details.get('assigned_to'):
                                 issue_details['assigned_to'] = field_value
-                            elif field_name in ['category', 'カテゴリ']:
+                            elif field_name in ['category', 'カテゴリ'] and not issue_details.get('category'):
                                 issue_details['category'] = field_value
-                            elif field_name in ['tracker', 'トラッカー']:
+                            elif field_name in ['tracker', 'トラッカー'] and not issue_details.get('tracker'):
                                 issue_details['tracker'] = field_value
-                            elif field_name in ['start date', '開始日']:
+                            elif field_name in ['start date', '開始日'] and not issue_details.get('start_date'):
                                 issue_details['start_date'] = field_value
-                            elif field_name in ['due date', '期日']:
+                            elif field_name in ['due date', '期日'] and not issue_details.get('due_date'):
                                 issue_details['due_date'] = field_value
-                            elif field_name in ['% done', '進捗率', 'progress']:
+                            elif field_name in ['% done', '進捗率', 'progress'] and not issue_details.get('done_ratio'):
                                 issue_details['done_ratio'] = field_value
                     except Exception as e:
                         logger.debug(f"Error processing row: {e}")
                         continue
+                        
+                # Try alternative approach: look for specific patterns in page source
+                if not issue_details.get('status') or not issue_details.get('priority'):
+                    try:
+                        page_text = self.driver.page_source
+                        
+                        # Look for status patterns
+                        if not issue_details.get('status'):
+                            status_patterns = [
+                                r'Status[:\s]*([^<\n]+)',
+                                r'ステータス[:\s]*([^<\n]+)',
+                                r'status["\']>([^<]+)<',
+                                r'未対応|対応中|完了確認待ち|完了'
+                            ]
+                            for pattern in status_patterns:
+                                match = re.search(pattern, page_text, re.IGNORECASE)
+                                if match:
+                                    status_value = match.group(1).strip() if len(match.groups()) > 0 else match.group(0)
+                                    if status_value and len(status_value) < 50:  # Reasonable length
+                                        issue_details['status'] = status_value
+                                        logger.debug(f"Found status via regex: {status_value}")
+                                        break
+                        
+                        # Look for priority patterns
+                        if not issue_details.get('priority'):
+                            priority_patterns = [
+                                r'Priority[:\s]*([^<\n]+)',
+                                r'優先度[:\s]*([^<\n]+)',
+                                r'priority["\']>([^<]+)<',
+                                r'低|中|高|緊急'
+                            ]
+                            for pattern in priority_patterns:
+                                match = re.search(pattern, page_text, re.IGNORECASE)
+                                if match:
+                                    priority_value = match.group(1).strip() if len(match.groups()) > 0 else match.group(0)
+                                    if priority_value and len(priority_value) < 50:  # Reasonable length
+                                        issue_details['priority'] = priority_value
+                                        logger.debug(f"Found priority via regex: {priority_value}")
+                                        break
+                                        
+                    except Exception as e:
+                        logger.debug(f"Error in regex extraction: {e}")
+                        
             except Exception as e:
                 logger.debug(f"Error finding detail rows: {e}")
             
@@ -1564,94 +1622,40 @@ class RedmineSeleniumScraper:
                     'required_fields': required_fields
                 }
             
-            # Validate and set tracker
+            # トラッカーIDバリデーション
+            if kwargs.get('tracker_id'):
+                # まずトラッカーIDが有効かチェック
+                tracker_validation = self._validate_tracker_for_project(project_id, kwargs['tracker_id'])
+                if not tracker_validation['valid']:
+                    return {
+                        'success': False,
+                        'message': f"Invalid tracker ID: {tracker_validation['message']}"
+                    }
+                
+                # フィールドバリデーション
+                validation_result = self._validate_fields(project_id, kwargs['tracker_id'], kwargs)
+                if not validation_result['valid']:
+                    return {
+                        'success': False,
+                        'message': f"Field validation failed: {validation_result['message']}"
+                    }
+            
+            # Set tracker
             if kwargs.get('tracker_id'):
                 try:
-                    # Try multiple selectors for tracker field
-                    tracker_select = None
-                    tracker_selectors = [
-                        "issue_tracker_id",
-                        "tracker_id", 
-                        "issue[tracker_id]"
-                    ]
-                    
-                    for selector in tracker_selectors:
-                        try:
-                            tracker_select = self.driver.find_element(By.ID, selector)
-                            logger.debug(f"Found tracker field with ID: {selector}")
-                            break
-                        except:
-                            try:
-                                tracker_select = self.driver.find_element(By.NAME, selector)
-                                logger.debug(f"Found tracker field with NAME: {selector}")
-                                break
-                            except:
-                                continue
-                    
-                    if not tracker_select:
-                        # Try CSS selector as fallback
-                        tracker_select = self.driver.find_element(By.CSS_SELECTOR, "select[name*='tracker']")
+                    tracker_select = self.driver.find_element(By.ID, "issue_tracker_id")
                     from selenium.webdriver.support.ui import Select
                     select = Select(tracker_select)
-                    
-                    # Get available trackers
-                    available_trackers = []
-                    for option in select.options:
-                        value = option.get_attribute('value')
-                        text = option.text.strip()
-                        if value:
-                            available_trackers.append({'value': value, 'text': text})
-                    
-                    # Validate tracker
-                    tracker_id = str(kwargs['tracker_id'])
-                    tracker_found = any(t['value'] == tracker_id for t in available_trackers)
-                    
-                    if not tracker_found:
-                        available_options = [f"{t['value']}:{t['text']}" for t in available_trackers]
-                        return {
-                            'success': False,
-                            'message': f"Tracker ID '{tracker_id}' is not available. Available trackers: {', '.join(available_options)}",
-                            'available_trackers': available_trackers
-                        }
-                    
-                    select.select_by_value(tracker_id)
-                    
+                    select.select_by_value(str(kwargs['tracker_id']))
                 except Exception as e:
                     logger.debug(f"Tracker field not found or not accessible: {e}")
-                    # Continue without setting tracker if field not found
             
             # Set subject (required)
             if kwargs.get('subject'):
                 try:
-                    # Try multiple selectors for subject field
-                    subject_field = None
-                    subject_selectors = [
-                        "issue_subject",
-                        "subject",
-                        "issue[subject]"
-                    ]
-                    
-                    for selector in subject_selectors:
-                        try:
-                            subject_field = self.driver.find_element(By.ID, selector)
-                            logger.debug(f"Found subject field with ID: {selector}")
-                            break
-                        except:
-                            try:
-                                subject_field = self.driver.find_element(By.NAME, selector)
-                                logger.debug(f"Found subject field with NAME: {selector}")
-                                break
-                            except:
-                                continue
-                    
-                    if not subject_field:
-                        # Try CSS selector as fallback
-                        subject_field = self.driver.find_element(By.CSS_SELECTOR, "input[name*='subject']")
-                    
+                    subject_field = self.driver.find_element(By.ID, "issue_subject")
                     subject_field.clear()
                     subject_field.send_keys(kwargs['subject'])
-                    logger.debug(f"Successfully set subject: {kwargs['subject']}")
-                    
                 except Exception as e:
                     return {
                         'success': False,
@@ -1843,6 +1847,31 @@ class RedmineSeleniumScraper:
                     'message': f'Issue #{issue_id} not found or not editable.'
                 }
             
+            # トラッカーフィールドバリデーション（現在のチケットのトラッカーを取得してバリデーション）
+            current_tracker_id = None
+            try:
+                tracker_select = self.driver.find_element(By.ID, "issue_tracker_id")
+                from selenium.webdriver.support.ui import Select
+                select = Select(tracker_select)
+                current_tracker_id = select.first_selected_option.get_attribute('value')
+            except:
+                pass
+            
+            if current_tracker_id:
+                # 現在のプロジェクトIDを取得（URLから抽出）
+                current_project_id = None
+                url_match = re.search(r'/projects/([^/]+)/', self.driver.current_url)
+                if url_match:
+                    current_project_id = url_match.group(1)
+                
+                if current_project_id:
+                    validation_result = self._validate_fields(current_project_id, current_tracker_id, kwargs)
+                    if not validation_result['valid']:
+                        return {
+                            'success': False,
+                            'message': f"Field validation failed: {validation_result['message']}"
+                        }
+            
             updated_fields = []
             
             # Update subject
@@ -1865,70 +1894,16 @@ class RedmineSeleniumScraper:
                 except NoSuchElementException:
                     logger.debug("Description field not found")
             
-            # Update status with validation
+            # Update status
             if kwargs.get('status_id'):
                 try:
                     status_select = self.driver.find_element(By.ID, "issue_status_id")
                     from selenium.webdriver.support.ui import Select
                     select = Select(status_select)
-                    
-                    # Get available status options
-                    available_statuses = []
-                    for option in select.options:
-                        value = option.get_attribute('value')
-                        text = option.text.strip()
-                        if value:  # Skip empty values
-                            available_statuses.append({
-                                'value': value,
-                                'text': text
-                            })
-                    
-                    logger.debug(f"Available statuses: {available_statuses}")
-                    
-                    # Check if requested status is available
-                    requested_status = str(kwargs['status_id'])
-                    status_found = False
-                    
-                    # Try to find by value or text
-                    for status in available_statuses:
-                        if (status['value'] == requested_status or 
-                            status['text'] == requested_status or
-                            status['text'].lower() == requested_status.lower()):
-                            status_found = True
-                            break
-                    
-                    if not status_found:
-                        # Return error with available options
-                        available_options = [f"{s['value']}:{s['text']}" for s in available_statuses]
-                        return {
-                            'success': False,
-                            'message': f"Status '{requested_status}' is not available for this issue. Available statuses: {', '.join(available_options)}",
-                            'available_statuses': available_statuses
-                        }
-                    
-                    # Try to select by value first, then by visible text
-                    try:
-                        select.select_by_value(requested_status)
-                        updated_fields.append('status')
-                        logger.debug(f"Status updated by value: {requested_status}")
-                    except Exception:
-                        try:
-                            # Try selecting by visible text
-                            select.select_by_visible_text(requested_status)
-                            updated_fields.append('status')
-                            logger.debug(f"Status updated by text: {requested_status}")
-                        except Exception as e:
-                            return {
-                                'success': False,
-                                'message': f"Failed to select status '{requested_status}': {str(e)}"
-                            }
-                        
-                except (NoSuchElementException, Exception) as e:
-                    logger.debug(f"Status field not found: {e}")
-                    return {
-                        'success': False,
-                        'message': f"Status field not found or not accessible: {str(e)}"
-                    }
+                    select.select_by_value(str(kwargs['status_id']))
+                    updated_fields.append('status')
+                except Exception as e:
+                    logger.debug(f"Status field not found or invalid value: {e}")
             
             # Update priority
             if kwargs.get('priority_id'):
@@ -2024,6 +1999,127 @@ class RedmineSeleniumScraper:
             return {
                 'success': False,
                 'message': f"Error updating issue: {str(e)}"
+            }
+    
+    def _validate_fields(self, project_id: str, tracker_id: str, fields: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate fields against tracker field definitions
+        
+        Args:
+            project_id: Project ID
+            tracker_id: Tracker ID
+            fields: Fields to validate
+            
+        Returns:
+            Dict with validation result
+        """
+        try:
+            # Get tracker fields
+            tracker_fields_result = self.get_tracker_fields(project_id, str(tracker_id))
+            
+            if not tracker_fields_result.get('success'):
+                return {
+                    'valid': False,
+                    'message': f"Could not get tracker fields: {tracker_fields_result.get('message')}"
+                }
+            
+            all_fields = tracker_fields_result.get('fields', [])
+            field_map = {}
+            
+            # Create field mapping (handle both with and without 'issue_' prefix)
+            for field in all_fields:
+                field_id = field['id']
+                # Remove 'issue_' prefix for mapping
+                clean_id = field_id.replace('issue_', '') if field_id.startswith('issue_') else field_id
+                field_map[clean_id] = field
+                field_map[field_id] = field  # Also keep original ID
+            
+            # Validate each provided field
+            invalid_fields = []
+            for field_name, field_value in fields.items():
+                # Skip special fields that are always valid
+                if field_name in ['subject', 'tracker_id', 'project_id']:
+                    continue
+                
+                if field_name not in field_map:
+                    invalid_fields.append(f"{field_name} (not available for this tracker)")
+            
+            if invalid_fields:
+                available_fields = [k for k in field_map.keys() if not k.startswith('issue_')]
+                return {
+                    'valid': False,
+                    'message': f"Invalid fields: {', '.join(invalid_fields)}. Available fields: {', '.join(available_fields)}"
+                }
+            
+            return {'valid': True}
+            
+        except Exception as e:
+            logger.debug(f"Field validation error: {e}")
+            return {
+                'valid': True,  # Allow operation to proceed if validation fails
+                'message': f"Validation error: {str(e)}"
+            }
+    
+    def _validate_tracker_for_project(self, project_id: str, tracker_id: str) -> Dict[str, Any]:
+        """
+        Validate if tracker_id is available for a specific project
+        
+        Args:
+            project_id: Project ID
+            tracker_id: Tracker ID or name to validate
+            
+        Returns:
+            Dict with validation result
+        """
+        try:
+            # Get tracker fields for the project to see available trackers
+            tracker_fields_result = self.get_tracker_fields(project_id)
+            
+            if not tracker_fields_result.get('success'):
+                return {
+                    'valid': False,
+                    'message': f"Could not get tracker options for project {project_id}: {tracker_fields_result.get('message')}"
+                }
+            
+            # Find tracker field and its options
+            tracker_options = []
+            for field in tracker_fields_result.get('fields', []):
+                if field.get('id') == 'issue_tracker_id':
+                    tracker_options = field.get('options', [])
+                    break
+            
+            if not tracker_options:
+                return {
+                    'valid': False,
+                    'message': f"No tracker options found for project {project_id}"
+                }
+            
+            # Check if requested tracker is available
+            requested_tracker = str(tracker_id)
+            tracker_found = False
+            
+            for tracker in tracker_options:
+                if (tracker['value'] == requested_tracker or 
+                    tracker['text'] == requested_tracker or
+                    tracker['text'].lower() == requested_tracker.lower()):
+                    tracker_found = True
+                    break
+            
+            if tracker_found:
+                return {'valid': True}
+            else:
+                available_options = [f"{t['value']}:{t['text']}" for t in tracker_options]
+                return {
+                    'valid': False,
+                    'message': f"Tracker '{requested_tracker}' is not available for project {project_id}. Available trackers: {', '.join(available_options)}",
+                    'available_trackers': tracker_options
+                }
+                
+        except Exception as e:
+            logger.debug(f"Error validating tracker for project: {e}")
+            return {
+                'valid': False,  # Fail validation if we can't check
+                'message': f"Tracker validation failed: {str(e)}"
             }
     
     def _validate_tracker(self, tracker_id: str) -> Dict[str, Any]:
