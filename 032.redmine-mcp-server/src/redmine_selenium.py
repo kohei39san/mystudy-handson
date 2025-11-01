@@ -1161,12 +1161,6 @@ class RedmineSeleniumScraper:
                         subject_elem = self.driver.find_element(By.CSS_SELECTOR, selector)
                         subject_text = subject_elem.text.strip()
                         
-                        # Extract tracker info from h2.inline-block format
-                        if selector == "h2.inline-block" and not issue_details.get('tracker'):
-                            tracker_match = re.match(r'^([^#]+)\s*#\d+', subject_text)
-                            if tracker_match:
-                                issue_details['tracker'] = tracker_match.group(1).strip()
-                        
                         if subject_text:
                             issue_details['subject'] = subject_text
                             break
@@ -1175,6 +1169,31 @@ class RedmineSeleniumScraper:
                         
             except Exception as e:
                 logger.debug(f"Error extracting subject: {e}")
+            
+            # Extract tracker from specific selector
+            try:
+                tracker_elem = self.driver.find_element(By.CSS_SELECTOR, "#content > h2:nth-child(2)")
+                tracker_text = tracker_elem.text.strip()
+                # Extract tracker name from "トラッカー名 #チケットID" format
+                tracker_match = re.match(r'^([^#]+)\s*#\d+', tracker_text)
+                if tracker_match:
+                    issue_details['tracker'] = tracker_match.group(1).strip()
+            except NoSuchElementException:
+                pass
+            
+            # Extract status from specific selector
+            try:
+                status_elem = self.driver.find_element(By.CSS_SELECTOR, "div.status.attribute > div.value")
+                issue_details['status'] = status_elem.text.strip()
+            except NoSuchElementException:
+                pass
+            
+            # Extract priority from specific selector
+            try:
+                priority_elem = self.driver.find_element(By.CSS_SELECTOR, "div.priority.attribute > div.value")
+                issue_details['priority'] = priority_elem.text.strip()
+            except NoSuchElementException:
+                pass
             
             # Status, Priority, Assignee, etc. from the details table
             try:
@@ -1200,33 +1219,7 @@ class RedmineSeleniumScraper:
                     except Exception:
                         continue
                 
-                # Also try to find individual field elements directly
-                field_mappings = {
-                    'status': ['.status', '.issue-status', '[class*="status"]'],
-                    'priority': ['.priority', '.issue-priority', '[class*="priority"]'],
-                    'tracker': ['.tracker', '.issue-tracker', '[class*="tracker"]'],
-                    'assigned_to': ['.assigned-to', '.assignee', '[class*="assigned"]']
-                }
-                
-                # Try direct field extraction first
-                for field_key, selectors in field_mappings.items():
-                    if field_key not in issue_details:
-                        for selector in selectors:
-                            try:
-                                elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
-                                for elem in elements:
-                                    text = elem.text.strip()
-                                    # Clean text - take only the first line if it's multi-line
-                                    if '\n' in text:
-                                        text = text.split('\n')[0].strip()
-                                    if text and len(text) > 0 and len(text) < 100:  # Reasonable length
-                                        issue_details[field_key] = text
-                                        logger.debug(f"Found {field_key} via direct selector: {text}")
-                                        break
-                                if field_key in issue_details:
-                                    break
-                            except Exception:
-                                continue
+
                 
                 # Process table rows
                 for row in detail_rows:
@@ -1242,16 +1235,11 @@ class RedmineSeleniumScraper:
                             
                             logger.debug(f"Field: '{field_name}' = '{field_value}'")
                             
-                            if field_name in ['status', 'ステータス', 'state'] and not issue_details.get('status'):
-                                issue_details['status'] = field_value
-                            elif field_name in ['priority', '優先度'] and not issue_details.get('priority'):
-                                issue_details['priority'] = field_value
-                            elif field_name in ['assigned to', 'assignee', '担当者'] and not issue_details.get('assigned_to'):
+                            if field_name in ['assigned to', 'assignee', '担当者'] and not issue_details.get('assigned_to'):
                                 issue_details['assigned_to'] = field_value
                             elif field_name in ['category', 'カテゴリ'] and not issue_details.get('category'):
                                 issue_details['category'] = field_value
-                            elif field_name in ['tracker', 'トラッカー'] and not issue_details.get('tracker'):
-                                issue_details['tracker'] = field_value
+
                             elif field_name in ['start date', '開始日'] and not issue_details.get('start_date'):
                                 issue_details['start_date'] = field_value
                             elif field_name in ['due date', '期日'] and not issue_details.get('due_date'):
@@ -1262,47 +1250,7 @@ class RedmineSeleniumScraper:
                         logger.debug(f"Error processing row: {e}")
                         continue
                         
-                # Try alternative approach: look for specific patterns in page source
-                if not issue_details.get('status') or not issue_details.get('priority'):
-                    try:
-                        page_text = self.driver.page_source
-                        
-                        # Look for status patterns
-                        if not issue_details.get('status'):
-                            status_patterns = [
-                                r'Status[:\s]*([^<\n]+)',
-                                r'ステータス[:\s]*([^<\n]+)',
-                                r'status["\']>([^<]+)<',
-                                r'未対応|対応中|完了確認待ち|完了'
-                            ]
-                            for pattern in status_patterns:
-                                match = re.search(pattern, page_text, re.IGNORECASE)
-                                if match:
-                                    status_value = match.group(1).strip() if len(match.groups()) > 0 else match.group(0)
-                                    if status_value and len(status_value) < 50:  # Reasonable length
-                                        issue_details['status'] = status_value
-                                        logger.debug(f"Found status via regex: {status_value}")
-                                        break
-                        
-                        # Look for priority patterns
-                        if not issue_details.get('priority'):
-                            priority_patterns = [
-                                r'Priority[:\s]*([^<\n]+)',
-                                r'優先度[:\s]*([^<\n]+)',
-                                r'priority["\']>([^<]+)<',
-                                r'低|中|高|緊急'
-                            ]
-                            for pattern in priority_patterns:
-                                match = re.search(pattern, page_text, re.IGNORECASE)
-                                if match:
-                                    priority_value = match.group(1).strip() if len(match.groups()) > 0 else match.group(0)
-                                    if priority_value and len(priority_value) < 50:  # Reasonable length
-                                        issue_details['priority'] = priority_value
-                                        logger.debug(f"Found priority via regex: {priority_value}")
-                                        break
-                                        
-                    except Exception as e:
-                        logger.debug(f"Error in regex extraction: {e}")
+
                         
             except Exception as e:
                 logger.debug(f"Error finding detail rows: {e}")
