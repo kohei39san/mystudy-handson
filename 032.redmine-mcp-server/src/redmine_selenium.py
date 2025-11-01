@@ -462,6 +462,22 @@ class RedmineSeleniumScraper:
             
             members = []
             
+            # Get current user ID from page header
+            current_user_id = None
+            try:
+                # Look for logged in user link in header
+                user_elements = self.driver.find_elements(By.CSS_SELECTOR, "a.user.active")
+                for elem in user_elements:
+                    href = elem.get_attribute("href")
+                    if href:
+                        user_id_match = re.search(r'/users/(\d+)', href)
+                        if user_id_match:
+                            current_user_id = user_id_match.group(1)
+                            logger.debug(f"Current user ID detected: {current_user_id}")
+                            break
+            except Exception as e:
+                logger.debug(f"Could not detect current user ID: {e}")
+            
             # Look for members table
             try:
                 members_table = self.driver.find_element(By.CSS_SELECTOR, "#tab-content-members > table > tbody")
@@ -487,6 +503,12 @@ class RedmineSeleniumScraper:
                                 if user_id_match:
                                     member_info['id'] = user_id_match.group(1)
                                 
+                                # Check if this is the current user
+                                member_info['is_current_user'] = (
+                                    current_user_id and 
+                                    member_info.get('id') == current_user_id
+                                )
+                                
                                 # Extract roles (usually second column)
                                 if len(cells) > 1:
                                     roles_text = cells[1].text.strip()
@@ -497,7 +519,7 @@ class RedmineSeleniumScraper:
                                     member_info['additional_info'] = cells[2].text.strip()
                                 
                                 members.append(member_info)
-                                logger.debug(f"Added member: {member_info['name']} (ID: {member_info.get('id', 'unknown')})")
+                                logger.debug(f"Added member: {member_info['name']} (ID: {member_info.get('id', 'unknown')}, Current: {member_info['is_current_user']})")
                                 
                             except Exception as e:
                                 logger.debug(f"Error processing member row: {e}")
@@ -528,7 +550,11 @@ class RedmineSeleniumScraper:
                                         members.append({
                                             'id': user_id,
                                             'name': user_name,
-                                            'roles': []
+                                            'roles': [],
+                                            'is_current_user': (
+                                                current_user_id and 
+                                                user_id == current_user_id
+                                            )
                                         })
                                         logger.debug(f"Added member from link: {user_name} (ID: {user_id})")
                         except Exception as e:
@@ -1260,15 +1286,39 @@ class RedmineSeleniumScraper:
                 from selenium.webdriver.support.ui import Select
                 select = Select(tracker_select)
                 
-                available_trackers = []
+                # First collect all tracker info
+                tracker_options = []
                 for option in select.options:
                     value = option.get_attribute('value')
                     text = option.text.strip()
                     if value:  # Skip empty values
-                        available_trackers.append({
+                        tracker_options.append({
                             'value': value,
                             'text': text
                         })
+                
+                # Then get fields for each tracker
+                available_trackers = []
+                for tracker_option in tracker_options:
+                    tracker_info = {
+                        'value': tracker_option['value'],
+                        'text': tracker_option['text']
+                    }
+                    
+                    # Get fields for this tracker if project_id is provided
+                    if project_id:
+                        try:
+                            fields_result = self.get_tracker_fields(project_id, tracker_option['value'])
+                            if fields_result.get('success'):
+                                tracker_info['fields'] = fields_result.get('fields', [])
+                                tracker_info['required_fields'] = fields_result.get('required_fields', [])
+                                tracker_info['optional_fields'] = fields_result.get('optional_fields', [])
+                            else:
+                                logger.debug(f"Could not get fields for tracker {tracker_option['value']}: {fields_result.get('message')}")
+                        except Exception as e:
+                            logger.debug(f"Error getting fields for tracker {tracker_option['value']}: {e}")
+                    
+                    available_trackers.append(tracker_info)
                 
                 logger.info(f"Found {len(available_trackers)} available trackers")
                 
