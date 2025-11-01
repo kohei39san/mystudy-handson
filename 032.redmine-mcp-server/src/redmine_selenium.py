@@ -1135,36 +1135,37 @@ class RedmineSeleniumScraper:
             except NoSuchElementException:
                 pass
             
-            # Status, Priority, Assignee, etc. from the details table
+            # Extract all fields from div.attribute elements
             try:
-                detail_rows = self.driver.find_elements(By.CSS_SELECTOR, "#content > div.issue.details > div.attributes tr")
-                # Process table rows
-                for row in detail_rows:
+                attribute_divs = self.driver.find_elements(By.CSS_SELECTOR, "div.attribute")
+                # Process attribute divs
+                for div in attribute_divs:
                     try:
-                        cells = row.find_elements(By.TAG_NAME, "td")
-                        if len(cells) >= 2:
-                            field_name = cells[0].text.strip().lower().replace(':', '')
-                            field_value = cells[1].text.strip()
-                            
-                            # Clean field value - take only the first line if it's multi-line
-                            if '\n' in field_value:
-                                field_value = field_value.split('\n')[0].strip()
-                            
-                            logger.debug(f"Field: '{field_name}' = '{field_value}'")
-                            
-                            if field_name in ['assigned to', 'assignee', '担当者'] and not issue_details.get('assigned_to'):
-                                issue_details['assigned_to'] = field_value
-                            elif field_name in ['category', 'カテゴリ'] and not issue_details.get('category'):
-                                issue_details['category'] = field_value
-
-                            elif field_name in ['start date', '開始日'] and not issue_details.get('start_date'):
-                                issue_details['start_date'] = field_value
-                            elif field_name in ['due date', '期日'] and not issue_details.get('due_date'):
-                                issue_details['due_date'] = field_value
-                            elif field_name in ['% done', '進捗率', 'progress'] and not issue_details.get('done_ratio'):
-                                issue_details['done_ratio'] = field_value
+                        # Get label and value elements
+                        label_elem = div.find_element(By.CSS_SELECTOR, "div.label")
+                        value_elem = div.find_element(By.CSS_SELECTOR, "div.value")
+                        
+                        field_name_raw = label_elem.text.strip()
+                        field_value = value_elem.text.strip()
+                        
+                        # Clean field value - take only the first line if it's multi-line
+                        if '\n' in field_value:
+                            field_value = field_value.split('\n')[0].strip()
+                        
+                        # Skip empty field names (but allow empty values)
+                        if not field_name_raw:
+                            continue
+                        
+                        # Create field key by cleaning the field name
+                        field_key = field_name_raw.lower().replace(':', '').replace(' ', '_').replace('　', '_')
+                        
+                        # Store the field
+                        issue_details[field_key] = field_value
+                        
+                        logger.debug(f"Field: '{field_name_raw}' -> '{field_key}' = '{field_value}'")
+                        
                     except Exception as e:
-                        logger.debug(f"Error processing row: {e}")
+                        logger.debug(f"Error processing attribute div: {e}")
                         continue
                         
 
