@@ -2015,13 +2015,10 @@ class RedmineSeleniumScraper:
             all_fields = tracker_fields_result.get('fields', [])
             field_map = {}
             
-            # Create field mapping (handle both with and without 'issue_' prefix)
+            # Create field mapping
             for field in all_fields:
                 field_id = field['id']
-                # Remove 'issue_' prefix for mapping
-                clean_id = field_id.replace('issue_', '') if field_id.startswith('issue_') else field_id
-                field_map[clean_id] = field
-                field_map[field_id] = field  # Also keep original ID
+                field_map[field_id] = field
             
             # Check required fields
             required_fields = [f for f in all_fields if f.get('required', False)]
@@ -2029,10 +2026,9 @@ class RedmineSeleniumScraper:
             
             for req_field in required_fields:
                 field_id = req_field['id']
-                clean_id = field_id.replace('issue_', '') if field_id.startswith('issue_') else field_id
                 
                 # Check if required field is provided
-                if field_id not in fields and clean_id not in fields:
+                if field_id not in fields:
                     missing_required.append(f"{req_field.get('name', field_id)} ({field_id})")
             
             if missing_required:
@@ -2044,7 +2040,6 @@ class RedmineSeleniumScraper:
             # Validate each provided field
             invalid_fields = []
             for field_name, field_value in fields.items():
-
                 if field_name not in field_map:
                     invalid_fields.append(f"{field_name} (not available for this tracker)")
                     continue
@@ -2056,7 +2051,7 @@ class RedmineSeleniumScraper:
                         invalid_fields.append(f"{field_name}: {assignee_validation['message']}")
             
             if invalid_fields:
-                available_fields = [k for k in field_map.keys() if not k.startswith('issue_')]
+                available_fields = list(field_map.keys())
                 return {
                     'valid': False,
                     'message': f"Invalid fields: {', '.join(invalid_fields)}. Available fields: {', '.join(available_fields)}"
