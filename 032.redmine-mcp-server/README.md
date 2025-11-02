@@ -1,257 +1,86 @@
-# Redmine MCP サーバー
+# Redmine MCP Server
 
-## 概要
+## 従来のRedmine利用における課題
 
-このプロジェクトは、WebスクレイピングによるRedmine MCPサーバーの実装です。APIキーによる認証ではなく、Webスクレイピングによるブラウザ認証を使用してRedmineのプロジェクト一覧を取得します。
+- チケット作成・更新のたびにWebブラウザでアクセスが必要で、複数チケットの一括操作や定型作業の自動化が困難
+- AIアシスタントがRedmineの情報を直接取得できないため、チケット内容の要約や分析を依頼する際に手動での情報転記が必要
+- RedmineのREST APIは機能が限定的で、APIキーの管理・配布が困難な組織環境や2FA認証環境では利用が制約される
 
-## 機能
+## Redmine MCP Serverの概要・目的
 
-- **Webスクレイピング認証**: Redmineのログインフォームを使用した認証
-- **2FA対応**: 二要素認証が有効なRedmineサーバーに対応（Selenium使用）
-- **プロジェクト一覧取得**: 認証後にプロジェクト一覧をスクレイピングで取得
-- **MCPプロトコル対応**: Model Context Protocolに準拠したサーバー実装
-- **自動ブラウザ管理**: 認証時は可視ブラウザ、認証後はヘッドレスモードに自動切り替え
+Redmine MCP Serverは、Model Context Protocol (MCP) を使用してRedmineと連携するためのサーバーです。
 
-## ファイル構成
+- MCPツールによるチケット操作の自動化、複数チケットの一括処理が可能
+- AIアシスタントがRedmine情報を直接取得・操作、手動転記が不要
+- WebスクレイピングによりAPI無効化・2FA環境でも動作、APIキー管理不要
 
-```
-032.redmine-mcp-server/
-├── README.md                 # このファイル
-├── requirements.txt          # Python依存関係
-├── setup.py                  # セットアップスクリプト
-├── .env.example              # 環境変数設定例
-├── install.sh                # インストールスクリプト
-├── run.sh                    # 実行スクリプト
-├── test_selenium.py          # Seleniumテストスクリプト
-├── validate.py               # 実装検証スクリプト
-├── src/
-│   ├── __init__.py           # パッケージ初期化
-│   ├── redmine_mcp_server.py # MCPサーバーのメイン実装
-│   ├── redmine_selenium.py   # Redmineスクレイピング機能（Selenium版）
-│   └── config.py             # 設定ファイル
-└── examples/
-    ├── mcp-config.json       # MCP設定例
-    └── vscode-settings.json  # VSCode設定例
-```
+### 利用可能なツール一覧
 
-## 依存関係
+| 概要 | ツール名 | 入力 | 説明 |
+|------|----------|------|------|
+| Redmineにログインして認証セッションを確立 | `redmine_login` | ユーザー名、パスワード | Webブラウザと同様の認証フローでRedmineにログインする |
+| Redmineからログアウトしてセッションを終了 | `logout` | なし | 現在のセッションを終了し、ログアウトする |
+| サーバー設定情報と認証状態を取得 | `get_server_info` | なし | Redmineサーバーの設定情報と現在の認証状態を表示する |
+| プロジェクト一覧を取得 | `get_projects` | なし | アクセス可能なプロジェクトの一覧を取得する |
+| プロジェクトメンバー一覧を取得 | `get_project_members` | プロジェクトID | 指定したプロジェクトに所属するメンバー情報を取得する |
+| 様々な条件でチケットを検索 | `search_issues` | プロジェクトID、ステータスID、トラッカーID、担当者ID、件名、全文検索等 | 指定した条件にマッチするチケットを検索し、一覧で返す |
+| チケットの詳細情報を取得 | `get_issue_details` | チケットID | 指定したチケットの詳細情報（件名、説明、ステータス等）を取得する |
+| 新しいチケットを作成 | `create_issue` | プロジェクトID、トラッカーID、件名、フィールド情報 | 指定した情報で新しいチケットを作成する |
+| 既存チケットを更新 | `update_issue` | チケットID、更新フィールド | 指定したチケットの情報を更新する |
+| 利用可能なトラッカー一覧を取得 | `get_available_trackers` | プロジェクトID（省略可） | プロジェクトで利用可能なトラッカーとそのフィールド情報を取得する |
+| チケットで利用可能なステータス一覧を取得 | `get_available_statuses` | チケットID | 指定したチケットで利用可能なステータス一覧を取得する |
+| 新規作成時に利用可能なステータス一覧を取得 | `get_creation_statuses` | プロジェクトID、トラッカーID | 新規チケット作成時に選択可能なステータス一覧を取得する |
+| トラッカーで利用可能なフィールド一覧を取得 | `get_tracker_fields` | プロジェクトID、トラッカーID | 指定したトラッカーで利用可能なフィールドとその属性を取得する |
 
-- `mcp`: Model Context Protocol実装
-- `selenium`: Webブラウザ自動化（2FA対応）
-- `webdriver-manager`: ChromeDriver自動管理
-- `python-dotenv`: 環境変数管理
+## クイックスタート
 
-## セットアップ
-
-### 自動インストール（推奨）
-
+### 1. インストール
 ```bash
-# リポジトリをクローンまたはダウンロード
-cd 032.redmine-mcp-server
+# 依存関係をインストール
+pip install -r scripts/requirements.txt
 
-# 自動インストールスクリプトを実行
-chmod +x install.sh
-./install.sh
-
-# 環境設定ファイルを編集
-cp .env.example .env
-# .envファイルでREDMINE_URLを設定
+# 環境変数を設定
+echo "REDMINE_URL=https://your-redmine-server.com" > .env
 ```
 
-### 手動インストール
-
-1. 依存関係のインストール:
+### 2. サーバー起動
 ```bash
-pip install -r requirements.txt
+python src/redmine_mcp_server.py
 ```
 
-2. 環境変数の設定:
-```bash
-# .envファイルを作成して設定
-cp .env.example .env
-# または環境変数を直接設定
-export REDMINE_URL=https://your-redmine-server.com
-```
+## Amazon Q Developerへのインストール
 
-3. MCPサーバーの起動:
-```bash
-# 実行スクリプトを使用（推奨）
-chmod +x run.sh
-./run.sh
+### 設定手順
+1. Amazon Q Developer拡張機能をインストール
+2. MCP設定ファイルを作成
+3. パスを実際の環境に合わせて修正
+4. Amazon Q Developerを再起動
+5. チャットで「redmine_login」などのツールが利用可能になることを確認
 
-# または直接実行
-python -m src.redmine_mcp_server
-
-# Windowsの場合
-python src\redmine_mcp_server.py
-```
-
-### テスト実行
-
-```bash
-# Seleniumスクレイピング機能のテスト（2FA対応）
-python test_selenium.py
-
-# チケット検索機能のテスト
-python test_search.py
-```
-
-**注意**: テストスクリプトは環境変数に認証情報がない場合、手動入力を求めます。
-
-## 使用方法
-
-### 1. 認証
-
-MCPクライアントから`redmine_login`ツールを使用してRedmineにログイン：
-
-**注意**: 環境変数に認証情報を設定していない場合でも、MCPツールやテストスクリプトで手動入力できます。
-
+### MCP設定ファイル（~/.amazonq/mcp_servers.json）
 ```json
 {
-  "tool": "redmine_login",
-  "arguments": {
-    "username": "your_username",
-    "password": "your_password"
+  "mcpServers": {
+    "redmine": {
+      "command": "python",
+      "args": ["C:\\path\\to\\mystudy-handson\\032.redmine-mcp-server\\src\\redmine_mcp_server.py"],
+      "env": {
+        "REDMINE_URL": "https://your-redmine-server.com",
+        "DEBUG": "false",
+        "SESSION_TIMEOUT": "3600"
+      }
+    }
   }
 }
 ```
 
-### 2. プロジェクト一覧取得
+## サポートしている環境変数
 
-認証後、`get_projects`ツールでプロジェクト一覧を取得:
-
-```json
-{
-  "tool": "get_projects",
-  "arguments": {}
-}
-```
-
-## 利用可能なツール
-
-### redmine_login
-- **説明**: Redmineにログインして認証セッションを確立
-- **引数**:
-  - `username` (string): ユーザー名
-  - `password` (string): パスワード
-- **戻り値**: ログイン成功/失敗のステータス
-
-### get_projects
-- **説明**: 認証済みセッションでプロジェクト一覧を取得
-- **引数**: なし
-- **戻り値**: プロジェクト一覧（ID、名前、説明等）
-
-### logout
-- **説明**: Redmineからログアウトしてセッションを終了
-- **引数**: なし
-- **戻り値**: ログアウト成功のステータス
-
-### get_server_info
-- **説明**: Redmineサーバーの設定情報と認証状態を取得
-- **引数**: なし
-- **戻り値**: サーバー情報（URL、認証状態等）
-
-### search_issues
-- **説明**: 様々な条件でRedmineのチケットを検索
-- **引数**:
-  - `status_id` (string): ステータスIDまたは名前
-  - `tracker_id` (string): トラッカーIDまたは名前
-  - `assigned_to_id` (string): 担当者IDまたは名前
-  - `parent_id` (string): 親チケットID
-  - `project_id` (string): プロジェクトIDまたは識別子
-  - `subject` (string): 件名テキスト検索
-  - `description` (string): 説明テキスト検索
-  - `notes` (string): ノートテキスト検索
-  - `q` (string): 全般テキスト検索
-  - `page` (integer): ページ番号
-  - `per_page` (integer): 1ページあたりの件数
-- **戻り値**: チケット一覧、総数、ページネーション情報
-
-## トラブルシューティング
-
-### よくある問題
-
-#### ログインに失敗する
-- ユーザー名・パスワードが正しいか確認
-- RedmineのURL設定を確認
-- Redmineのバージョンやカスタマイズを確認
-- 2FA認証が有効な場合、ブラウザで手動認証を完了
-
-#### プロジェクトが取得できない
-- ユーザーにプロジェクト閲覧権限があるか確認
-- Redmineのバージョンを確認（4.0以降推奨）
-- プロジェクトページの構造をデバッグモードで確認
-
-#### セッションタイムアウト
-- 環境変数`SESSION_TIMEOUT`で調整可能
-- 長時間使用しない場合は再ログインが必要
-
-#### 接続エラー
-- ネットワーク接続を確認
-- `REQUEST_TIMEOUT`を延長
-- プロキシ設定が必要な場合は環境変数で設定
-
-#### SSL証明書エラー
-- 証明書が有効か確認
-- 自己署名証明書の場合は適切な設定が必要
-
-### デバッグモード
-
-```bash
-# Linux/macOS
-export DEBUG=true
-python src/redmine_mcp_server.py
-
-# Windows
-set DEBUG=true
-python src\redmine_mcp_server.py
-```
-
-## 環境変数
-
-| 変数名 | 説明 | デフォルト値 |
-|--------|------|-------------|
-| `REDMINE_URL` | RedmineサーバーのURL | `http://localhost:3000` |
-| `SESSION_TIMEOUT` | セッションタイムアウト（秒） | `3600` |
-| `REQUEST_TIMEOUT` | リクエストタイムアウト（秒） | `30` |
-| `MAX_RETRIES` | 最大リトライ回数 | `3` |
-| `RETRY_DELAY` | リトライ間隔（秒） | `1.0` |
-| `DEBUG` | デバッグモード | `false` |
-| `TWOFA_WAIT` | 2FA認証待機時間（秒） | `300` |
-| `TWOFA_POLL_INTERVAL` | 2FA認証確認間隔（秒） | `3` |
-
-## 注意事項
-
-- このツールはWebスクレイピングを使用するため、Redmineのバージョンやカスタマイズによって動作しない場合があります
-- 2FA認証が有効な場合、Seleniumを使用してブラウザが自動的に開きます
-- 対象のRedmineサーバーの利用規約を確認してから使用してください
-- 過度なリクエストを避けるため、適切な間隔でアクセスしてください
-- セキュリティ上の理由から、本番環境では適切な認証情報管理を行ってください
-- Chromeブラウザがインストールされていることを確認してください（Selenium使用時）
-
-## 制限事項
-
-- **Redmine依存**: HTMLの構造変更に影響を受ける可能性
-- **認証方式**: フォーム認証のみサポート（LDAP、OAuth等は未対応）
-- **パフォーマンス**: APIと比較して処理速度が劣る
-- **ブラウザ依存**: Chromeブラウザが必要
-
-## 今後の拡張可能性
-
-- チケット詳細取得
-- チケット作成・更新
-- ファイルダウンロード
-- キャッシュ機能
-- 並列処理
-- 高度な検索フィルター
-
-## 対応環境
-
-- **Python**: 3.8以降
-- **Redmine**: 4.0以降（推奨）
-- **OS**: Windows, macOS, Linux
-- **ブラウザ**: Google Chrome（Selenium使用時）
-
-## ライセンス
-
-このプロジェクトはMITライセンスの下で公開されています。
+| 変数名 | 説明 | デフォルト値 | 必須 |
+|--------|------|-------------|------|
+| `REDMINE_URL` | RedmineサーバーのURL | `http://localhost:3000` | ○ |
+| `DEBUG` | デバッグモード（true/false） | `false` | × |
+| `SESSION_TIMEOUT` | セッションタイムアウト（秒） | `3600` | × |
+| `REQUEST_TIMEOUT` | リクエストタイムアウト（秒） | `30` | × |
+| `MAX_RETRIES` | 最大リトライ回数 | `3` | × |
+| `RETRY_DELAY` | リトライ間隔（秒） | `1.0` | × |
