@@ -1,5 +1,13 @@
 # GitHub Actions OIDC プロバイダーセットアップ
 
+![Architecture Diagram](src/architecture.svg)
+
+## 概要
+
+このCloudFormationテンプレートは、GitHub ActionsからAWSリソースに安全にアクセスするためのOIDC認証基盤を構築します。
+
+## 構成要素
+
 このCloudFormationテンプレートは以下のリソースを作成します：
 - GitHub Actions用のOIDCプロバイダー
   - URL: https://token.actions.githubusercontent.com
