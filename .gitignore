@@ -67,3 +67,11 @@ cdk.context.json
 # Build output
 dist/
 build/
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
