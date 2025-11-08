@@ -14,15 +14,19 @@ from redmine_mcp_server import RedmineMCPServer
 class TestRedmineMCPServer:
     """Test cases for RedmineMCPServer"""
 
-    def test_server_initialization(self):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    def test_server_initialization(self, mock_scraper_class):
         """Test server initialization"""
+        mock_scraper_class.return_value = Mock()
         server = RedmineMCPServer()
         assert server.server is not None
         assert server.scraper is not None
 
     @pytest.mark.asyncio
-    async def test_handle_login_success(self, mock_scraper):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_login_success(self, mock_scraper_class, mock_scraper):
         """Test successful login"""
+        mock_scraper_class.return_value = mock_scraper
         server = RedmineMCPServer()
         server.scraper = mock_scraper
         
@@ -34,8 +38,10 @@ class TestRedmineMCPServer:
         assert 'success' in result[0].text.lower()
 
     @pytest.mark.asyncio
-    async def test_handle_login_missing_params(self):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_login_missing_params(self, mock_scraper_class):
         """Test login with missing parameters"""
+        mock_scraper_class.return_value = Mock()
         server = RedmineMCPServer()
         
         result = await server._handle_login({'username': 'test'})
@@ -45,8 +51,10 @@ class TestRedmineMCPServer:
         assert 'error' in result[0].text.lower()
 
     @pytest.mark.asyncio
-    async def test_handle_get_projects_authenticated(self, mock_scraper):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_get_projects_authenticated(self, mock_scraper_class, mock_scraper):
         """Test get projects when authenticated"""
+        mock_scraper_class.return_value = mock_scraper
         server = RedmineMCPServer()
         server.scraper = mock_scraper
         server.scraper.is_authenticated = True
@@ -58,11 +66,13 @@ class TestRedmineMCPServer:
         assert 'success' in result[0].text.lower()
 
     @pytest.mark.asyncio
-    async def test_handle_get_projects_not_authenticated(self):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_get_projects_not_authenticated(self, mock_scraper_class):
         """Test get projects when not authenticated"""
+        mock_scraper = Mock()
+        mock_scraper.is_authenticated = False
+        mock_scraper_class.return_value = mock_scraper
         server = RedmineMCPServer()
-        server.scraper = Mock()
-        server.scraper.is_authenticated = False
         
         result = await server._handle_get_projects({})
         
@@ -71,10 +81,11 @@ class TestRedmineMCPServer:
         assert 'error' in result[0].text.lower()
 
     @pytest.mark.asyncio
-    async def test_handle_search_issues(self, mock_scraper):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_search_issues(self, mock_scraper_class, mock_scraper):
         """Test search issues"""
+        mock_scraper_class.return_value = mock_scraper
         server = RedmineMCPServer()
-        server.scraper = mock_scraper
         server.scraper.is_authenticated = True
         
         result = await server._handle_search_issues({'project_id': 'test'})
@@ -84,10 +95,11 @@ class TestRedmineMCPServer:
         mock_scraper.search_issues.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_handle_get_issue_details(self, mock_scraper):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_get_issue_details(self, mock_scraper_class, mock_scraper):
         """Test get issue details"""
+        mock_scraper_class.return_value = mock_scraper
         server = RedmineMCPServer()
-        server.scraper = mock_scraper
         server.scraper.is_authenticated = True
         
         result = await server._handle_get_issue_details({'issue_id': '1'})
@@ -97,10 +109,11 @@ class TestRedmineMCPServer:
         mock_scraper.get_issue_details.assert_called_once_with('1')
 
     @pytest.mark.asyncio
-    async def test_handle_create_issue(self, mock_scraper):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_create_issue(self, mock_scraper_class, mock_scraper):
         """Test create issue"""
+        mock_scraper_class.return_value = mock_scraper
         server = RedmineMCPServer()
-        server.scraper = mock_scraper
         server.scraper.is_authenticated = True
         
         # Mock validation methods
@@ -116,10 +129,11 @@ class TestRedmineMCPServer:
         assert len(result) == 1
 
     @pytest.mark.asyncio
-    async def test_handle_update_issue(self, mock_scraper):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_update_issue(self, mock_scraper_class, mock_scraper):
         """Test update issue"""
+        mock_scraper_class.return_value = mock_scraper
         server = RedmineMCPServer()
-        server.scraper = mock_scraper
         server.scraper.is_authenticated = True
         
         result = await server._handle_update_issue({
@@ -132,10 +146,11 @@ class TestRedmineMCPServer:
         mock_scraper.update_issue.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_handle_get_project_members(self, mock_scraper):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_get_project_members(self, mock_scraper_class, mock_scraper):
         """Test get project members"""
+        mock_scraper_class.return_value = mock_scraper
         server = RedmineMCPServer()
-        server.scraper = mock_scraper
         server.scraper.is_authenticated = True
         
         result = await server._handle_get_project_members({'project_id': 'test'})
@@ -145,10 +160,11 @@ class TestRedmineMCPServer:
         mock_scraper.get_project_members.assert_called_once_with('test')
 
     @pytest.mark.asyncio
-    async def test_handle_logout(self, mock_scraper):
+    @patch('redmine_mcp_server.RedmineSeleniumScraper')
+    async def test_handle_logout(self, mock_scraper_class, mock_scraper):
         """Test logout"""
+        mock_scraper_class.return_value = mock_scraper
         server = RedmineMCPServer()
-        server.scraper = mock_scraper
         
         result = await server._handle_logout({})
         
