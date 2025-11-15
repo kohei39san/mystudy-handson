@@ -4,6 +4,132 @@
 
 本ドキュメントは、Redmine MCP Serverの実装から読み取れる設計指針と設計思想をまとめたものです。
 
+## 返却形式
+
+以下は `src/redmine_selenium.py` の主要メソッドが実際に返す Python 辞書（スクレイパー側の返却形式）の例です。MCP サーバー側はこれらを `TextContent(type="text", text=str(result))` でラップして返しています。
+
+- `login(username, password)`
+```json
+{
+    "success": true,
+    "message": "Successfully logged in to Redmine",
+    "redirect_url": "http://redmine.example.com/projects"
+}
+```
+
+- `get_projects()`
+```json
+{
+    "success": true,
+    "message": "Successfully retrieved 2 projects",
+    "projects": [
+        { "id": "proj1", "name": "Project 1", "description": "...", "url": "..." },
+        { "id": "proj2", "name": "Project 2", "description": "...", "url": "..." }
+    ]
+}
+```
+
+- `get_project_members(project_id)`
+```json
+{
+    "success": true,
+    "message": "Successfully retrieved 3 project members",
+    "project_id": "proj1",
+    "members": [ { "id": "5", "name": "alice", "roles": ["Manager"], "is_current_user": false } ]
+}
+```
+
+- `logout()`
+```json
+{
+    "success": true,
+    "message": "Successfully logged out from Redmine"
+}
+```
+
+- `search_issues(...)`
+```json
+{
+    "success": true,
+    "message": "Found 12 issues (showing page 1)",
+    "issues": [ { "id": "123", "subject": "Example issue", "status": "Ongoing", "url": "..." } ],
+    "total_count": 12,
+    "page": 1,
+    "per_page": 25,
+    "total_pages": 1
+}
+```
+
+- `get_issue_details(issue_id)`
+```json
+{
+    "success": true,
+    "message": "Successfully retrieved details for issue #123",
+    "issue": { "id": "123", "subject": "Example issue", "description": "詳細説明", "status": "Ongoing", "created_on": "2025-01-01", "updated_on": "2025-01-02", "custom_field_x": "..." }
+}
+```
+
+- `get_available_trackers(project_id?)`
+```json
+{
+    "success": true,
+    "message": "Found 3 available trackers",
+    "trackers": [ { "value": "1", "text": "Bug", "fields": [...] } ]
+}
+```
+
+- `get_tracker_fields(project_id, tracker_id)`
+```json
+{
+    "success": true,
+    "message": "Found 10 fields (2 required, 8 optional)",
+    "fields": [ { "id": "issue_subject", "name": "Subject", "type": "text", "required": true, "visible": true, "enabled": true } ],
+    "required_fields": [ ... ],
+    "optional_fields": [ ... ],
+    "custom_fields": [ ... ],
+    "standard_fields": [ ... ],
+    "tracker_id": "3"
+}
+```
+
+- `get_creation_statuses(project_id, tracker_id)`
+```json
+{
+    "success": true,
+    "message": "Found 4 creation statuses",
+    "statuses": [ { "value": "1", "text": "New" }, { "value": "2", "text": "In Progress" } ]
+}
+```
+
+- `get_available_statuses(issue_id)`
+```json
+{
+    "success": true,
+    "message": "Found 3 available statuses",
+    "statuses": [ { "value": "2", "text": "In Progress" }, { "value": "5", "text": "Closed" } ]
+}
+```
+
+- `create_issue(project_id, tracker_id, **fields)`
+```json
+{
+    "success": true,
+    "message": "Successfully created issue #124",
+    "issue_id": "124",
+    "issue_url": "http://redmine.example.com/issues/124"
+}
+```
+
+- `update_issue(issue_id, **fields)`
+```json
+{
+    "success": true,
+    "message": "Successfully updated issue #123",
+    "issue_id": "123",
+    "updated_fields": ["subject","status_id"]
+}
+```
+
 ## アーキテクチャ設計
 
 ### 1. レイヤー分離
