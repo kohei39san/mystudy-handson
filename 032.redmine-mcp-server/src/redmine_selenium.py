@@ -2361,6 +2361,356 @@ class RedmineSeleniumScraper:
             }
     
 
+    def get_time_entries(self, project_id: str, **kwargs) -> Dict[str, Any]:
+        """
+        Get time entries (作業時間) for a project with optional filters
+        
+        Args:
+            project_id: Project ID to get time entries for
+            start_date: Start date for filtering (YYYY-MM-DD format, optional)
+            end_date: End date for filtering (YYYY-MM-DD format, optional)
+            user_id: User ID to filter by (optional)
+            page: Page number for pagination (default: 1)
+            per_page: Items per page (default: 25)
+            
+        Returns:
+            Dict with time entries list and pagination info
+        """
+        if not self.is_authenticated or not self.driver:
+            return {
+                'success': False,
+                'message': 'Not authenticated. Please login first.',
+                'time_entries': [],
+                'total_count': 0,
+                'page': 1,
+                'per_page': 25,
+                'total_pages': 0
+            }
+        
+        try:
+            logger.info(f"Fetching time entries for project: {project_id}")
+            
+            # Build time entries URL
+            time_entries_url = f"{config.base_url}/projects/{project_id}/time_entries"
+            
+            # Build filter parameters
+            filter_params = ["set_filter=1", "sort=spent_on:desc"]
+            
+            # Add date range filter if provided
+            start_date = kwargs.get('start_date')
+            end_date = kwargs.get('end_date')
+            
+            if start_date or end_date:
+                filter_params.extend([
+                    "f[]=spent_on",
+                    "op[spent_on]=><"
+                ])
+                if start_date:
+                    filter_params.append(f"v[spent_on][]={start_date}")
+                if end_date:
+                    filter_params.append(f"v[spent_on][]={end_date}")
+            
+            # Add user filter if provided
+            if kwargs.get('user_id'):
+                filter_params.extend([
+                    "f[]=user_id",
+                    "op[user_id]==",
+                    f"v[user_id][]={kwargs['user_id']}"
+                ])
+            
+            # Add empty filter field
+            filter_params.append("f[]=")
+            
+            # Add column configuration for time entries
+            filter_params.extend([
+                "c[]=hours",
+                "c[]=spent_on",
+                "c[]=activity",
+                "c[]=user",
+                "c[]=issue",
+                "c[]=comments"
+            ])
+            
+            # Add pagination
+            page = kwargs.get('page', 1)
+            per_page = kwargs.get('per_page', 25)
+            
+            # Append parameters to URL
+            from urllib.parse import quote
+            if filter_params:
+                encoded_params = []
+                for param in filter_params:
+                    if '=' in param:
+                        key, value = param.split('=', 1)
+                        encoded_params.append(f"{quote(key, safe='[]')}={quote(value, safe='')}")
+                    else:
+                        encoded_params.append(quote(param, safe='[]'))
+                time_entries_url += "?" + "&".join(encoded_params)
+            
+            logger.debug(f"Time entries URL: {time_entries_url}")
+            logger.debug(f"Filter parameters: {kwargs}")
+            
+            # Navigate to time entries page
+            self.driver.get(time_entries_url)
+            
+            # Wait for page to load
+            time.sleep(2)
+            
+            # Check if redirected to login page
+            if 'login' in self.driver.current_url.lower():
+                logger.warning("Redirected to login page - session expired")
+                self.is_authenticated = False
+                return {
+                    'success': False,
+                    'message': 'Session expired. Please login again.',
+                    'time_entries': [],
+                    'total_count': 0,
+                    'page': page,
+                    'per_page': per_page,
+                    'total_pages': 0
+                }
+            
+            # Check if project is accessible
+            if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
+                return {
+                    'success': False,
+                    'message': f'Project {project_id} not found or time entries not accessible.',
+                    'time_entries': [],
+                    'total_count': 0,
+                    'page': page,
+                    'per_page': per_page,
+                    'total_pages': 0
+                }
+            
+            time_entries = []
+            total_count = 0
+            
+            # Extract total count from page
+            try:
+                # Method 1: Look for pagination info with pattern (1-25/101)
+                pagination_elements = self.driver.find_elements(By.CSS_SELECTOR, 
+                    ".pagination, .paginator, .page-info, .items-info")
+                
+                for element in pagination_elements:
+                    text = element.text.strip()
+                    logger.debug(f"Pagination text: {text}")
+                    # Look for patterns like "(1-25/101)" or "1-25/101"
+                    match = re.search(r'\(?\d+-\d+/(\d+)\)?', text)
+                    if match:
+                        total_count = int(match.group(1))
+                        logger.debug(f"Found total count from pagination: {total_count}")
+                        break
+                
+                # Method 2: Look for "X entries" or similar text
+                if total_count == 0:
+                    count_elements = self.driver.find_elements(By.CSS_SELECTOR, 
+                        ".count, .total-count, .entry-count, .results-info")
+                    
+                    for element in count_elements:
+                        text = element.text.strip()
+                        # Extract number from text like "101 entries" or "101件"
+                        count_match = re.search(r'(\d+)\s*(?:entries?|件|個|results?)', text, re.IGNORECASE)
+                        if count_match:
+                            total_count = int(count_match.group(1))
+                            logger.debug(f"Found total count from text: {total_count}")
+                            break
+                            
+            except Exception as e:
+                logger.debug(f"Could not extract total count: {e}")
+            
+            # Extract time entries from table
+            try:
+                # Look for time entries table
+                time_entries_table = None
+                try:
+                    time_entries_table = self.driver.find_element(By.CSS_SELECTOR, "#content table.list")
+                    logger.debug("Found time entries table")
+                except Exception as e:
+                    logger.debug(f"Time entries table selector failed: {e}")
+                    time_entries_table = None
+                
+                if time_entries_table:
+                    rows = time_entries_table.find_elements(By.TAG_NAME, "tr")
+                    logger.debug(f"Found {len(rows)} rows in time entries table")
+                    
+                    # Skip header row(s) - look for rows with td elements
+                    data_rows = []
+                    for row in rows:
+                        cells = row.find_elements(By.TAG_NAME, "td")
+                        if cells:  # Has td elements, likely a data row
+                            data_rows.append(row)
+                    
+                    logger.debug(f"Found {len(data_rows)} data rows")
+                    
+                    for row_idx, row in enumerate(data_rows):
+                        cells = row.find_elements(By.TAG_NAME, "td")
+                        logger.debug(f"Row {row_idx}: {len(cells)} cells")
+                        
+                        if len(cells) >= 1:
+                            entry_data = {}
+                            
+                            try:
+                                # Look for issue ID or entry identifier link
+                                entry_link = None
+                                entry_id = None
+                                
+                                for cell_idx, cell in enumerate(cells):
+                                    # Look for issue links or entry links
+                                    links = cell.find_elements(By.TAG_NAME, "a")
+                                    for link in links:
+                                        href = link.get_attribute("href")
+                                        link_text = link.text.strip()
+                                        
+                                        # Try to extract issue ID
+                                        if href and '/issues/' in href:
+                                            id_match = re.search(r'/issues/(\d+)', href)
+                                            if id_match:
+                                                entry_data['issue_id'] = id_match.group(1)
+                                                entry_link = link
+                                                break
+                                        
+                                        # Try to extract other entry identifiers
+                                        if href and link_text:
+                                            entry_link = link
+                                            break
+                                    
+                                    if entry_link:
+                                        break
+                                
+                                # Extract cell values and identify them by position or content
+                                for cell_idx, cell in enumerate(cells):
+                                    cell_text = cell.text.strip()
+                                    
+                                    if not cell_text:
+                                        continue
+                                    
+                                    # Method 1: Identify by column position and content pattern
+                                    # First column: checkbox or user name
+                                    if cell_idx == 0:
+                                        if not cell_text.isdigit() and cell_text != '✓':
+                                            # Try to get from user link
+                                            try:
+                                                user_link = cell.find_element(By.TAG_NAME, "a")
+                                                user_text = user_link.text.strip()
+                                                if user_text:
+                                                    entry_data['user'] = user_text
+                                                    # Try to extract user ID
+                                                    user_href = user_link.get_attribute("href")
+                                                    if user_href:
+                                                        user_id_match = re.search(r'/users/(\d+)', user_href)
+                                                        if user_id_match:
+                                                            entry_data['user_id'] = user_id_match.group(1)
+                                            except:
+                                                entry_data['user'] = cell_text
+                                    
+                                    # Look for hours (numeric value, often in cell with decimal)
+                                    elif re.match(r'^\d+\.?\d*$', cell_text):
+                                        if 'hours' not in entry_data:
+                                            entry_data['hours'] = cell_text
+                                    
+                                    # Look for date (YYYY-MM-DD format)
+                                    elif re.match(r'^\d{4}-\d{2}-\d{2}', cell_text):
+                                        if 'spent_on' not in entry_data:
+                                            entry_data['spent_on'] = cell_text.split()[0]  # Take only date part
+                                    
+                                    # Activity (usually a label-like string)
+                                    elif cell_idx > 0 and 'activity' not in entry_data and not re.match(r'^\d+', cell_text):
+                                        # Check if it looks like an activity
+                                        if len(cell_text) > 2 and len(cell_text) < 50:
+                                            # Try to distinguish from other columns
+                                            if 'issue' not in entry_data or cell_idx < 4:
+                                                entry_data['activity'] = cell_text
+                                    
+                                    # Comments (usually longer text)
+                                    elif 'comments' not in entry_data and len(cell_text) > 10:
+                                        entry_data['comments'] = cell_text
+                                
+                                # If we have at least hours and date, it's a valid entry
+                                if entry_data.get('hours') and entry_data.get('spent_on'):
+                                    time_entries.append(entry_data)
+                                    logger.debug(f"Added time entry: {entry_data}")
+                                
+                            except Exception as e:
+                                logger.debug(f"Error processing row {row_idx}: {e}")
+                                continue
+                
+            except Exception as e:
+                logger.debug(f"Error processing time entries table: {e}")
+            
+            # Alternative method: look for any time entry rows directly
+            if not time_entries:
+                logger.debug("No time entries found in table, trying alternative methods")
+                try:
+                    # Look for rows that likely contain time entry data
+                    rows = self.driver.find_elements(By.CSS_SELECTOR, "table tr")
+                    logger.debug(f"Found {len(rows)} rows on page")
+                    
+                    for row in rows:
+                        cells = row.find_elements(By.TAG_NAME, "td")
+                        if len(cells) >= 2:  # Time entries need at least 2 columns
+                            try:
+                                row_text = row.text.strip()
+                                # Look for patterns that indicate a time entry row
+                                # e.g., contains hours (number), date, and other identifiers
+                                
+                                entry_data = {}
+                                cell_texts = [cell.text.strip() for cell in cells]
+                                
+                                # Look for hours (first numeric value with decimals)
+                                for text in cell_texts:
+                                    if re.match(r'^\d+\.?\d*$', text):
+                                        entry_data['hours'] = text
+                                        break
+                                
+                                # Look for date (YYYY-MM-DD)
+                                for text in cell_texts:
+                                    if re.match(r'^\d{4}-\d{2}-\d{2}', text):
+                                        entry_data['spent_on'] = text.split()[0]
+                                        break
+                                
+                                if entry_data.get('hours') and entry_data.get('spent_on'):
+                                    time_entries.append(entry_data)
+                                    logger.debug(f"Added time entry from alternative method: {entry_data}")
+                                    
+                            except Exception as e:
+                                logger.debug(f"Error processing alternative row: {e}")
+                                continue
+                                
+                except Exception as e:
+                    logger.debug(f"Error finding time entry rows: {e}")
+            
+            # Calculate pagination info
+            total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
+            
+            # If we found time entries but no total count, estimate from entries found
+            if time_entries and total_count == 0:
+                total_count = len(time_entries)
+                logger.debug(f"Estimated total count from found entries: {total_count}")
+            
+            logger.info(f"Found {len(time_entries)} time entries on page {page}, total: {total_count}")
+            
+            return {
+                'success': True,
+                'message': f'Found {total_count} time entries (showing page {page})',
+                'time_entries': time_entries,
+                'total_count': total_count,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': total_pages
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching time entries: {e}")
+            return {
+                'success': False,
+                'message': f"Error fetching time entries: {str(e)}",
+                'time_entries': [],
+                'total_count': 0,
+                'page': kwargs.get('page', 1),
+                'per_page': kwargs.get('per_page', 25),
+                'total_pages': 0
+            }
+    
     def __del__(self):
         """Cleanup when object is destroyed"""
         if self.driver:

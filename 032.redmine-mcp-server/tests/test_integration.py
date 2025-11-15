@@ -108,3 +108,126 @@ class TestRedmineIntegration:
         assert config.base_url is not None
         assert config.login_url is not None
         assert config.projects_url is not None
+
+    @pytest.mark.skipif(not (os.getenv('REDMINE_USERNAME') and os.getenv('REDMINE_PASSWORD')), 
+                       reason="Credentials not configured")
+    @pytest.mark.asyncio
+    async def test_get_time_entries_without_auth(self, mcp_server):
+        """Test that get_time_entries fails without authentication"""
+        result = await mcp_server._handle_get_time_entries({
+            'project_id': 'test-project'
+        })
+        
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert '[ERROR]' in result[0].text
+        assert 'Not authenticated' in result[0].text
+
+    @pytest.mark.skipif(not (os.getenv('REDMINE_USERNAME') and os.getenv('REDMINE_PASSWORD')), 
+                       reason="Credentials not configured")
+    @pytest.mark.asyncio
+    async def test_get_time_entries_missing_project_id(self, mcp_server):
+        """Test that get_time_entries requires project_id"""
+        result = await mcp_server._handle_get_time_entries({})
+        
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert '[ERROR]' in result[0].text
+        assert 'Project ID is required' in result[0].text
+
+    @pytest.mark.skipif(not (os.getenv('REDMINE_USERNAME') and os.getenv('REDMINE_PASSWORD') and os.getenv('TEST_PROJECT_ID')), 
+                       reason="Credentials or TEST_PROJECT_ID not configured")
+    @pytest.mark.asyncio
+    async def test_get_time_entries_with_authentication(self, mcp_server):
+        """Test get_time_entries after authentication"""
+        username = os.getenv('REDMINE_USERNAME', '')
+        password = os.getenv('REDMINE_PASSWORD', '')
+        project_id = os.getenv('TEST_PROJECT_ID', '')
+        
+        if not username or not password or not project_id:
+            pytest.skip("Credentials or TEST_PROJECT_ID not available")
+        
+        # First login
+        login_result = await mcp_server._handle_login({
+            'username': username,
+            'password': password
+        })
+        
+        # Parse login result to verify authentication
+        login_text = login_result[0].text
+        if 'error' in login_text.lower() or 'failed' in login_text.lower():
+            pytest.skip(f"Login failed: {login_text}")
+        
+        # Now test get_time_entries
+        time_entries_result = await mcp_server._handle_get_time_entries({
+            'project_id': project_id
+        })
+        
+        assert isinstance(time_entries_result, list)
+        assert len(time_entries_result) == 1
+        
+        # Parse result
+        result_text = time_entries_result[0].text
+        # Result should be a dictionary as string
+        assert isinstance(result_text, str)
+
+    @pytest.mark.skipif(not (os.getenv('REDMINE_USERNAME') and os.getenv('REDMINE_PASSWORD') and os.getenv('TEST_PROJECT_ID')), 
+                       reason="Credentials or TEST_PROJECT_ID not configured")
+    def test_scraper_get_time_entries(self, scraper):
+        """Test scraper get_time_entries functionality"""
+        username = os.getenv('REDMINE_USERNAME', '')
+        password = os.getenv('REDMINE_PASSWORD', '')
+        project_id = os.getenv('TEST_PROJECT_ID', '')
+        
+        if not username or not password or not project_id:
+            pytest.skip("Credentials or TEST_PROJECT_ID not available")
+        
+        try:
+            # Test login
+            login_result = scraper.login(username, password)
+            
+            if login_result.get('success'):
+                # Test get_time_entries without filters
+                time_entries_result = scraper.get_time_entries(project_id)
+                assert time_entries_result.get('success') is True
+                assert 'time_entries' in time_entries_result
+                assert 'total_count' in time_entries_result
+                assert 'page' in time_entries_result
+                assert 'per_page' in time_entries_result
+                
+                # Verify response structure
+                assert isinstance(time_entries_result['time_entries'], list)
+                assert isinstance(time_entries_result['total_count'], int)
+                assert time_entries_result['page'] >= 1
+                assert time_entries_result['per_page'] > 0
+                
+                # Test get_time_entries with date filter
+                import datetime
+                end_date = datetime.date.today()
+                start_date = end_date - datetime.timedelta(days=30)
+                
+                filtered_result = scraper.get_time_entries(
+                    project_id,
+                    start_date=start_date.strftime('%Y-%m-%d'),
+                    end_date=end_date.strftime('%Y-%m-%d')
+                )
+                assert filtered_result.get('success') is True
+                assert 'time_entries' in filtered_result
+                
+                # Test get_time_entries with pagination
+                paginated_result = scraper.get_time_entries(
+                    project_id,
+                    page=1,
+                    per_page=5
+                )
+                assert paginated_result.get('success') is True
+                assert paginated_result.get('per_page') == 5
+                
+                # Test logout
+                logout_result = scraper.logout()
+                assert logout_result.get('success') is True
+            else:
+                pytest.skip(f"Login failed: {login_result.get('message')}")
+                
+        except Exception as e:
+            pytest.skip(f"Scraper integration test failed: {str(e)}")

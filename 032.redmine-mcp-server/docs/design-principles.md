@@ -130,6 +130,21 @@
 }
 ```
 
+- `get_time_entries(project_id, start_date?, end_date?, user_id?, page?, per_page?)`
+```json
+{
+    "success": true,
+    "message": "Found 45 time entries (showing page 1)",
+    "time_entries": [
+        { "hours": "2.5", "spent_on": "2025-01-15", "activity": "Development", "user": "alice", "user_id": "5", "issue_id": "123", "comments": "..." }
+    ],
+    "total_count": 45,
+    "page": 1,
+    "per_page": 25,
+    "total_pages": 2
+}
+```
+
 ## アーキテクチャ設計
 
 ### 1. レイヤー分離

@@ -302,6 +302,43 @@ class RedmineMCPServer:
                         },
                         "required": ["project_id"]
                     }
+                ),
+                Tool(
+                    name="get_time_entries",
+                    description="Get time entries (作業時間) for a project with optional filters",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_id": {
+                                "type": "string",
+                                "description": "Project ID to get time entries for (required)"
+                            },
+                            "start_date": {
+                                "type": "string",
+                                "description": "Start date for filtering in YYYY-MM-DD format (optional)"
+                            },
+                            "end_date": {
+                                "type": "string",
+                                "description": "End date for filtering in YYYY-MM-DD format (optional)"
+                            },
+                            "user_id": {
+                                "type": "string",
+                                "description": "User ID to filter by (optional)"
+                            },
+                            "page": {
+                                "type": "integer",
+                                "description": "Page number for pagination (default: 1)",
+                                "minimum": 1
+                            },
+                            "per_page": {
+                                "type": "integer",
+                                "description": "Items per page (default: 25)",
+                                "minimum": 1,
+                                "maximum": 100
+                            }
+                        },
+                        "required": ["project_id"]
+                    }
                 )
             ]
         
@@ -335,6 +372,8 @@ class RedmineMCPServer:
                     return await self._handle_update_issue(arguments)
                 elif name == "get_project_members":
                     return await self._handle_get_project_members(arguments)
+                elif name == "get_time_entries":
+                    return await self._handle_get_time_entries(arguments)
                 else:
                     return [TextContent(
                         type="text",
@@ -681,6 +720,35 @@ class RedmineMCPServer:
             )]
         
         result = self.scraper.get_project_members(project_id)
+        
+        return [TextContent(
+            type="text",
+            text=str(result)
+        )]
+    
+    async def _handle_get_time_entries(self, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Handle get time entries tool call"""
+        project_id = arguments.get("project_id")
+        
+        if not project_id:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Project ID is required"
+            )]
+        
+        logger.info(f"Getting time entries for project: {project_id}")
+        
+        # Check if authenticated
+        if not self.scraper.is_authenticated:
+            return [TextContent(
+                type="text",
+                text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
+            )]
+        
+        # Extract parameters from arguments
+        filter_params = {k: v for k, v in arguments.items() if v is not None and k != 'project_id'}
+        
+        result = self.scraper.get_time_entries(project_id, **filter_params)
         
         return [TextContent(
             type="text",
