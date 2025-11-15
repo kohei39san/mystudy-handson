@@ -2,7 +2,8 @@
     "python.testing.pytestArgs": [
         "--cov=032.redmine-mcp-server/src",
         "--cov-report=html",
-        "--cov-report=term-missing"
+        "--cov-report=term-missing",
+        "--log-cli-level=DEBUG"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true

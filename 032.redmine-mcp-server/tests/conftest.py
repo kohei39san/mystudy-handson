@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file (explicit path to ensure it loads)
 env_path = Path(__file__).parent.parent / '.env'
-load_dotenv(dotenv_path=env_path)
+load_dotenv(dotenv_path=env_path, override=True)
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -75,16 +75,33 @@ def mock_config():
     config.debug = False
     return config
 
-@pytest.fixture(autouse=True)
-def mock_selenium_driver():
-    """Automatically mock selenium driver creation to prevent browser launch"""
+@pytest.fixture(autouse=True, scope="function")
+def mock_selenium_driver(request):
+    """Automatically mock selenium driver creation to prevent browser launch.
+    
+    Skips mocking for integration tests so they can use real browsers.
+    """
+    # Check if test is marked with @pytest.mark.integration
+    if request.node.get_closest_marker('integration'):
+        # Skip mocking for integration tests
+        yield None
+        return
+    
     with patch('redmine_selenium.webdriver.Chrome') as mock_chrome:
         mock_driver = Mock()
         mock_driver.get = Mock()
         mock_driver.quit = Mock()
         mock_driver.current_url = 'http://localhost:3000'
         mock_driver.page_source = 'test page'
-        mock_driver.find_element = Mock()
+        # Create a mock element that behaves like a real WebElement for common calls
+        mock_element = Mock()
+        mock_element.get_attribute = Mock(return_value='')
+        mock_element.text = ''
+        mock_element.find_elements = Mock(return_value=[])
+        mock_element.find_element = Mock(return_value=mock_element)
+
+        # Driver find_element should return the mock element; find_elements returns empty list
+        mock_driver.find_element = Mock(return_value=mock_element)
         mock_driver.find_elements = Mock(return_value=[])
         mock_chrome.return_value = mock_driver
         yield mock_driver

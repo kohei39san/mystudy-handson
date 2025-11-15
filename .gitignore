@@ -74,4 +74,4 @@ htmlcov/
 .nox/
 .coverage
 .coverage.*
-coverage.xml
+coverage.*

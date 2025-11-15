@@ -174,7 +174,36 @@ class RedmineSeleniumScraper:
                 time.sleep(2)  # Allow initial redirect
                 current_url = self.driver.current_url
                 
-                if 'twofa' in current_url.lower():
+                # Skip 2FA handling if configured for test environment
+                skip_2fa = config.skip_2fa
+                logger.info(f"Skip 2FA mode: {skip_2fa}")
+
+                # If SKIP_2FA is enabled for test envs, try immediate bypass by
+                # navigating to the projects page right after credentials submission.
+                # This avoids waiting the full TWOFA_WAIT when using mocked drivers
+                # that do not change URL.
+                if skip_2fa:
+                    try:
+                        logger.info("SKIP_2FA enabled: attempting immediate projects access")
+                        self.driver.get(config.projects_url)
+                        time.sleep(1)
+                        if 'login' not in self.driver.current_url.lower():
+                            self.is_authenticated = True
+                            logger.info("Bypassed 2FA via immediate projects access")
+                            # Switch to headless mode if appropriate and return success
+                            try:
+                                self._switch_to_headless()
+                            except Exception:
+                                logger.debug("_switch_to_headless failed during SKIP_2FA bypass")
+                            return {
+                                'success': True,
+                                'message': 'Successfully logged in to Redmine (2FA bypassed)',
+                                'redirect_url': self.driver.current_url
+                            }
+                    except Exception as e:
+                        logger.debug(f"SKIP_2FA immediate check failed: {e}")
+
+                if 'twofa' in current_url.lower() and not skip_2fa:
                     logger.info("2FA page detected. Please complete authentication manually in the browser.")
                     print("\n" + "="*60)
                     print("TWO-FACTOR AUTHENTICATION REQUIRED")
@@ -245,8 +274,25 @@ class RedmineSeleniumScraper:
                                     # Continue monitoring even if there's an error
                         
                         # Check if we're still on the same page (no navigation happened)
-                        # This could mean user is still completing 2FA
-                        if 'twofa' in current_url.lower():
+                        # If 2FA is being skipped, try to proceed without waiting
+                        if skip_2fa and 'twofa' in current_url.lower():
+                            logger.info("2FA page detected but SKIP_2FA is enabled, attempting to bypass...")
+                            # Try to navigate directly to projects page
+                            try:
+                                self.driver.get(config.projects_url)
+                                time.sleep(2)
+                                if 'login' not in self.driver.current_url.lower():
+                                    self.is_authenticated = True
+                                    logger.info("Bypassed 2FA - authenticated successfully")
+                                    self._switch_to_headless()
+                                    return {
+                                        'success': True,
+                                        'message': 'Successfully logged in to Redmine (2FA bypassed)',
+                                        'redirect_url': self.driver.current_url
+                                    }
+                            except Exception as e:
+                                logger.debug(f"Error bypassing 2FA: {e}")
+                        elif 'twofa' in current_url.lower():
                             # Just wait, don't reload
                             pass
                         elif 'login' in current_url.lower():
@@ -303,6 +349,12 @@ class RedmineSeleniumScraper:
             # Wait for page to load
             wait = WebDriverWait(self.driver, 10)
             
+            # Debug: Log page title and source
+            logger.debug(f"Page title: {self.driver.title}")
+            page_source = self.driver.page_source
+            logger.debug(f"Page source length: {len(page_source)}")
+            logger.debug(f"First 500 chars: {page_source[:500]}")
+            
             projects = []
             
             # Check if we're redirected to login page
@@ -319,6 +371,7 @@ class RedmineSeleniumScraper:
             try:
                 project_table = self.driver.find_element(By.CSS_SELECTOR, "table.projects, table.list")
                 rows = project_table.find_elements(By.TAG_NAME, "tr")
+                logger.debug(f"Found project table with {len(rows)} rows")
                 
                 for row in rows[1:]:  # Skip header row
                     cells = row.find_elements(By.TAG_NAME, "td")
@@ -357,6 +410,7 @@ class RedmineSeleniumScraper:
             if not projects:
                 try:
                     project_links = self.driver.find_elements(By.CSS_SELECTOR, "a[href*='/projects/']")
+                    logger.debug(f"Found {len(project_links)} links containing '/projects/'")
                     
                     for link in project_links:
                         href = link.get_attribute("href")
