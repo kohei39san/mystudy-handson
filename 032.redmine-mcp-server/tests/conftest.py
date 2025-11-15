@@ -5,11 +5,13 @@ pytest configuration and fixtures for Redmine MCP Server tests
 import pytest
 import sys
 import os
+from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from .env file (explicit path to ensure it loads)
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))

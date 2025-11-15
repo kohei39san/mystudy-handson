@@ -6,10 +6,12 @@ These tests require a running Redmine instance and valid credentials
 import pytest
 import asyncio
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from .env file (explicit path to ensure it loads)
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 # Import modules under test
 from redmine_mcp_server import RedmineMCPServer
