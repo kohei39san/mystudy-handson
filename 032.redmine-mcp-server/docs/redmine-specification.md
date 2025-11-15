@@ -18,6 +18,7 @@ Redmine MCP Serverが使用するRedmineの仕様をまとめたドキュメン�
 | プロジェクトメンバー | `{base_url}/projects/{project_id}/settings/members` | プロジェクトメンバー設定ページ |
 | チケット一覧（全体） | `{base_url}/issues` | 全プロジェクトのチケット一覧 |
 | チケット一覧（プロジェクト） | `{base_url}/projects/{project_id}/issues` | 特定プロジェクトのチケット一覧 |
+| 作業時間一覧（プロジェクト） | `{base_url}/projects/{project_id}/time_entries` | 特定プロジェクトの作業時間一覧 |
 | チケット詳細 | `{base_url}/issues/{issue_id}` | チケット詳細ページ |
 | チケット編集 | `{base_url}/issues/{issue_id}/edit` | チケット編集ページ |
 | チケット新規作成 | `{base_url}/issues/new` | 新規チケット作成ページ（全体） |
@@ -33,7 +34,9 @@ Redmine MCP Serverが使用するRedmineの仕様をまとめたドキュメン�
 | `{issue_id}` | チケットID | `123` |
 | `{tracker_id}` | トラッカーID | `1` |
 
-### チケット検索
+## チケット
+
+### 検索パラメータ
 
 #### URLパターン
 
@@ -47,9 +50,7 @@ Redmine MCP Serverが使用するRedmineの仕様をまとめたドキュメン�
 
 **注意**: フィルターパラメータとカラムパラメータは複数指定可能です。
 
-#### 検索パラメータ
-
-##### 基本パラメータ
+#### 基本パラメータ
 
 | パラメータ | 説明 | `{sort}` / `{keyword}` |
 |-----------|----|-----|
@@ -58,7 +59,7 @@ Redmine MCP Serverが使用するRedmineの仕様をまとめたドキュメン�
 | `group_by` | グループ化 | 空文字列（グループ化なし） |
 | `q` | 全文検索 | `認証`（検索キーワード） |
 
-##### フィルターパラメータ
+#### フィルターパラメータ
 
 フィルターは`f[]`、`op[field]`、`v[field][]`の3つのパラメータで構成されます。
 
@@ -71,7 +72,7 @@ Redmine MCP Serverが使用するRedmineの仕様をまとめたドキュメン�
 | 全文検索 | `any_searchable` | 題名・説明・コメントを横断検索 |
 | カスタムフィールド | `cf_{id}` | Redmine設定で追加されたフィールド |
 
-##### 演算子一覧
+#### 演算子一覧
 
 | `{operator}` | 説明 | 使用可能フィールド | `{value}` 例 |
 |--------|------|---------------------|----------|
@@ -82,7 +83,7 @@ Redmine MCP Serverが使用するRedmineの仕様をまとめたドキュメン�
 | `c` | 完了 | `status_id` | 空文字列 |
 | `*` | すべて | `status_id` | 空文字列 |
 
-##### 表示カラムパラメータ
+#### 表示カラムパラメータ
 
 | パラメータ | 説明 | `{column}` |
 |-----------|----|-----|
@@ -110,9 +111,7 @@ Redmine MCP Serverが使用するRedmineの仕様をまとめたドキュメン�
 {base_url}/issues?set_filter=1&f[]=status_id&op[status_id]=o&f[]=tracker_id&op[tracker_id]==&v[tracker_id][]=1&f[]=&c[]=subject&c[]=priority&c[]=assigned_to
 ```
 
----
-
-## 標準フィールド一覧
+### フィールド一覧
 
 標準フィールドは、以下のURLにアクセスした際に画面で出てくる項目です：
 
@@ -121,8 +120,6 @@ Redmine MCP Serverが使用するRedmineの仕様をまとめたドキュメン�
 | `{base_url}/projects/{project_id}/issues/new` | 更新フィールドID | チケット新規作成 |
 | `{base_url}/issues/{issue_id}/edit` | 更新フィールドID | チケット編集 |
 | `{base_url}/issues/{issue_id}` | 表示フィールドID | チケット詳細（表示のみ） |
-
-### フィールド一覧表
 
 | フィールド名 | 表示フィールドID | 更新フィールドID | 型 | 必須 | 説明 | 取りうる値 |
 |-------------|-------------|----------------|-----|------|------|-----------|
@@ -139,6 +136,70 @@ Redmine MCP Serverが使用するRedmineの仕様をまとめたドキュメン�
 | 進捗率 | `done_ratio` | `issue_done_ratio` | select-one | × | 作業の進捗状況 | 数値（0-100の10刻み）<br>例: `0`, `10`, `20`, ..., `100` |
 | プライベート | `is_private` | `issue_is_private` | checkbox | × | チケットの公開/非公開 | ブール値<br>`true`=非公開, `false`=公開 |
 | カスタムフィールド | `custom_field_values_{id}` | `issue_custom_field_values_{id}` | 可変 | × | Redmine設定で追加されたフィールド | フィールドの型により異なる<br>例: `1`（選択肢）、`テキスト`（文字列） |
+
+---
+
+## 作業時間
+
+### 検索パラメータ
+
+#### URLパターン
+
+```
+{base_url}/projects/{project_id}/time_entries?set_filter=1&sort={sort}&f[]={field}&op[{field}]={operator}&v[{field}][]={value}&f[]=
+```
+
+**注意**: フィルターパラメータとカラムパラメータは複数指定可能です。
+
+#### 基本パラメータ
+
+| パラメータ | 説明 | 例 |
+|-----------|----|-----|
+| `set_filter` | フィルタ有効化 | `1`（必須） |
+| `sort` | ソート順 | `spent_on:desc`（日付降順） |
+
+#### フィルターパラメータ
+
+フィルターは`f[]`、`op[field]`、`v[field][]`の3つのパラメータで構成されます。
+
+| フィールド | `{field}` | 説明 |
+|----------|----------|------|
+| 期間（範囲） | `spent_on` | 作業した日付 |
+| ユーザー | `user_id` | 作業したユーザー |
+
+#### 演算子一覧
+
+| `{operator}` | 説明 | 使用可能フィールド | `{value}` 例 |
+|--------|------|---------------------|----------|
+| `=` | 等しい | `spent_on`、`user_id` | `2025-11-01`（日付）、`5`（ユーザーID） |
+| `><` | 範囲 | `spent_on` | `2025-11-01` と `2025-11-30` |
+
+#### 表示カラムパラメータ
+
+| パラメータ | 説明 | `{column}` |
+|-----------|----|-----|
+| `c[]` | 表示するカラム | `hours`、`spent_on`、`activity`、`user`、`issue`、`comments` |
+
+### 検索URL例
+
+```
+# プロジェクト内の作業時間を期間で絞り込む（例: 2025-11-01 〜 2025-11-30）
+{base_url}/projects/{project_id}/time_entries?set_filter=1&sort=spent_on:desc&f[]=spent_on&op[spent_on]=><&v[spent_on][]=2025-11-01&v[spent_on][]=2025-11-30&f[]=
+
+# 同じ期間で特定ユーザーの作業時間に絞り込む（ユーザーID=5 の例）
+{base_url}/projects/{project_id}/time_entries?set_filter=1&sort=spent_on:desc&f[]=spent_on&op[spent_on]=><&v[spent_on][]=2025-11-01&v[spent_on][]=2025-11-30&f[]=user_id&op[user_id]==&v[user_id][]=5&f[]=
+```
+
+### フィールド一覧
+
+| フィールド名 | 表示フィールドID | 更新フィールドID | 型 | 必須 | 説明 | 取りうる値 |
+|-------------|-------------|----------------|-----|------|------|-----------|
+| 作業時間 | `hours` | `time_entry_hours` | number | ○ | 記録された作業時間（時間単位） | 数値（例: `1.5`） |
+| 日付 | `spent_on` | `time_entry_spent_on` | date | ○ | 作業した日付 | `YYYY-MM-DD`（例: `2025-01-15`） |
+| 活動 | `activity_id` | `time_entry_activity_id` | select-one | ○ | 作業の活動種類 | 活動ID（数値） |
+| コメント | `comments` | `time_entry_comments` | textarea | × | 作業の説明 / コメント | 文字列 |
+| チケット | `issue_id` | `time_entry_issue_id` | text | × | 関連するチケットID | チケットID（数値） |
+| ユーザー | `user_id` | `time_entry_user_id` | select-one | × | 作業を登録したユーザー | ユーザーID（数値） |
 
 ---
 
