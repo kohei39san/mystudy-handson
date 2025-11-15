@@ -12,11 +12,6 @@ Parameters:
     Default: 'Enforce required tags on EC2 instances while allowing related resources without tags'
     Description: 'Description of the SCP policy'
 
-  RequiredTags:
-    Type: CommaDelimitedList
-    Default: 'Name,Environment,Owner'
-    Description: 'Comma-delimited list of required tag keys for EC2 instances'
-
 Resources:
   EC2TaggingEnforcementPolicy:
     Type: AWS::Organizations::Policy
@@ -25,7 +20,7 @@ Resources:
       Description: !Ref PolicyDescription
       Type: SERVICE_CONTROL_POLICY
       TargetIds: []  # Will be attached manually or via separate process
-      Content: !Sub |
+      Content: |
         {
           "Version": "2012-10-17",
           "Statement": [
