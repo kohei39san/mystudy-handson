@@ -19,3 +19,42 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+    groups:
+      aws-provider:
+        patterns:
+          - "registry.terraform.io/hashicorp/aws"
+        update-types:
+          - "minor"
+          - "patch"
+      oci-provider:
+        patterns:
+          - "registry.terraform.io/oracle/oci"
+        update-types:
+          - "minor"
+          - "patch"
+      hashicorp-providers:
+        patterns:
+          - "registry.terraform.io/hashicorp/http"
+          - "registry.terraform.io/hashicorp/null"
+          - "registry.terraform.io/hashicorp/random"
+          - "registry.terraform.io/hashicorp/local"
+          - "registry.terraform.io/hashicorp/tls"
+          - "registry.terraform.io/hashicorp/time"
+        update-types:
+          - "minor"
+          - "patch"
+      other-providers:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "registry.terraform.io/hashicorp/aws"
+          - "registry.terraform.io/oracle/oci"
+          - "registry.terraform.io/hashicorp/http"
+          - "registry.terraform.io/hashicorp/null"
+          - "registry.terraform.io/hashicorp/random"
+          - "registry.terraform.io/hashicorp/local"
+          - "registry.terraform.io/hashicorp/tls"
+          - "registry.terraform.io/hashicorp/time"
+        update-types:
+          - "minor"
+          - "patch"
