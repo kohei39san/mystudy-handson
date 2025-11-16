@@ -25,20 +25,7 @@ Resources:
           "Version": "2012-10-17",
           "Statement": [
             {
-              "Sid": "DenyEC2LaunchOutsideApNortheast1",
-              "Effect": "Deny",
-              "Action": [
-                "ec2:RunInstances"
-              ],
-              "Resource": "*",
-              "Condition": {
-                "StringNotEquals": {
-                  "aws:RequestedRegion": "ap-northeast-1"
-                }
-              }
-            },
-            {
-              "Sid": "DenyEC2LaunchWithoutNameTag",
+              "Sid": "DenyEC2LaunchWithoutOwnerTag",
               "Effect": "Deny",
               "Action": [
                 "ec2:RunInstances"
@@ -48,22 +35,7 @@ Resources:
               ],
               "Condition": {
                 "Null": {
-                  "aws:RequestTag/Name": "true"
-                }
-              }
-            },
-            {
-              "Sid": "DenyEC2LaunchWithoutEnvironmentTag",
-              "Effect": "Deny",
-              "Action": [
-                "ec2:RunInstances"
-              ],
-              "Resource": [
-                "arn:aws:ec2:*:*:instance/*"
-              ],
-              "Condition": {
-                "Null": {
-                  "aws:RequestTag/Environment": "true"
+                  "aws:RequestTag/Owner": "true"
                 }
               }
             },
@@ -78,7 +50,7 @@ Resources:
               ],
               "Condition": {
                 "Null": {
-                  "aws:RequestTag/Owner": "true"
+                  "aws:ResourceTag/Owner": "true"
                 }
               }
             }
