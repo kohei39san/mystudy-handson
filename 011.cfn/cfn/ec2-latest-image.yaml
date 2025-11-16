@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+  MyEC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !Ref LatestAmiId # Using a direct AMI ID instead of !GetAtt
+      InstanceType: 't2.micro'
+      KeyName: !Ref 'MyKeyPair'  # Fixed: Using !Ref instead of !GetAtt
+      SecurityGroupIds: [!Ref MySecurityGroup]  # Fixed: Using SecurityGroupIds instead of SecurityGroups
+      Tags:
+        - Key: Name
+          Value: MyEC2Instance
+        - Key: Owner
+          Value: hoge@invalid.com
+
+  # Removed AWS::EC2::Image resource as it's not a valid CloudFormation resource type
+  
+  MyKeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    Properties:
+      KeyName: 'my-key-pair'
+
+  MySecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'My security group'
+      VpcId: !Ref 'MyVPC'  # Fixed: Using !Ref instead of !GetAtt
+      # Removed invalid SecurityGroups property
+
+  MyVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+
+Parameters:
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
