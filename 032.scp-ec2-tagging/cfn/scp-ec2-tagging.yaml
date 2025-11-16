@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'SCP for enforcing EC2 instance tagging requirements'
+
+Parameters:
+  PolicyName:
+    Type: String
+    Default: 'EC2-Tagging-Enforcement-Policy'
+    Description: 'Name of the SCP policy'
+    
+  PolicyDescription:
+    Type: String
+    Default: 'Enforce required tags on EC2 instances while allowing related resources without tags'
+    Description: 'Description of the SCP policy'
+
+Resources:
+  EC2TaggingEnforcementPolicy:
+    Type: AWS::Organizations::Policy
+    Properties:
+      Name: !Ref PolicyName
+      Description: !Ref PolicyDescription
+      Type: SERVICE_CONTROL_POLICY
+      TargetIds: []  # Will be attached manually or via separate process
+      Content: |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DenyEC2LaunchWithoutRequestOwnerTag",
+              "Effect": "Deny",
+              "Action": [
+                "ec2:RunInstances"
+              ],
+              "Resource": [
+                "arn:aws:ec2:*:*:instance/*"
+              ],
+              "Condition": {
+                "Null": {
+                  "aws:RequestTag/Owner": "true",
+                  "aws:ResourceTag/Owner": "true"
+                }
+              }
+            }
+          ]
+        }
+
+Outputs:
+  PolicyId:
+    Description: 'The ID of the created SCP policy'
+    Value: !Ref EC2TaggingEnforcementPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-PolicyId'
+      
+  PolicyArn:
+    Description: 'The ARN of the created SCP policy'
+    Value: !Sub 'arn:aws:organizations::${AWS::AccountId}:policy/${EC2TaggingEnforcementPolicy}'
+    Export:
+      Name: !Sub '${AWS::StackName}-PolicyArn'
+      
+  PolicyName:
+    Description: 'The name of the created SCP policy'
+    Value: !Ref PolicyName
+    Export:
+      Name: !Sub '${AWS::StackName}-PolicyName'
