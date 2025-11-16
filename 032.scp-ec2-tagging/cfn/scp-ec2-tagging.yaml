@@ -25,7 +25,7 @@ Resources:
           "Version": "2012-10-17",
           "Statement": [
             {
-              "Sid": "DenyEC2LaunchWithoutOwnerTag",
+              "Sid": "DenyEC2LaunchWithoutRequestOwnerTag",
               "Effect": "Deny",
               "Action": [
                 "ec2:RunInstances"
@@ -40,7 +40,7 @@ Resources:
               }
             },
             {
-              "Sid": "DenyEC2LaunchWithoutOwnerTag",
+              "Sid": "DenyEC2LaunchWithoutResourceOwnerTag",
               "Effect": "Deny",
               "Action": [
                 "ec2:RunInstances"
