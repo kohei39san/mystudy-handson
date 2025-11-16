@@ -35,21 +35,7 @@ Resources:
               ],
               "Condition": {
                 "Null": {
-                  "aws:RequestTag/Owner": "true"
-                }
-              }
-            },
-            {
-              "Sid": "DenyEC2LaunchWithoutResourceOwnerTag",
-              "Effect": "Deny",
-              "Action": [
-                "ec2:RunInstances"
-              ],
-              "Resource": [
-                "arn:aws:ec2:*:*:instance/*"
-              ],
-              "Condition": {
-                "Null": {
+                  "aws:RequestTag/Owner": "true",
                   "aws:ResourceTag/Owner": "true"
                 }
               }
