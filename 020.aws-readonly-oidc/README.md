@@ -3,11 +3,28 @@
 このプロジェクトは、GitHub ActionsからAWS IAMロールをAssumeするための設定を提供します。
 主にTFLintのAWSプラグインのdeep_check機能を使用するために、読み取り専用権限を持つIAMロールを作成します。
 
+## アーキテクチャ図
+
+![Architecture Diagram](src/architecture.svg)
+
 ## 概要
 
 以下のリソースが作成されます：
-- GitHub Actions用のOIDCプロバイダー
-- 指定したGitHubリポジトリからのみ利用可能なViewOnlyAccessポリシーを持つIAMロール
+- **GitHub OIDC Provider**: GitHub ActionsからのOIDC認証を可能にするプロバイダー
+- **IAM Role**: TFLint用の読み取り専用ロール（ViewOnlyAccessポリシー付き）
+- **CloudFormation Stack**: 上記リソースを管理するスタック
+
+### リソース構成詳細
+
+1. **AWS::IAM::OIDCProvider**
+   - GitHub Actions用のOIDCプロバイダー
+   - URL: https://token.actions.githubusercontent.com
+   - 指定されたGitHubリポジトリからのみアクセス可能
+
+2. **AWS::IAM::Role**
+   - ロール名: `{StackName}-tflint-readonly-role`
+   - 管理ポリシー: `ViewOnlyAccess`
+   - 信頼関係: 指定されたGitHubリポジトリのみ
 
 ## デプロイ方法
 
