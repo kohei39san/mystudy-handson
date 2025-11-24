@@ -20,10 +20,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Draw.io Desktop
+      - name: Install Draw.io Desktop and Python dependencies
         run: |
           # Download and install draw.io desktop AppImage
-          sudo apt-get install -y xvfb libasound2t64
+          sudo apt-get update
+          sudo apt-get install -y xvfb libasound2t64 python3
           wget -O /tmp/drawio.deb https://github.com/jgraph/drawio-desktop/releases/download/v28.0.6/drawio-amd64-28.0.6.deb
           sudo apt-get install -y /tmp/drawio.deb
 
@@ -50,7 +51,7 @@ jobs:
             echo "$changed_files" > "${{ runner.temp }}/changed_drawio_files.txt"
           fi
 
-      - name: Convert Draw.io files to SVG
+      - name: Convert Draw.io files to SVG (Multi-page support)
         if: steps.changed-files.outputs.has_changes == 'true'
         run: |
           # Read the list of changed files
@@ -61,17 +62,72 @@ jobs:
               filename=$(basename "$drawio_file" .drawio)
               svg_file="$dir/$filename.svg"
               
-              echo "Converting $drawio_file to $svg_file"
+              echo "Processing $drawio_file..."
               
-              # Convert .drawio to .svg using draw.io desktop
+              # Set up environment for draw.io
               export XDG_RUNTIME_DIR="/run/user/$(id -u)"
               export DBUS_SESSION_BUS_ADDRESS=unix:path="$XDG_RUNTIME_DIR"/bus
-              if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
-                echo "Successfully converted $drawio_file to $svg_file"
+              
+              # Create temporary directory for individual pages
+              temp_dir="${{ runner.temp }}/drawio_pages_$(basename "$drawio_file" .drawio)"
+              mkdir -p "$temp_dir"
+              
+              # Try to detect number of pages by attempting to export pages until failure
+              page_index=0
+              page_files=()
+              
+              echo "Detecting pages in $drawio_file..."
+              while true; do
+                page_svg="$temp_dir/page_${page_index}.svg"
+                
+                # Try to export this page
+                if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --page-index "$page_index" --output "$page_svg" "$drawio_file" 2>/dev/null; then
+                  if [ -f "$page_svg" ] && [ -s "$page_svg" ]; then
+                    echo "Found page $page_index"
+                    page_files+=("$page_svg")
+                    page_index=$((page_index + 1))
+                  else
+                    break
+                  fi
+                else
+                  break
+                fi
+                
+                # Safety limit to prevent infinite loops
+                if [ "$page_index" -gt 100 ]; then
+                  echo "Warning: Reached maximum page limit (100), stopping"
+                  break
+                fi
+              done
+              
+              if [ ${#page_files[@]} -eq 0 ]; then
+                echo "No pages found, trying single page export..."
+                # Fallback to single page export (original behavior)
+                if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
+                  echo "Successfully converted $drawio_file to $svg_file (single page)"
+                else
+                  echo "Failed to convert $drawio_file"
+                  exit 1
+                fi
+              elif [ ${#page_files[@]} -eq 1 ]; then
+                echo "Found 1 page, copying to final location..."
+                # Single page, just copy the file
+                cp "${page_files[0]}" "$svg_file"
+                echo "Successfully converted $drawio_file to $svg_file (1 page)"
               else
-                echo "Failed to convert $drawio_file"
-                exit 1
+                echo "Found ${#page_files[@]} pages, combining into single SVG..."
+                # Multiple pages, combine them using Python script
+                if python3 scripts/combine_svgs.py "$svg_file" "${page_files[@]}"; then
+                  echo "Successfully combined ${#page_files[@]} pages into $svg_file"
+                else
+                  echo "Failed to combine pages for $drawio_file"
+                  exit 1
+                fi
               fi
+              
+              # Clean up temporary files
+              rm -rf "$temp_dir"
+              
             else
               echo "File $drawio_file not found, skipping"
             fi
