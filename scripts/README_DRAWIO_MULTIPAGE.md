@@ -14,21 +14,23 @@ The `.github/workflows/drawio-to-svg.yml` workflow has been enhanced to support 
 - **Same Output Filename**: Output files maintain the same naming convention (filename.svg)
 - **Robust Error Handling**: Fallback mechanisms ensure conversion succeeds even if page detection fails
 - **Clean Temporary Files**: All temporary files are automatically cleaned up
+- **XML-based Page Detection**: Uses XML parsing to accurately detect the number of pages
 
 ## How It Works
 
 ### 1. Page Detection
-The workflow attempts to export pages using the Draw.io command-line tool with the `--page-index` parameter:
-```bash
-drawio --no-sandbox --export --format svg --page-index 0 --output page0.svg input.drawio
-drawio --no-sandbox --export --format svg --page-index 1 --output page1.svg input.drawio
-# ... continues until export fails
+The workflow uses Python XML parsing to detect the number of pages in a Draw.io file:
+```python
+import xml.etree.ElementTree as ET
+tree = ET.parse(drawio_file)
+root = tree.getroot()
+diagrams = root.findall('diagram')
+pages = len(diagrams) if diagrams else 1
 ```
 
 ### 2. Processing Logic
-- **No pages found**: Falls back to original single-page export method
-- **1 page found**: Copies the single page to the final output location
-- **Multiple pages found**: Combines all pages using the Python script
+- **1 page found**: Uses direct single-page export method
+- **Multiple pages found**: Exports each page individually and combines them using the Python script
 
 ### 3. SVG Combination
 The `scripts/combine_svgs.py` script:
@@ -52,16 +54,17 @@ The workflow automatically triggers when `.drawio` files are pushed to the repos
 
 ### Example: Multi-page Draw.io File
 If you have a Draw.io file `diagram.drawio` with 3 pages:
-1. The workflow exports: `page_0.svg`, `page_1.svg`, `page_2.svg`
-2. The Python script combines them into: `diagram.svg`
-3. The temporary page files are cleaned up
-4. A PR is created with the new `diagram.svg`
+1. The workflow detects 3 pages using XML parsing
+2. The workflow exports: `page_0.svg`, `page_1.svg`, `page_2.svg`
+3. The Python script combines them into: `diagram.svg`
+4. The temporary page files are cleaned up
+5. A PR is created with the new `diagram.svg`
 
 ## Technical Details
 
 ### Dependencies
 - **Draw.io Desktop**: For exporting individual pages
-- **Python 3**: For SVG combination (uses standard library only)
+- **Python 3**: For XML parsing and SVG combination (uses standard library only)
 - **xvfb**: For headless Draw.io operation
 
 ### SVG Combination Algorithm
@@ -85,12 +88,6 @@ The default spacing between pages is 20 pixels. This can be modified in the `com
 success = combine_svgs(output_file, input_files, spacing=20)  # Change spacing here
 ```
 
-### Page Limit
-There's a safety limit of 100 pages to prevent infinite loops. This can be adjusted in the workflow:
-```bash
-if [ "$page_index" -gt 100 ]; then  # Change limit here
-```
-
 ## Testing
 
 Run the test script to validate the SVG combination functionality:
@@ -106,7 +103,7 @@ This creates test SVG files and verifies that they can be combined correctly.
 ### Common Issues
 
 1. **No pages detected**: 
-   - Check if the Draw.io file is valid
+   - Check if the Draw.io file is valid XML
    - Verify Draw.io desktop installation
    - Check workflow logs for export errors
 

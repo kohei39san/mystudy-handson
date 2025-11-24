@@ -72,56 +72,68 @@ jobs:
               temp_dir="${{ runner.temp }}/drawio_pages_$(basename "$drawio_file" .drawio)"
               mkdir -p "$temp_dir"
               
-              # Try to detect number of pages by attempting to export pages until failure
-              page_index=0
-              page_files=()
+              # Use Python to detect number of pages in the drawio file
+              pages=$(python3 -c "
+import xml.etree.ElementTree as ET
+import sys
+try:
+    tree = ET.parse('$drawio_file')
+    root = tree.getroot()
+    # Count diagram elements (each represents a page)
+    diagrams = root.findall('diagram')
+    print(len(diagrams) if diagrams else 1)
+except Exception as e:
+    print('1')  # Default to 1 page if parsing fails
+")
               
-              echo "Detecting pages in $drawio_file..."
-              while true; do
-                page_svg="$temp_dir/page_${page_index}.svg"
-                
-                # Try to export this page
-                if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --page-index "$page_index" --output "$page_svg" "$drawio_file" 2>/dev/null; then
-                  if [ -f "$page_svg" ] && [ -s "$page_svg" ]; then
-                    echo "Found page $page_index"
-                    page_files+=("$page_svg")
-                    page_index=$((page_index + 1))
-                  else
-                    break
-                  fi
-                else
-                  break
-                fi
-                
-                # Safety limit to prevent infinite loops
-                if [ "$page_index" -gt 100 ]; then
-                  echo "Warning: Reached maximum page limit (100), stopping"
-                  break
-                fi
-              done
+              echo "Detected $pages page(s) in $drawio_file"
               
-              if [ ${#page_files[@]} -eq 0 ]; then
-                echo "No pages found, trying single page export..."
-                # Fallback to single page export (original behavior)
+              if [ "$pages" -eq 1 ]; then
+                echo "Single page detected, using direct export..."
+                # Single page, direct export
                 if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
                   echo "Successfully converted $drawio_file to $svg_file (single page)"
                 else
                   echo "Failed to convert $drawio_file"
                   exit 1
                 fi
-              elif [ ${#page_files[@]} -eq 1 ]; then
-                echo "Found 1 page, copying to final location..."
-                # Single page, just copy the file
-                cp "${page_files[0]}" "$svg_file"
-                echo "Successfully converted $drawio_file to $svg_file (1 page)"
               else
-                echo "Found ${#page_files[@]} pages, combining into single SVG..."
-                # Multiple pages, combine them using Python script
-                if python3 scripts/combine_svgs.py "$svg_file" "${page_files[@]}"; then
-                  echo "Successfully combined ${#page_files[@]} pages into $svg_file"
+                echo "Multiple pages detected, exporting individual pages..."
+                # Multiple pages, export each page individually
+                page_files=()
+                for ((page_index=0; page_index<pages; page_index++)); do
+                  page_svg="$temp_dir/page_${page_index}.svg"
+                  
+                  if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --page-index "$page_index" --output "$page_svg" "$drawio_file"; then
+                    if [ -f "$page_svg" ] && [ -s "$page_svg" ]; then
+                      echo "Successfully exported page $page_index"
+                      page_files+=("$page_svg")
+                    else
+                      echo "Warning: Page $page_index export resulted in empty file"
+                    fi
+                  else
+                    echo "Warning: Failed to export page $page_index"
+                  fi
+                done
+                
+                if [ ${#page_files[@]} -eq 0 ]; then
+                  echo "No pages were successfully exported, trying fallback single page export..."
+                  # Fallback to single page export
+                  if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
+                    echo "Successfully converted $drawio_file to $svg_file (fallback single page)"
+                  else
+                    echo "Failed to convert $drawio_file"
+                    exit 1
+                  fi
                 else
-                  echo "Failed to combine pages for $drawio_file"
-                  exit 1
+                  echo "Combining ${#page_files[@]} pages into single SVG..."
+                  # Combine pages using Python script
+                  if python3 scripts/combine_svgs.py "$svg_file" "${page_files[@]}"; then
+                    echo "Successfully combined ${#page_files[@]} pages into $svg_file"
+                  else
+                    echo "Failed to combine pages for $drawio_file"
+                    exit 1
+                  fi
                 fi
               fi
               
