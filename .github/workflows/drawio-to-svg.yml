@@ -74,17 +74,17 @@ jobs:
               
               # Use Python to detect number of pages in the drawio file
               pages=$(python3 -c "
-import xml.etree.ElementTree as ET
-import sys
-try:
-    tree = ET.parse('$drawio_file')
-    root = tree.getroot()
-    # Count diagram elements (each represents a page)
-    diagrams = root.findall('diagram')
-    print(len(diagrams) if diagrams else 1)
-except Exception as e:
-    print('1')  # Default to 1 page if parsing fails
-")
+              import xml.etree.ElementTree as ET
+              import sys
+              try:
+                  tree = ET.parse('$drawio_file')
+                  root = tree.getroot()
+                  # Count diagram elements (each represents a page)
+                  diagrams = root.findall('diagram')
+                  print(len(diagrams) if diagrams else 1)
+              except Exception as e:
+                  print('1')  # Default to 1 page if parsing fails
+              ")
               
               echo "Detected $pages page(s) in $drawio_file"
               
