@@ -3,7 +3,7 @@ name: CloudFormation Linter
 on:
   push:
     paths:
-      - '**/cfn/**/*.yaml'
+      - "**/cfn/**/*.yaml"
 
 permissions:
   contents: read
