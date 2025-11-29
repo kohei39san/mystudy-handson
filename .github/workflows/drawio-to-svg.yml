@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -73,6 +73,8 @@ jobs:
               mkdir -p "$temp_dir"
               
               # Use Python to detect number of pages in the drawio file
+              # Declare variable first, then assign to avoid masking return values
+              pages=""
               pages=$(python3 -c "
               import xml.etree.ElementTree as ET
               import sys
