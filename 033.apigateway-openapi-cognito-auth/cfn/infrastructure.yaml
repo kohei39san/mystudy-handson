@@ -1,0 +1,677 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'API Gateway with OpenAPI specification, Cognito authentication, and Lambda authorizer'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name
+  
+  ProjectName:
+    Type: String
+    Default: openapi-cognito-auth
+    Description: Project name for resource naming
+  
+  UserEmail:
+    Type: String
+    Default: test@example.com
+    Description: Email address for the test Cognito user
+  
+  AdminEmail:
+    Type: String
+    Default: admin@example.com
+    Description: Email address for the admin Cognito user
+
+Resources:
+  # ===== IAM Roles =====
+  
+  # IAM Role for PreTokenGeneration Lambda
+  PreTokenGenerationLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-pretoken-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CognitoAccessPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminListGroupsForUser
+                  - cognito-idp:AdminUpdateUserAttributes
+                  - cognito-idp:AdminGetUser
+                Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*"
+
+  # IAM Role for Lambda Authorizer
+  LambdaAuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-authorizer-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # IAM Role for Backend Lambda
+  BackendLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-backend-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # IAM Role for API Gateway to invoke Lambda
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-apigateway-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: LambdaInvokePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: "*"
+
+  # ===== Lambda Functions =====
+  
+  # PreTokenGeneration Lambda Function
+  PreTokenGenerationLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-pretoken-${Environment}"
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt PreTokenGenerationLambdaRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import boto3
+          from botocore.exceptions import ClientError
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          cognito_client = boto3.client('cognito-idp')
+
+          def lambda_handler(event, context):
+              """
+              PreTokenGeneration trigger to set custom:role based on user groups
+              """
+              try:
+                  logger.info("=== PreTokenGeneration Lambda Triggered ===")
+                  logger.info(json.dumps(event, indent=2, default=str))
+                  
+                  user_pool_id = event['userPoolId']
+                  username = event['userName']
+                  
+                  logger.info(f"Processing user: {username} in pool: {user_pool_id}")
+                  
+                  # Get user's groups
+                  try:
+                      groups_response = cognito_client.admin_list_groups_for_user(
+                          UserPoolId=user_pool_id,
+                          Username=username
+                      )
+                      user_groups = [group['GroupName'] for group in groups_response.get('Groups', [])]
+                      logger.info(f"User groups: {user_groups}")
+                  except ClientError as e:
+                      logger.error(f"Error getting user groups: {str(e)}")
+                      user_groups = []
+                  
+                  # Determine role based on group membership
+                  if "api-admins" in user_groups:
+                      role = "admin"
+                  elif "api-users" in user_groups:
+                      role = "user"
+                  else:
+                      role = "anonymous"
+                  
+                  logger.info(f"Determined role: {role}")
+                  
+                  # Add custom claim to the token
+                  if 'response' not in event or event['response'] is None:
+                      event['response'] = {}
+                  if 'claimsOverrideDetails' not in event['response'] or event['response']['claimsOverrideDetails'] is None:
+                      event['response']['claimsOverrideDetails'] = {}
+                  if 'claimsToAddOrOverride' not in event['response']['claimsOverrideDetails'] or event['response']['claimsOverrideDetails']['claimsToAddOrOverride'] is None:
+                      event['response']['claimsOverrideDetails']['claimsToAddOrOverride'] = {}
+                  
+                  event['response']['claimsOverrideDetails']['claimsToAddOrOverride']['custom:role'] = role
+                  
+                  # Update user's custom attribute
+                  try:
+                      cognito_client.admin_update_user_attributes(
+                          UserPoolId=user_pool_id,
+                          Username=username,
+                          UserAttributes=[
+                              {
+                                  'Name': 'custom:role',
+                                  'Value': role
+                              }
+                          ]
+                      )
+                      logger.info(f"Successfully updated custom:role attribute to: {role}")
+                  except ClientError as e:
+                      logger.error(f"Error updating user attributes: {str(e)}")
+                  
+                  logger.info("=== PreTokenGeneration Processing Complete ===")
+                  return event
+                  
+              except Exception as e:
+                  logger.error(f"Unexpected error: {str(e)}")
+                  return event
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Lambda Authorizer Function
+  LambdaAuthorizerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-authorizer-${Environment}"
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaAuthorizerRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import base64
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              """
+              Lambda Authorizer to validate custom:role for API endpoints
+              """
+              try:
+                  logger.info("=== Lambda Authorizer Triggered ===")
+                  logger.info(json.dumps(event, indent=2, default=str))
+                  
+                  # Extract token from Authorization header
+                  token = event.get('authorizationToken', '')
+                  if token.startswith('Bearer '):
+                      token = token[7:]
+                  
+                  method_arn = event['methodArn']
+                  
+                  # Parse the method ARN to get resource path
+                  arn_parts = method_arn.split(':')
+                  api_gateway_arn = arn_parts[5]
+                  resource_parts = api_gateway_arn.split('/')
+                  
+                  if len(resource_parts) >= 4:
+                      resource_path = '/' + resource_parts[3]
+                  else:
+                      resource_path = '/'
+                  
+                  logger.info(f"Resource path: {resource_path}")
+                  
+                  # Simple JWT token parsing without verification (API Gateway already verified it)
+                  try:
+                      # Split JWT token and decode payload
+                      token_parts = token.split('.')
+                      if len(token_parts) >= 2:
+                          # Add padding if needed
+                          payload = token_parts[1]
+                          payload += '=' * (4 - len(payload) % 4)
+                          decoded_payload = base64.b64decode(payload)
+                          token_data = json.loads(decoded_payload)
+                          user_role = token_data.get('custom:role', 'anonymous')
+                          logger.info(f"User role from token: {user_role}")
+                      else:
+                          user_role = 'anonymous'
+                  except Exception as e:
+                      logger.error(f"Token decode error: {str(e)}")
+                      user_role = 'anonymous'
+                  
+                  # Define role requirements for each endpoint
+                  role_requirements = {
+                      '/admin': ['admin'],
+                      '/user': ['admin', 'user'],
+                      '/public': ['admin', 'user', 'anonymous'],
+                      '/health': []  # No role requirement
+                  }
+                  
+                  # Check if user has required role
+                  required_roles = role_requirements.get(resource_path, [])
+                  
+                  if not required_roles or user_role in required_roles:
+                      effect = 'Allow'
+                      logger.info(f"Access granted for role '{user_role}' to '{resource_path}'")
+                  else:
+                      effect = 'Deny'
+                      logger.info(f"Access denied for role '{user_role}' to '{resource_path}'. Required: {required_roles}")
+                  
+                  # Generate policy
+                  policy = {
+                      'principalId': token_data.get('sub', 'unknown') if 'token_data' in locals() else 'unknown',
+                      'policyDocument': {
+                          'Version': '2012-10-17',
+                          'Statement': [
+                              {
+                                  'Action': 'execute-api:Invoke',
+                                  'Effect': effect,
+                                  'Resource': method_arn
+                              }
+                          ]
+                      },
+                      'context': {
+                          'userRole': user_role,
+                          'userId': token_data.get('sub', 'unknown') if 'token_data' in locals() else 'unknown',
+                          'username': token_data.get('cognito:username', 'unknown') if 'token_data' in locals() else 'unknown'
+                      }
+                  }
+                  
+                  logger.info(f"Generated policy: {json.dumps(policy, indent=2)}")
+                  return policy
+                  
+              except Exception as e:
+                  logger.error(f"Authorizer error: {str(e)}")
+                  # Deny access on any error
+                  return {
+                      'principalId': 'unknown',
+                      'policyDocument': {
+                          'Version': '2012-10-17',
+                          'Statement': [
+                              {
+                                  'Action': 'execute-api:Invoke',
+                                  'Effect': 'Deny',
+                                  'Resource': event['methodArn']
+                              }
+                          ]
+                      }
+                  }
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Backend Lambda Function
+  BackendLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-backend-${Environment}"
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt BackendLambdaRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          from datetime import datetime
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def lambda_handler(event, context):
+              """
+              Backend Lambda function to handle API requests and demonstrate query parameter processing
+              """
+              try:
+                  logger.info("=== Backend Lambda Triggered ===")
+                  logger.info(json.dumps(event, indent=2, default=str))
+                  
+                  # Extract information from event
+                  path = event.get('path', event.get('requestContext', {}).get('path', '/'))
+                  http_method = event.get('httpMethod', 'GET')
+                  query_params = event.get('queryStringParameters') or {}
+                  headers = event.get('headers') or {}
+                  body = event.get('body')
+                  
+                  # Get user context from authorizer
+                  authorizer_context = event.get('requestContext', {}).get('authorizer', {})
+                  user_role = authorizer_context.get('userRole', 'unknown')
+                  user_id = authorizer_context.get('userId', 'unknown')
+                  
+                  logger.info(f"Processing {http_method} {path}")
+                  logger.info(f"User role: {user_role}, User ID: {user_id}")
+                  logger.info(f"Query parameters: {query_params}")
+                  
+                  # Handle different endpoints
+                  if path == '/health':
+                      response_data = {
+                          'status': 'healthy',
+                          'timestamp': datetime.utcnow().isoformat() + 'Z',
+                          'service': 'openapi-cognito-auth-api'
+                      }
+                  
+                  elif path == '/admin':
+                      action = query_params.get('action', 'unknown')
+                      target = query_params.get('target', 'default')
+                      priority = int(query_params.get('priority', 5))
+                      
+                      request_body = json.loads(body) if body else {}
+                      
+                      response_data = {
+                          'message': f'Admin action "{action}" executed successfully',
+                          'result': {
+                              'action': action,
+                              'target': target,
+                              'priority': priority,
+                              'processed_data': request_body.get('data', {}),
+                              'metadata': request_body.get('metadata', {}),
+                              'executed_by': user_id,
+                              'timestamp': datetime.utcnow().isoformat() + 'Z'
+                          },
+                          'query_parameters_received': query_params,
+                          'user_context': {
+                              'role': user_role,
+                              'user_id': user_id
+                          }
+                      }
+                  
+                  elif path == '/user':
+                      filter_param = query_params.get('filter', '')
+                      limit = int(query_params.get('limit', 10))
+                      offset = int(query_params.get('offset', 0))
+                      
+                      # Simulate data retrieval
+                      mock_data = []
+                      for i in range(limit):
+                          item_id = offset + i + 1
+                          if not filter_param or filter_param.lower() in f'item_{item_id}':
+                              mock_data.append({
+                                  'id': item_id,
+                                  'name': f'Item {item_id}',
+                                  'type': 'user_data',
+                                  'created_at': datetime.utcnow().isoformat() + 'Z'
+                              })
+                      
+                      response_data = {
+                          'data': mock_data,
+                          'pagination': {
+                              'limit': limit,
+                              'offset': offset,
+                              'total': 100,  # Mock total
+                              'filter_applied': filter_param
+                          },
+                          'query_parameters_received': query_params,
+                          'accessed_by': user_id,
+                          'user_role': user_role
+                      }
+                  
+                  elif path == '/public':
+                      format_param = query_params.get('format', 'json')
+                      include_metadata = query_params.get('include_metadata', 'false').lower() == 'true'
+                      
+                      response_data = {
+                          'message': 'Public endpoint accessed successfully',
+                          'data': {
+                              'public_info': 'This is publicly accessible data',
+                              'format': format_param,
+                              'timestamp': datetime.utcnow().isoformat() + 'Z'
+                          },
+                          'query_parameters_received': query_params
+                      }
+                      
+                      if include_metadata:
+                          response_data['metadata'] = {
+                              'api_version': '1.0.0',
+                              'response_time_ms': 50,
+                              'server_region': 'ap-northeast-1'
+                          }
+                  
+                  else:
+                      response_data = {
+                          'error': 'Endpoint not found',
+                          'path': path,
+                          'available_endpoints': ['/admin', '/user', '/public', '/health']
+                      }
+                      return {
+                          'statusCode': 404,
+                          'headers': {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          'body': json.dumps(response_data)
+                      }
+                  
+                  # Return successful response
+                  return {
+                      'statusCode': 200,
+                      'headers': {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*',
+                          'X-User-Role': user_role,
+                          'X-Request-ID': context.aws_request_id
+                      },
+                      'body': json.dumps(response_data, indent=2)
+                  }
+              
+              except Exception as e:
+                  logger.error(f"Backend Lambda error: {str(e)}")
+                  return {
+                      'statusCode': 500,
+                      'headers': {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      'body': json.dumps({
+                          'error': 'Internal server error',
+                          'message': str(e),
+                          'request_id': context.aws_request_id
+                      })
+                  }
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ===== Lambda Permissions =====
+  
+  # Permission for Cognito to invoke PreTokenGeneration Lambda
+  PreTokenGenerationLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PreTokenGenerationLambda
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+
+  # Permission for API Gateway to invoke Lambda Authorizer
+  LambdaAuthorizerPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaAuthorizerFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
+
+  # Permission for API Gateway to invoke Backend Lambda
+  BackendLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref BackendLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
+
+  # ===== Cognito Resources =====
+  
+  # Cognito User Pool
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${ProjectName}-user-pool-${Environment}"
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+        - Name: role
+          AttributeDataType: String
+          Required: false
+          Mutable: true
+      LambdaConfig:
+        PreTokenGeneration: !GetAtt PreTokenGenerationLambda.Arn
+      UserPoolTags:
+        Environment: !Ref Environment
+        Project: !Ref ProjectName
+
+  # Cognito User Pool Client - Fixed resource type
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${ProjectName}-client-${Environment}"
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - http://localhost:3000
+      LogoutURLs:
+        - http://localhost:3000
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+      AllowedOAuthFlowsUserPoolClient: true
+
+  # Cognito User Pool Domain
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub "openapi-auth-${Environment}-${AWS::AccountId}"
+      UserPoolId: !Ref CognitoUserPool
+
+  # Cognito User Groups
+  CognitoAdminGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: api-admins
+      UserPoolId: !Ref CognitoUserPool
+      Description: Group for API administrators
+
+  CognitoUserGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: api-users
+      UserPoolId: !Ref CognitoUserPool
+      Description: Group for API users
+
+  # ===== API Gateway =====
+  
+  # API Gateway REST API (will be overwritten by OpenAPI import)
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${ProjectName}-api-${Environment}"
+      Description: API Gateway with OpenAPI specification and Cognito authentication
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+Outputs:
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref CognitoUserPool
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolId"
+
+  CognitoUserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref CognitoUserPoolClient
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolClientId"
+
+  CognitoUserPoolArn:
+    Description: Cognito User Pool ARN
+    Value: !GetAtt CognitoUserPool.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolArn"
+
+  BackendLambdaArn:
+    Description: Backend Lambda Function ARN
+    Value: !GetAtt BackendLambdaFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-BackendLambdaArn"
+
+  LambdaAuthorizerArn:
+    Description: Lambda Authorizer Function ARN
+    Value: !GetAtt LambdaAuthorizerFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-LambdaAuthorizerArn"
+
+  ApiGatewayRoleArn:
+    Description: API Gateway IAM Role ARN
+    Value: !GetAtt ApiGatewayRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiGatewayRoleArn"
+
+  ApiGatewayRestApiId:
+    Description: API Gateway REST API ID
+    Value: !Ref ApiGatewayRestApi
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiGatewayRestApiId"
+
+  ApiGatewayEndpoint:
+    Description: API Gateway Endpoint URL
+    Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiGatewayEndpoint"

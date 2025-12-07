@@ -1,0 +1,189 @@
+openapi: "3.0.1"
+info:
+  title: "OpenAPI Cognito Auth API"
+  description: "API Gateway with OpenAPI specification, Cognito authentication, and\
+    \ Lambda authorizer"
+  version: "1.0.0"
+servers:
+- url: "https://33h1577v96.execute-api.ap-northeast-1.amazonaws.com/{basePath}"
+  variables:
+    basePath:
+      default: "dev"
+paths:
+  /health:
+    get:
+      responses:
+        "500":
+          description: "500 response"
+          content: {}
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MODELd42678"
+  /user:
+    get:
+      parameters:
+      - name: "filter"
+        in: "query"
+        schema:
+          type: "string"
+      - name: "offset"
+        in: "query"
+        schema:
+          type: "string"
+      - name: "limit"
+        in: "query"
+        schema:
+          type: "string"
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MODEL774ac3"
+        "400":
+          description: "400 response"
+          content: {}
+        "500":
+          description: "500 response"
+          content: {}
+        "403":
+          description: "403 response"
+          content: {}
+      security:
+      - CognitoUserPool: []
+  /admin:
+    post:
+      parameters:
+      - name: "priority"
+        in: "query"
+        schema:
+          type: "string"
+      - name: "action"
+        in: "query"
+        required: true
+        schema:
+          type: "string"
+      - name: "target"
+        in: "query"
+        schema:
+          type: "string"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MODEL109801"
+        required: true
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MODEL9cd08b"
+        "400":
+          description: "400 response"
+          content: {}
+        "500":
+          description: "500 response"
+          content: {}
+        "403":
+          description: "403 response"
+          content: {}
+      security:
+      - CognitoUserPool: []
+  /public:
+    get:
+      parameters:
+      - name: "include_metadata"
+        in: "query"
+        schema:
+          type: "string"
+      - name: "format"
+        in: "query"
+        schema:
+          type: "string"
+      responses:
+        "200":
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MODEL79411c"
+        "400":
+          description: "400 response"
+          content: {}
+        "401":
+          description: "401 response"
+          content: {}
+        "500":
+          description: "500 response"
+          content: {}
+      security:
+      - CognitoUserPool: []
+components:
+  schemas:
+    MODEL109801:
+      required:
+      - "data"
+      type: "object"
+      properties:
+        data:
+          type: "object"
+          description: "Admin operation data"
+        metadata:
+          type: "object"
+          description: "Additional metadata"
+    MODEL774ac3:
+      type: "object"
+      properties:
+        data:
+          type: "array"
+          items:
+            type: "object"
+        pagination:
+          type: "object"
+          properties:
+            limit:
+              type: "integer"
+              format: "int32"
+            offset:
+              type: "integer"
+              format: "int32"
+            total:
+              type: "integer"
+              format: "int32"
+    MODEL9cd08b:
+      type: "object"
+      properties:
+        message:
+          type: "string"
+        result:
+          type: "object"
+    MODELd42678:
+      type: "object"
+      properties:
+        status:
+          type: "string"
+        timestamp:
+          type: "string"
+          format: "date-time"
+    MODEL79411c:
+      type: "object"
+      properties:
+        message:
+          type: "string"
+        data:
+          type: "object"
+        metadata:
+          type: "object"
+  securitySchemes:
+    CognitoUserPool:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "cognito_user_pools"
+x-amazon-apigateway-security-policy: "TLS_1_0"
