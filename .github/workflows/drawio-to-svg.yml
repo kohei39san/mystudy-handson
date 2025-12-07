@@ -73,20 +73,7 @@ jobs:
               mkdir -p "$temp_dir"
               
               # Use Python to detect number of pages in the drawio file
-              # Declare variable first, then assign to avoid masking return values
-              pages=""
-              pages=$(python3 -c "
-              import xml.etree.ElementTree as ET
-              import sys
-              try:
-                  tree = ET.parse('$drawio_file')
-                  root = tree.getroot()
-                  # Count diagram elements (each represents a page)
-                  diagrams = root.findall('diagram')
-                  print(len(diagrams) if diagrams else 1)
-              except Exception as e:
-                  print('1')  # Default to 1 page if parsing fails
-              ")
+              pages=$(python3 scripts/count_drawio_pages.py "$drawio_file")
               
               echo "Detected $pages page(s) in $drawio_file"
               
