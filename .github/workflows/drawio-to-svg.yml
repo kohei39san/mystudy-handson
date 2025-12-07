@@ -160,3 +160,4 @@ jobs:
           base: ${{ steps.get_branch.outputs.branch_name }}
           branch: drawio-to-svg-pr-${{ steps.get_branch.outputs.branch_name }}
           title: "Changes by drawio-to-svg actions"
+          labels: fix
