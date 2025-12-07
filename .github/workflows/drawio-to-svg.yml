@@ -92,10 +92,11 @@ jobs:
                 page_files=()
                 for ((page_index=0; page_index<pages; page_index++)); do
                   page_svg="$temp_dir/page_${page_index}.svg"
+                  echo "Exporting page $page_index to $page_svg..."
                   
                   if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --page-index "$page_index" --output "$page_svg" "$drawio_file"; then
                     if [ -f "$page_svg" ] && [ -s "$page_svg" ]; then
-                      echo "Successfully exported page $page_index"
+                      echo "Successfully exported page $page_index (size: $(stat -c%s "$page_svg") bytes)"
                       page_files+=("$page_svg")
                     else
                       echo "Warning: Page $page_index export resulted in empty file"
@@ -104,6 +105,8 @@ jobs:
                     echo "Warning: Failed to export page $page_index"
                   fi
                 done
+                
+                echo "Total page files collected: ${#page_files[@]}"
                 
                 if [ ${#page_files[@]} -eq 0 ]; then
                   echo "No pages were successfully exported, trying fallback single page export..."
@@ -116,6 +119,8 @@ jobs:
                   fi
                 else
                   echo "Combining ${#page_files[@]} pages into single SVG..."
+                  echo "Page files to combine:"
+                  printf '%s\n' "${page_files[@]}"
                   # Combine pages using Python script
                   if python3 scripts/combine_svgs.py "$svg_file" "${page_files[@]}"; then
                     echo "Successfully combined ${#page_files[@]} pages into $svg_file"
