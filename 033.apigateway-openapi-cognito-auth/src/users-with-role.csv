@@ -1,0 +1,3 @@
+username,group,role
+testuser,api-users,user
+adminuser,api-admins,admin

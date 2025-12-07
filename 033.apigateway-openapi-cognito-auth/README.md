@@ -34,33 +34,51 @@
 
 ```
 033.apigateway-openapi-cognito-auth/
-├── README.md                    # このファイル
+├── README.md
 ├── cfn/
-│   └── infrastructure.yaml     # CloudFormationテンプレート
-├── api/
-│   └── openapi-spec.yaml       # OpenAPI定義書
+│   └── infrastructure.yaml      # CloudFormationテンプレート
+├── src/
+│   ├── openapi-spec.yaml        # OpenAPI仕様
+│   └── users.csv                # ユーザーインポート用CSV
 └── scripts/
-    ├── deploy.sh               # デプロイスクリプト
-    └── test-api.py             # APIテストスクリプト
+    ├── deploy.ps1               # デプロイスクリプト（PowerShell）
+    ├── test-api-simple.py       # 簡易APIテスト
+    └── test-cognito-auth.py     # Cognito認証テスト
 ```
 
 ## デプロイ手順
 
-1. **前提条件**
-   - AWS CLI設定済み
-   - 適切なIAM権限
+### 1. 前提条件
+- AWS CLI設定済み
+- PowerShell実行環境
+- Python 3.x インストール済み
 
-2. **デプロイ実行**
-   ```bash
-   cd scripts
-   chmod +x deploy.sh
-   ./deploy.sh
-   ```
+### 2. デプロイ実行
 
-3. **テスト実行**
-   ```bash
-   python test-api.py
-   ```
+```powershell
+cd 033.apigateway-openapi-cognito-auth
+powershell -ExecutionPolicy Bypass -File "scripts\deploy.ps1"
+```
+
+このスクリプトは以下を自動実行します：
+1. CloudFormationスタックのデプロイ
+2. CSVファイルからユーザーをインポート（ランダムパスワード生成）
+3. OpenAPI仕様ファイルのプレースホルダー置換
+4. API GatewayへのOpenAPI仕様インポート
+5. APIのデプロイ
+
+### 3. APIテスト
+
+```powershell
+cd scripts
+python test-api-simple.py --api-endpoint <API_ENDPOINT> --user-pool-id <USER_POOL_ID> --client-id <CLIENT_ID>
+```
+
+または
+
+```powershell
+python test-cognito-auth.py
+```
 
 ## API エンドポイント
 
@@ -112,21 +130,57 @@ OpenAPI定義書内でAPI Gatewayのパラメータマッピング機能を使�
 3. **ログ記録**
    - 全ての認証・認可イベントをCloudWatch Logsに記録
 
+## ユーザー管理
+
+### CSVファイルからのインポート
+
+`src/users.csv`にユーザー情報を記載：
+```csv
+username,group
+testuser,api-users
+adminuser,api-admins
+```
+
+- パスワードは自動生成され、デプロイ時に表示されます
+- グループに基づいてcustom:roleが自動設定されます
+
 ## トラブルシューティング
 
-### よくある問題
+### デプロイエラー
 
-1. **403 Forbidden エラー**
-   - Lambda Authorizerのロール検証を確認
-   - Cognitoトークンのcustom:role属性を確認
+**OpenAPIインポートエラー**: "A combination of multiple Authorizers..."
+- 原因: 複数のAuthorizerを同時に指定
+- 解決: CognitoUserPoolのみを使用
 
-2. **401 Unauthorized エラー**
-   - Cognitoトークンの有効性を確認
-   - Authorization ヘッダーの形式を確認
+**デプロイメントエラー**: "The REST API doesn't contain any methods"
+- 原因: メソッドが定義されていない状態でデプロイ
+- 解決: OpenAPIインポート後にデプロイ
 
-3. **クエリパラメータが渡されない**
-   - OpenAPI定義書のパラメータマッピング設定を確認
-   - API Gatewayのリクエスト変換設定を確認
+**httpMethodエラー**: "Enumeration value for HttpMethod must be non-empty"
+- 原因: Lambda統合にhttpMethodが未指定
+- 解決: `httpMethod: POST`を追加
+
+### 認証エラー
+
+**403 Forbidden エラー**
+- Lambda Authorizerのロール検証を確認
+- Cognitoトークンのcustom:role属性を確認
+
+**401 Unauthorized エラー**
+- Cognitoトークンの有効性を確認
+- Authorization ヘッダーの形式を確認
+
+### その他
+
+**クエリパラメータが渡されない**
+- OpenAPI定義書のパラメータマッピング設定を確認
+- API Gatewayのリクエスト変換設定を確認
+
+## クリーンアップ
+
+```powershell
+aws cloudformation delete-stack --stack-name openapi-cognito-auth-dev
+```
 
 ## 参考資料
 

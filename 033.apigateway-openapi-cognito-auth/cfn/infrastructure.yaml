@@ -167,11 +167,11 @@ Resources:
                   logger.info(f"Determined role: {role}")
                   
                   # Add custom claim to the token
-                  if 'response' not in event:
+                  if 'response' not in event or event['response'] is None:
                       event['response'] = {}
-                  if 'claimsOverrideDetails' not in event['response']:
+                  if 'claimsOverrideDetails' not in event['response'] or event['response']['claimsOverrideDetails'] is None:
                       event['response']['claimsOverrideDetails'] = {}
-                  if 'claimsToAddOrOverride' not in event['response']['claimsOverrideDetails']:
+                  if 'claimsToAddOrOverride' not in event['response']['claimsOverrideDetails'] or event['response']['claimsOverrideDetails']['claimsToAddOrOverride'] is None:
                       event['response']['claimsOverrideDetails']['claimsToAddOrOverride'] = {}
                   
                   event['response']['claimsOverrideDetails']['claimsToAddOrOverride']['custom:role'] = role
@@ -547,12 +547,10 @@ Resources:
           RequireSymbols: false
       AutoVerifiedAttributes:
         - email
-      UsernameAttributes:
-        - email
       Schema:
         - Name: email
           AttributeDataType: String
-          Required: true
+          Required: false
           Mutable: true
         - Name: role
           AttributeDataType: String
@@ -594,7 +592,7 @@ Resources:
   CognitoUserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
-      Domain: !Sub "${ProjectName}-${Environment}-${AWS::AccountId}"
+      Domain: !Sub "openapi-auth-${Environment}-${AWS::AccountId}"
       UserPoolId: !Ref CognitoUserPool
 
   # Cognito User Groups
@@ -612,42 +610,68 @@ Resources:
       UserPoolId: !Ref CognitoUserPool
       Description: Group for API users
 
-  # Test Users
-  CognitoTestUser:
-    Type: AWS::Cognito::UserPoolUser
+  # ===== API Gateway =====
+  
+  # API Gateway REST API (will be overwritten by OpenAPI import)
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
     Properties:
-      UserPoolId: !Ref CognitoUserPool
-      Username: !Ref UserEmail
-      UserAttributes:
-        - Name: email
-          Value: !Ref UserEmail
-        - Name: email_verified
-          Value: "true"
-      MessageAction: SUPPRESS
+      Name: !Sub "${ProjectName}-api-${Environment}"
+      Description: API Gateway with OpenAPI specification and Cognito authentication
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
 
-  CognitoAdminUser:
-    Type: AWS::Cognito::UserPoolUser
-    Properties:
-      UserPoolId: !Ref CognitoUserPool
-      Username: !Ref AdminEmail
-      UserAttributes:
-        - Name: email
-          Value: !Ref AdminEmail
-        - Name: email_verified
-          Value: "true"
-      MessageAction: SUPPRESS
+Outputs:
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref CognitoUserPool
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolId"
 
-  # Add users to groups
-  CognitoTestUserToGroup:
-    Type: AWS::Cognito::UserPoolUserToGroupAttachment
-    Properties:
-      GroupName: !Ref CognitoUserGroup
-      Username: !Ref CognitoTestUser
-      UserPoolId: !Ref CognitoUserPool
+  CognitoUserPoolClientId:
+    Description: Cognito User Pool Client ID
+    Value: !Ref CognitoUserPoolClient
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolClientId"
 
-  CognitoAdminUserToGroup:
-    Type: AWS::Cognito::UserPoolUserToGroupAttachment
-    Properties:
-      GroupName: !Ref CognitoAdminGroup
-      Username: !Ref CognitoAdminUser
-      UserPoolId: !Ref CognitoUserPool
+  CognitoUserPoolArn:
+    Description: Cognito User Pool ARN
+    Value: !GetAtt CognitoUserPool.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-UserPoolArn"
+
+  BackendLambdaArn:
+    Description: Backend Lambda Function ARN
+    Value: !GetAtt BackendLambdaFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-BackendLambdaArn"
+
+  LambdaAuthorizerArn:
+    Description: Lambda Authorizer Function ARN
+    Value: !GetAtt LambdaAuthorizerFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-LambdaAuthorizerArn"
+
+  ApiGatewayRoleArn:
+    Description: API Gateway IAM Role ARN
+    Value: !GetAtt ApiGatewayRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiGatewayRoleArn"
+
+  ApiGatewayRestApiId:
+    Description: API Gateway REST API ID
+    Value: !Ref ApiGatewayRestApi
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiGatewayRestApiId"
+
+  ApiGatewayEndpoint:
+    Description: API Gateway Endpoint URL
+    Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
+    Export:
+      Name: !Sub "${AWS::StackName}-ApiGatewayEndpoint"

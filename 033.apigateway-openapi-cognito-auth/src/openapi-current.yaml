@@ -1,0 +1,202 @@
+openapi: "3.0.1"
+info:
+  title: "OpenAPI Cognito Auth API"
+  description: "API Gateway with OpenAPI specification, Cognito authentication, and\
+    \ Lambda authorizer"
+  version: "1.0.0"
+servers:
+- url: "https://33h1577v96.execute-api.ap-northeast-1.amazonaws.com/{basePath}"
+  variables:
+    basePath:
+      default: "dev"
+paths:
+  /health:
+    get:
+      summary: "Health check endpoint"
+      description: "Simple health check endpoint without authentication"
+      responses:
+        "500":
+          description: "Service is unhealthy"
+          content: {}
+        "200":
+          description: "Service is healthy"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MODELd42678"
+  /user:
+    get:
+      summary: "User endpoint"
+      description: "Endpoint accessible by users with user or admin role"
+      parameters:
+      - name: "filter"
+        in: "query"
+        description: "Filter criteria"
+        schema:
+          type: "string"
+      - name: "offset"
+        in: "query"
+        description: "Number of items to skip"
+        schema:
+          type: "string"
+      - name: "limit"
+        in: "query"
+        description: "Number of items to return"
+        schema:
+          type: "string"
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MODEL774ac3"
+        "400":
+          description: "Bad Request"
+          content: {}
+        "500":
+          description: "Internal Server Error"
+          content: {}
+        "403":
+          description: "Forbidden - Insufficient permissions"
+          content: {}
+      security:
+      - CognitoUserPool: []
+  /admin:
+    post:
+      summary: "Admin-only endpoint"
+      description: "Endpoint accessible only by users with admin role"
+      parameters:
+      - name: "priority"
+        in: "query"
+        description: "Priority level"
+        schema:
+          type: "string"
+      - name: "action"
+        in: "query"
+        description: "Action to perform"
+        required: true
+        schema:
+          type: "string"
+      - name: "target"
+        in: "query"
+        description: "Target resource"
+        schema:
+          type: "string"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MODEL109801"
+        required: true
+      responses:
+        "200":
+          description: "Success"
+          headers:
+            aaa:
+              schema:
+                type: "string"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MODEL109801"
+        "400":
+          description: "Bad Request"
+          content: {}
+        "500":
+          description: "Internal Server Error"
+          content: {}
+        "403":
+          description: "Forbidden - Insufficient permissions"
+          content: {}
+      security:
+      - CognitoUserPool: []
+  /public:
+    get:
+      summary: "Public endpoint"
+      description: "Endpoint accessible by any authenticated user"
+      parameters:
+      - name: "include_metadata"
+        in: "query"
+        description: "Include metadata in response"
+        schema:
+          type: "string"
+      - name: "format"
+        in: "query"
+        description: "Response format"
+        schema:
+          type: "string"
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MODEL79411c"
+        "400":
+          description: "Bad Request"
+          content: {}
+        "401":
+          description: "Unauthorized"
+          content: {}
+        "500":
+          description: "Internal Server Error"
+          content: {}
+      security:
+      - CognitoUserPool: []
+components:
+  schemas:
+    MODEL109801:
+      required:
+      - "data"
+      type: "object"
+      properties:
+        data:
+          type: "object"
+          description: "Admin operation data"
+        metadata:
+          type: "object"
+          description: "Additional metadata"
+    MODEL774ac3:
+      type: "object"
+      properties:
+        data:
+          type: "array"
+          items:
+            type: "object"
+        pagination:
+          type: "object"
+          properties:
+            limit:
+              type: "integer"
+              format: "int32"
+            offset:
+              type: "integer"
+              format: "int32"
+            total:
+              type: "integer"
+              format: "int32"
+    MODELd42678:
+      type: "object"
+      properties:
+        status:
+          type: "string"
+        timestamp:
+          type: "string"
+          format: "date-time"
+    MODEL79411c:
+      type: "object"
+      properties:
+        message:
+          type: "string"
+        data:
+          type: "object"
+        metadata:
+          type: "object"
+  securitySchemes:
+    CognitoUserPool:
+      type: "apiKey"
+      name: "Authorization"
+      in: "header"
+      x-amazon-apigateway-authtype: "cognito_user_pools"
+x-amazon-apigateway-security-policy: "TLS_1_0"
