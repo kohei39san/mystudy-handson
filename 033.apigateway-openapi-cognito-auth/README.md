@@ -36,7 +36,8 @@
 033.apigateway-openapi-cognito-auth/
 ├── README.md                    # このファイル
 ├── cfn/
-│   ├── infrastructure.yaml     # CloudFormationテンプレート
+│   └── infrastructure.yaml     # CloudFormationテンプレート
+├── api/
 │   └── openapi-spec.yaml       # OpenAPI定義書
 └── scripts/
     ├── deploy.sh               # デプロイスクリプト

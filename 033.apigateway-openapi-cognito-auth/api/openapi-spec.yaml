@@ -1,0 +1,368 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI Cognito Auth API
+  description: API Gateway with OpenAPI specification, Cognito authentication, and Lambda authorizer
+  version: 1.0.0
+
+# API Gateway Extensions for AWS Integration
+x-amazon-apigateway-request-validators:
+  all:
+    validateRequestBody: true
+    validateRequestParameters: true
+  params-only:
+    validateRequestBody: false
+    validateRequestParameters: true
+
+x-amazon-apigateway-request-validator: all
+
+# Cognito User Pool Authorizer
+components:
+  securitySchemes:
+    CognitoUserPool:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: cognito_user_pools
+      x-amazon-apigateway-authorizer:
+        type: cognito_user_pools
+        providerARNs:
+          - "${CognitoUserPoolArn}"
+    
+    LambdaAuthorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: custom
+      x-amazon-apigateway-authorizer:
+        type: request
+        authorizerUri: "${LambdaAuthorizerUri}"
+        authorizerCredentials: "${ApiGatewayRole}"
+        authorizerResultTtlInSeconds: 300
+        identitySource: "method.request.header.Authorization"
+
+paths:
+  /admin:
+    post:
+      summary: Admin-only endpoint
+      description: Endpoint accessible only by users with admin role
+      security:
+        - CognitoUserPool: []
+        - LambdaAuthorizer: []
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [create, update, delete]
+          description: Action to perform
+        - name: target
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "default"
+          description: Target resource
+        - name: priority
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 5
+          description: Priority level
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  description: Admin operation data
+                metadata:
+                  type: object
+                  description: Additional metadata
+              required:
+                - data
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  result:
+                    type: object
+        '403':
+          description: Forbidden - Insufficient permissions
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "${BackendLambdaUri}"
+        credentials: "${ApiGatewayRole}"
+        requestParameters:
+          integration.request.querystring.action: "method.request.querystring.action"
+          integration.request.querystring.target: "method.request.querystring.target"
+          integration.request.querystring.priority: "method.request.querystring.priority"
+        requestTemplates:
+          application/json: |
+            {
+              "body": $input.json('$'),
+              "queryStringParameters": {
+                "action": "$input.params('action')",
+                "target": "$util.escapeJavaScript($input.params('target'))",
+                "priority": "$input.params('priority')"
+              },
+              "headers": {
+                #foreach($header in $input.params().header.keySet())
+                "$header": "$util.escapeJavaScript($input.params().header.get($header))"#if($foreach.hasNext),#end
+                #end
+              },
+              "requestContext": {
+                "authorizer": {
+                  "claims": {
+                    #foreach($key in $context.authorizer.claims.keySet())
+                    "$key": "$util.escapeJavaScript($context.authorizer.claims.get($key))"#if($foreach.hasNext),#end
+                    #end
+                  }
+                }
+              },
+              "requiredRole": "admin"
+            }
+
+  /user:
+    get:
+      summary: User endpoint
+      description: Endpoint accessible by users with user or admin role
+      security:
+        - CognitoUserPool: []
+        - LambdaAuthorizer: []
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          description: Filter criteria
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items to return
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of items to skip
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  pagination:
+                    type: object
+                    properties:
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      total:
+                        type: integer
+        '403':
+          description: Forbidden - Insufficient permissions
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "${BackendLambdaUri}"
+        credentials: "${ApiGatewayRole}"
+        requestParameters:
+          integration.request.querystring.filter: "method.request.querystring.filter"
+          integration.request.querystring.limit: "method.request.querystring.limit"
+          integration.request.querystring.offset: "method.request.querystring.offset"
+        requestTemplates:
+          application/json: |
+            {
+              "queryStringParameters": {
+                "filter": "$util.escapeJavaScript($input.params('filter'))",
+                "limit": "$input.params('limit')",
+                "offset": "$input.params('offset')"
+              },
+              "headers": {
+                #foreach($header in $input.params().header.keySet())
+                "$header": "$util.escapeJavaScript($input.params().header.get($header))"#if($foreach.hasNext),#end
+                #end
+              },
+              "requestContext": {
+                "authorizer": {
+                  "claims": {
+                    #foreach($key in $context.authorizer.claims.keySet())
+                    "$key": "$util.escapeJavaScript($context.authorizer.claims.get($key))"#if($foreach.hasNext),#end
+                    #end
+                  }
+                }
+              },
+              "requiredRole": "user"
+            }
+
+  /public:
+    get:
+      summary: Public endpoint
+      description: Endpoint accessible by any authenticated user
+      security:
+        - CognitoUserPool: []
+      parameters:
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [json, xml, csv]
+            default: json
+          description: Response format
+        - name: include_metadata
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Include metadata in response
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '401':
+          description: Unauthorized
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "${BackendLambdaUri}"
+        credentials: "${ApiGatewayRole}"
+        requestParameters:
+          integration.request.querystring.format: "method.request.querystring.format"
+          integration.request.querystring.include_metadata: "method.request.querystring.include_metadata"
+        requestTemplates:
+          application/json: |
+            {
+              "queryStringParameters": {
+                "format": "$util.escapeJavaScript($input.params('format'))",
+                "include_metadata": "$input.params('include_metadata')"
+              },
+              "headers": {
+                #foreach($header in $input.params().header.keySet())
+                "$header": "$util.escapeJavaScript($input.params().header.get($header))"#if($foreach.hasNext),#end
+                #end
+              },
+              "requestContext": {
+                "authorizer": {
+                  "claims": {
+                    #foreach($key in $context.authorizer.claims.keySet())
+                    "$key": "$util.escapeJavaScript($context.authorizer.claims.get($key))"#if($foreach.hasNext),#end
+                    #end
+                  }
+                }
+              },
+              "requiredRole": "anonymous"
+            }
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Simple health check endpoint without authentication
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+        '500':
+          description: Service is unhealthy
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "${BackendLambdaUri}"
+        credentials: "${ApiGatewayRole}"
+        requestTemplates:
+          application/json: |
+            {
+              "path": "/health",
+              "httpMethod": "GET",
+              "headers": {
+                #foreach($header in $input.params().header.keySet())
+                "$header": "$util.escapeJavaScript($input.params().header.get($header))"#if($foreach.hasNext),#end
+                #end
+              },
+              "requestContext": {
+                "path": "/health",
+                "httpMethod": "GET"
+              },
+              "requiredRole": "none"
+            }
+
+# CORS configuration for all endpoints
+x-amazon-apigateway-cors:
+  allowOrigins:
+    - "*"
+  allowHeaders:
+    - "Content-Type"
+    - "X-Amz-Date"
+    - "Authorization"
+    - "X-Api-Key"
+    - "X-Amz-Security-Token"
+  allowMethods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  maxAge: 86400

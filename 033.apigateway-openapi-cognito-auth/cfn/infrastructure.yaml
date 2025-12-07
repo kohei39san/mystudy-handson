@@ -564,9 +564,9 @@ Resources:
         Environment: !Ref Environment
         Project: !Ref ProjectName
 
-  # Cognito User Pool Client
+  # Cognito User Pool Client - Fixed resource type
   CognitoUserPoolClient:
-    Type: AWS::Cognito::UserPool::Client
+    Type: AWS::Cognito::UserPoolClient
     Properties:
       ClientName: !Sub "${ProjectName}-client-${Environment}"
       UserPoolId: !Ref CognitoUserPool
