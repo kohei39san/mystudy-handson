@@ -20,10 +20,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Draw.io Desktop
+      - name: Install Draw.io Desktop and Python dependencies
         run: |
           # Download and install draw.io desktop AppImage
-          sudo apt-get install -y xvfb libasound2t64
+          sudo apt-get update
+          sudo apt-get install -y xvfb libasound2t64 python3
           wget -O /tmp/drawio.deb https://github.com/jgraph/drawio-desktop/releases/download/v28.0.6/drawio-amd64-28.0.6.deb
           sudo apt-get install -y /tmp/drawio.deb
 
@@ -50,7 +51,7 @@ jobs:
             echo "$changed_files" > "${{ runner.temp }}/changed_drawio_files.txt"
           fi
 
-      - name: Convert Draw.io files to SVG
+      - name: Convert Draw.io files to SVG (Multi-page support)
         if: steps.changed-files.outputs.has_changes == 'true'
         run: |
           # Read the list of changed files
@@ -61,17 +62,78 @@ jobs:
               filename=$(basename "$drawio_file" .drawio)
               svg_file="$dir/$filename.svg"
               
-              echo "Converting $drawio_file to $svg_file"
+              echo "Processing $drawio_file..."
               
-              # Convert .drawio to .svg using draw.io desktop
+              # Set up environment for draw.io
               export XDG_RUNTIME_DIR="/run/user/$(id -u)"
               export DBUS_SESSION_BUS_ADDRESS=unix:path="$XDG_RUNTIME_DIR"/bus
-              if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
-                echo "Successfully converted $drawio_file to $svg_file"
+              
+              # Create temporary directory for individual pages
+              temp_dir="${{ runner.temp }}/drawio_pages_$(basename "$drawio_file" .drawio)"
+              mkdir -p "$temp_dir"
+              
+              # Use Python to detect number of pages in the drawio file
+              pages=$(python3 scripts/count_drawio_pages.py "$drawio_file")
+              
+              echo "Detected $pages page(s) in $drawio_file"
+              
+              if [ "$pages" -eq 1 ]; then
+                echo "Single page detected, using direct export..."
+                # Single page, direct export
+                if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
+                  echo "Successfully converted $drawio_file to $svg_file (single page)"
+                else
+                  echo "Failed to convert $drawio_file"
+                  exit 1
+                fi
               else
-                echo "Failed to convert $drawio_file"
-                exit 1
+                echo "Multiple pages detected, exporting individual pages..."
+                # Multiple pages, export each page individually
+                page_files=()
+                for ((page_index=1; page_index<=pages; page_index++)); do
+                  page_svg="$temp_dir/page_${page_index}.svg"
+                  echo "Exporting page $page_index to $page_svg..."
+                  
+                  if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --page-index "$page_index" --output "$page_svg" "$drawio_file"; then
+                    if [ -f "$page_svg" ] && [ -s "$page_svg" ]; then
+                      echo "Successfully exported page $page_index (size: $(stat -c%s "$page_svg") bytes)"
+                      page_files+=("$page_svg")
+                    else
+                      echo "Warning: Page $page_index export resulted in empty file"
+                    fi
+                  else
+                    echo "Warning: Failed to export page $page_index"
+                  fi
+                done
+                
+                echo "Total page files collected: ${#page_files[@]}"
+                
+                if [ ${#page_files[@]} -eq 0 ]; then
+                  echo "No pages were successfully exported, trying fallback single page export..."
+                  # Fallback to single page export
+                  if xvfb-run --auto-servernum /usr/bin/drawio --no-sandbox --export --format svg --output "$svg_file" "$drawio_file"; then
+                    echo "Successfully converted $drawio_file to $svg_file (fallback single page)"
+                  else
+                    echo "Failed to convert $drawio_file"
+                    exit 1
+                  fi
+                else
+                  echo "Combining ${#page_files[@]} pages into single SVG..."
+                  echo "Page files to combine:"
+                  printf '%s\n' "${page_files[@]}"
+                  # Combine pages using Python script
+                  if python3 scripts/combine_svgs.py "$svg_file" "${page_files[@]}"; then
+                    echo "Successfully combined ${#page_files[@]} pages into $svg_file"
+                  else
+                    echo "Failed to combine pages for $drawio_file"
+                    exit 1
+                  fi
+                fi
               fi
+              
+              # Clean up temporary files
+              rm -rf "$temp_dir"
+              
             else
               echo "File $drawio_file not found, skipping"
             fi
