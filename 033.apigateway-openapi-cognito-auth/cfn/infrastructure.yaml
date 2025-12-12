@@ -11,16 +11,6 @@ Parameters:
     Type: String
     Default: openapi-cognito-auth
     Description: Project name for resource naming
-  
-  UserEmail:
-    Type: String
-    Default: test@example.com
-    Description: Email address for the test Cognito user
-  
-  AdminEmail:
-    Type: String
-    Default: admin@example.com
-    Description: Email address for the admin Cognito user
 
 Resources:
   # ===== IAM Roles =====
