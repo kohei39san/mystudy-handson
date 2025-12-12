@@ -1,0 +1,64 @@
+{
+  "name": "q_ide_default",
+  "description": "Default agent configuration",
+  "prompt": "",
+  "mcpServers": {
+    "redmine-mcp-server": {
+      "command": "python",
+      "args": [
+        "034.redmine-mcp-server/src/redmine_mcp_server.py"
+      ],
+      "env": {
+        "SESSION_TIMEOUT": "3600",
+        "REQUEST_TIMEOUT": "30",
+        "MAX_RETRIES": "3",
+        "RETRY_DELAY": "1.0"
+      },
+      "timeout": 60000,
+      "disabled": false
+    }
+  },
+  "tools": [
+    "fs_read",
+    "execute_bash",
+    "fs_write",
+    "report_issue",
+    "use_aws",
+    "@redmine-mcp-server"
+  ],
+  "toolAliases": {},
+  "allowedTools": [
+    "fs_read",
+    "report_issue",
+    "use_aws",
+    "execute_bash",
+    "fs_write",
+    "@redmine-mcp-server/get_projects",
+    "@redmine-mcp-server/get_server_info",
+    "@redmine-mcp-server/get_issue_details",
+    "@redmine-mcp-server/get_available_trackers",
+    "@redmine-mcp-server/get_creation_statuses",
+    "@redmine-mcp-server/get_available_statuses",
+    "@redmine-mcp-server/get_tracker_fields",
+    "@redmine-mcp-server/get_project_members",
+    "@redmine-mcp-server/search_issues"
+  ],
+  "toolsSettings": {
+    "use_aws": {
+      "preset": "readOnly"
+    },
+    "execute_bash": {
+      "preset": "readOnly"
+    }
+  },
+  "resources": [
+    "file://AmazonQ.md",
+    "file://README.md",
+    "file://.amazonq/rules/**/*.md"
+  ],
+  "hooks": {
+    "agentSpawn": [],
+    "userPromptSubmit": []
+  },
+  "useLegacyMcpJson": true
+}
