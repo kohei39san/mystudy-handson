@@ -65,7 +65,9 @@ jobs:
               echo "Processing $drawio_file..."
               
               # Set up environment for draw.io
-              export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+              # Separate declaration and assignment to avoid masking return values (SC2155)
+              XDG_RUNTIME_DIR="/run/user/$(id -u)"
+              export XDG_RUNTIME_DIR
               export DBUS_SESSION_BUS_ADDRESS=unix:path="$XDG_RUNTIME_DIR"/bus
               
               # Create temporary directory for individual pages

@@ -248,7 +248,7 @@ resource "aws_lambda_function" "mcp_server" {
   source_code_hash = data.archive_file.mcp_server_zip.output_base64sha256
   role             = aws_iam_role.mcp_server_role.arn
   handler          = "lambda_function.lambda_handler"
-  runtime          = "python3.9"
+  runtime          = "python3.12"  # Updated from deprecated python3.9 to latest supported version
   timeout          = var.lambda_timeout
   memory_size      = var.lambda_memory_size
 
@@ -383,7 +383,7 @@ resource "aws_lambda_function" "github_to_s3_sync" {
   source_code_hash = data.archive_file.github_sync_zip.output_base64sha256
   role             = aws_iam_role.github_sync_role.arn
   handler          = "github_to_s3_sync.lambda_handler"
-  runtime          = "python3.9"
+  runtime          = "python3.12"  # Updated from deprecated python3.9 to latest supported version
   timeout          = 300
   memory_size      = 512
 

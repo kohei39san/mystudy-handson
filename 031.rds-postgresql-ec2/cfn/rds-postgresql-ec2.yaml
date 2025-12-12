@@ -201,7 +201,7 @@ Resources:
       DBInstanceIdentifier: !Sub '${EnvironmentName}-postgresql'
       DBInstanceClass: db.t4g.medium
       Engine: postgres
-      EngineVersion: '15'
+      EngineVersion: '16'  # Updated from deprecated version '15' to supported version
       AllocatedStorage: 20
       StorageType: gp2
       StorageEncrypted: true
