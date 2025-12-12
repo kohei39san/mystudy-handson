@@ -71,8 +71,9 @@ class RedmineSeleniumScraper:
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
         # Use webdriver-manager to automatically download and manage ChromeDriver
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
+        #service = Service(ChromeDriverManager().install())
+        #driver = webdriver.Chrome(service=service, options=chrome_options)
+        driver = webdriver.Chrome(options=chrome_options)
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
         return driver
@@ -186,7 +187,7 @@ class RedmineSeleniumScraper:
                     try:
                         logger.info("SKIP_2FA enabled: attempting immediate projects access")
                         self.driver.get(config.projects_url)
-                        time.sleep(1)
+                        time.sleep(10)
                         if 'login' not in self.driver.current_url.lower():
                             self.is_authenticated = True
                             logger.info("Bypassed 2FA via immediate projects access")
