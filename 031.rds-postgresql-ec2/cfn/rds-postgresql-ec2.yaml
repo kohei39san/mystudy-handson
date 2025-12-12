@@ -201,7 +201,7 @@ Resources:
       DBInstanceIdentifier: !Sub '${EnvironmentName}-postgresql'
       DBInstanceClass: db.t4g.medium
       Engine: postgres
-      EngineVersion: '16'  # Updated from deprecated version '15' to supported version
+      EngineVersion: '17'  # Updated to latest supported version to resolve deprecation warnings
       AllocatedStorage: 20
       StorageType: gp2
       StorageEncrypted: true
@@ -234,7 +234,7 @@ Resources:
           #!/bin/bash
           yum update -y
           
-          # Install PostgreSQL client
+          # Install PostgreSQL client (compatible with PostgreSQL 17)
           yum install -y postgresql15
           
           # Install AWS CLI v2 (if not already installed)
