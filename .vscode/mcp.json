@@ -1,0 +1,33 @@
+{
+  "servers": {
+    "awslabs.aws-documentation-mcp-server": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "tool",
+        "run",
+        "--from",
+        "awslabs.aws-documentation-mcp-server@latest",
+        "awslabs.aws-documentation-mcp-server.exe"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR",
+        "AWS_DOCUMENTATION_PARTITION": "aws"
+      }
+    },
+    "redmine-mcp-server": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "src/redmine_mcp_server.py"
+      ],
+      "cwd": "034.redmine-mcp-server",
+      "env": {
+        "SESSION_TIMEOUT": "3600",
+        "REQUEST_TIMEOUT": "30",
+        "MAX_RETRIES": "3",
+        "RETRY_DELAY": "1.0"
+      }
+    }
+  }
+}
