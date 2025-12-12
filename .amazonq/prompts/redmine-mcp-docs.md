@@ -2,9 +2,9 @@
 
 以下のドキュメントを読み込んで、Redmine MCP Serverの仕様と設計を理解してください：
 
-1. @032.redmine-mcp-server/README.md - 概要、インストール方法、利用例
-2. @032.redmine-mcp-server/docs/design-principles.md - 設計指針とアーキテクチャ
-3. @032.redmine-mcp-server/docs/redmine-specification.md - Redmine仕様（URL、フィールド定義）
+1. @034.redmine-mcp-server/README.md - 概要、インストール方法、利用例
+2. @034.redmine-mcp-server/docs/design-principles.md - 設計指針とアーキテクチャ
+3. @034.redmine-mcp-server/docs/redmine-specification.md - Redmine仕様（URL、フィールド定義）
 
 これらのドキュメントを参照して質問に回答してください。
 
@@ -35,15 +35,15 @@
 確認した情報をドキュメントに追加してください：
 
 **新しいURLを使用する場合**:
-- `032.redmine-mcp-server/docs/redmine-specification.md`の「URL一覧」セクションに追加
+- `034.redmine-mcp-server/docs/redmine-specification.md`の「URL一覧」セクションに追加
 - URLパターン、説明、使用箇所を記載
 
 **新しいフィールドを使用する場合**:
-- `032.redmine-mcp-server/docs/redmine-specification.md`の「標準フィールド一覧」セクションに追加
+- `034.redmine-mcp-server/docs/redmine-specification.md`の「標準フィールド一覧」セクションに追加
 - フィールド名、ID、型、必須/任意、説明、取りうる値を記載
 
 **設計パターンに従う場合**:
-- `032.redmine-mcp-server/docs/design-principles.md`に設計指針を追記（必要に応じて）
+- `034.redmine-mcp-server/docs/design-principles.md`に設計指針を追記（必要に応じて）
 
 ### 3. 実装
 

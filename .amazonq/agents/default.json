@@ -6,7 +6,7 @@
     "redmine-mcp-server": {
       "command": "python",
       "args": [
-        "032.redmine-mcp-server/src/redmine_mcp_server.py"
+        "034.redmine-mcp-server/src/redmine_mcp_server.py"
       ],
       "env": {
         "SESSION_TIMEOUT": "3600",

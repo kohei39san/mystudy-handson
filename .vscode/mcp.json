@@ -21,7 +21,7 @@
       "args": [
         "src/redmine_mcp_server.py"
       ],
-      "cwd": "032.redmine-mcp-server",
+      "cwd": "034.redmine-mcp-server",
       "env": {
         "SESSION_TIMEOUT": "3600",
         "REQUEST_TIMEOUT": "30",
