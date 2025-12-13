@@ -142,13 +142,10 @@ class RedmineSeleniumScraper:
             
             # Navigate to login page
             self.driver.get(config.login_url)
-            
-            # Wait for login form to load
-            wait = WebDriverWait(self.driver, 10)
-            
+
             try:
                 # Find username field
-                username_field = wait.until(
+                username_field = self.wait.until(
                     EC.presence_of_element_located((By.ID, "username"))
                 )
                 
