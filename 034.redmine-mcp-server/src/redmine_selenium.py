@@ -448,7 +448,7 @@ class RedmineSeleniumScraper:
                             
                             # Filter out navigation links and system links
                             if (project_name and len(project_name) > 1 and
-                                project_name.lower() not in ['projects', 'new project', 'settings', '新しいプロジェクト'] and
+                                project_name.lower() not in ['projects', 'new project', 'settings'] and
                                 not href.endswith('/projects/new')):
                                 
                                 # Extract project ID from URL
@@ -883,8 +883,8 @@ class RedmineSeleniumScraper:
                     
                     for element in count_elements:
                         text = element.text.strip()
-                        # Extract number from text like "101 issues" or "101件"
-                        count_match = re.search(r'(\d+)\s*(?:issues?|件|個|results?)', text, re.IGNORECASE)
+                        # Extract number from text like "101 issues" or "101 items"
+                        count_match = re.search(r'(\d+)\s*(?:issues?|items?|results?)', text, re.IGNORECASE)
                         if count_match:
                             total_count = int(count_match.group(1))
                             logger.debug(f"Found total count from text: {total_count}")
@@ -1068,11 +1068,11 @@ class RedmineSeleniumScraper:
                                             # Try to identify cell content by position or content
                                             if cell_idx == 0 and not issue_data.get('tracker'):
                                                 # First cell might be tracker or checkbox
-                                                if not cell_text.startswith('#') and cell_text not in ['', '✁']:
+                                                if not cell_text.startswith('#') and cell_text not in ['']:
                                                     issue_data['tracker'] = cell_text
-                                            elif 'status' not in issue_data and cell_text in ['New', 'Open', 'Closed', 'Resolved', 'In Progress', '新規', '進行中', '完了']:
+                                            elif 'status' not in issue_data and cell_text in ['New', 'Open', 'Closed', 'Resolved', 'In Progress']:
                                                 issue_data['status'] = cell_text
-                                            elif 'priority' not in issue_data and cell_text in ['Low', 'Normal', 'High', 'Urgent', 'Immediate', '低', '通常', '高', '緊急']:
+                                            elif 'priority' not in issue_data and cell_text in ['Low', 'Normal', 'High', 'Urgent', 'Immediate']:
                                                 issue_data['priority'] = cell_text
                                     
                                     # If we still don't have a subject, use a default
@@ -1232,7 +1232,7 @@ class RedmineSeleniumScraper:
             try:
                 tracker_elem = self.driver.find_element(By.CSS_SELECTOR, "#content > h2")
                 tracker_text = tracker_elem.text.strip()
-                # Extract tracker name from "トラッカー名 #チケットID" format
+                # Extract tracker name from "Tracker Name #IssueID" format
                 tracker_match = re.match(r'^([^#]+)\s*#\d+', tracker_text)
                 if tracker_match:
                     issue_details['tracker'] = tracker_match.group(1).strip()
@@ -1870,7 +1870,7 @@ class RedmineSeleniumScraper:
         try:
             logger.info(f"Creating issue in project {project_id}")
             
-            # トラッカーIDバリデーション
+            # Tracker ID validation
             tracker_validation = self._validate_tracker_for_project(project_id, issue_tracker_id)
             if not tracker_validation['valid']:
                 return {
@@ -2076,7 +2076,7 @@ class RedmineSeleniumScraper:
                     'message': f'Issue #{issue_id} not found or not editable.'
                 }
             
-            # トラッカーフィールドバリデーション（現在のチケットのトラッカーを取得してバリデーション）
+            # Tracker field validation (get current issue tracker for validation)
             current_tracker_id = None
             try:
                 tracker_select = self.driver.find_element(By.ID, "issue_tracker_id")
@@ -2087,7 +2087,7 @@ class RedmineSeleniumScraper:
                 pass
             
             if current_tracker_id:
-                # 現在のプロジェクトIDを取得（URLから抽出）
+                # Get current project ID (extract from URL)
                 current_project_id = None
                 url_match = re.search(r'/projects/([^/]+)/', self.driver.current_url)
                 if url_match:
@@ -2201,7 +2201,7 @@ class RedmineSeleniumScraper:
                     
                     # Check for success message or flash notice
                     success_indicators = [
-                        "successfully updated", "更新しました", "flash notice", 
+                        "successfully updated", "flash notice", 
                         "notice", "success"
                     ]
                     
@@ -2425,7 +2425,7 @@ class RedmineSeleniumScraper:
 
     def get_time_entries(self, project_id: str, **kwargs) -> Dict[str, Any]:
         """
-        Get time entries (作業時間) for a project with optional filters
+        Get time entries (work hours) for a project with optional filters
         
         Args:
             project_id: Project ID to get time entries for
@@ -2573,8 +2573,8 @@ class RedmineSeleniumScraper:
                     
                     for element in count_elements:
                         text = element.text.strip()
-                        # Extract number from text like "101 entries" or "101件"
-                        count_match = re.search(r'(\d+)\s*(?:entries?|件|個|results?)', text, re.IGNORECASE)
+                        # Extract number from text like "101 entries" or "101 items"
+                        count_match = re.search(r'(\d+)\s*(?:entries?|items?|results?)', text, re.IGNORECASE)
                         if count_match:
                             total_count = int(count_match.group(1))
                             logger.debug(f"Found total count from text: {total_count}")
@@ -2652,7 +2652,7 @@ class RedmineSeleniumScraper:
                                     # Method 1: Identify by column position and content pattern
                                     # First column: checkbox or user name
                                     if cell_idx == 0:
-                                        if not cell_text.isdigit() and cell_text != '✁':
+                                        if not cell_text.isdigit() and cell_text != '':
                                             # Try to get from user link
                                             try:
                                                 user_link = cell.find_element(By.TAG_NAME, "a")

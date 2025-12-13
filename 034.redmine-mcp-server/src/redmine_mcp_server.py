@@ -305,7 +305,7 @@ class RedmineMCPServer:
                 ),
                 Tool(
                     name="get_time_entries",
-                    description="Get time entries (作業時間) for a project with optional filters",
+                    description="Get time entries (work hours) for a project with optional filters",
                     inputSchema={
                         "type": "object",
                         "properties": {
