@@ -13,7 +13,7 @@
         "REQUEST_TIMEOUT": "30",
         "MAX_RETRIES": "3",
         "RETRY_DELAY": "1.0",
-        "SELENIUM_WAIT": 60
+        "SELENIUM_WAIT": "60"
       },
       "timeout": 60000,
       "disabled": false

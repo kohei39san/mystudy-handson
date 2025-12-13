@@ -56,7 +56,7 @@ class RedmineSeleniumScraper:
         self.driver = None
         self.is_authenticated = False
         self.headless_mode = False
-        self.wait_time = int(os.getenv('SELENIUM_WAIT', '3'))
+        self.wait_time = int(os.getenv('SELENIUM_WAIT', '60'))
         self.wait = None
         
     def _create_driver(self, headless: bool = False) -> webdriver.Chrome:
