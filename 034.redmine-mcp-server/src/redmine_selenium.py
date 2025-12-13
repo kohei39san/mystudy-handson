@@ -58,6 +58,7 @@ class RedmineSeleniumScraper:
         self.headless_mode = False
         self.wait_time = int(os.getenv('SELENIUM_WAIT', '60'))
         self.wait = None
+        self.auto_switch_headless = os.getenv('AUTO_SWITCH_HEADLESS', 'false').lower() == 'true'
         
     def _create_driver(self, headless: bool = False) -> webdriver.Chrome:
         """Create Chrome WebDriver instance"""
@@ -201,11 +202,12 @@ class RedmineSeleniumScraper:
                         if 'login' not in self.driver.current_url.lower():
                             self.is_authenticated = True
                             logger.info("Bypassed 2FA via immediate projects access")
-                            # Switch to headless mode if appropriate and return success
-                            try:
-                                self._switch_to_headless()
-                            except Exception:
-                                logger.debug("_switch_to_headless failed during SKIP_2FA bypass")
+                            # Switch to headless mode if enabled
+                            if self.auto_switch_headless:
+                                try:
+                                    self._switch_to_headless()
+                                except Exception:
+                                    logger.debug("_switch_to_headless failed during SKIP_2FA bypass")
                             return {
                                 'success': True,
                                 'message': 'Successfully logged in to Redmine (2FA bypassed)',
@@ -278,8 +280,9 @@ class RedmineSeleniumScraper:
                                                 lambda d: True
                                             )
                                             
-                                            # Switch to headless mode (this will close the visible browser)
-                                            self._switch_to_headless()
+                                            # Switch to headless mode if enabled (this will close the visible browser)
+                                            if self.auto_switch_headless:
+                                                self._switch_to_headless()
                                             
                                             return {
                                                 'success': True,
@@ -304,7 +307,8 @@ class RedmineSeleniumScraper:
                                 if 'login' not in self.driver.current_url.lower():
                                     self.is_authenticated = True
                                     logger.info("Bypassed 2FA - authenticated successfully")
-                                    self._switch_to_headless()
+                                    if self.auto_switch_headless:
+                                        self._switch_to_headless()
                                     return {
                                         'success': True,
                                         'message': 'Successfully logged in to Redmine (2FA bypassed)',
