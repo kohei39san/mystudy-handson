@@ -56,6 +56,8 @@ class RedmineSeleniumScraper:
         self.driver = None
         self.is_authenticated = False
         self.headless_mode = False
+        self.wait_time = int(os.getenv('SELENIUM_WAIT', '3'))
+        self.wait = None
         
     def _create_driver(self, headless: bool = False) -> webdriver.Chrome:
         """Create Chrome WebDriver instance"""
@@ -95,6 +97,7 @@ class RedmineSeleniumScraper:
             logger.info("Starting headless browser")
             self.driver = self._create_driver(headless=True)
             self.headless_mode = True
+            self.wait = WebDriverWait(self.driver, self.wait_time)
             
             # Navigate to base URL first
             self.driver.get(config.base_url)
@@ -135,6 +138,7 @@ class RedmineSeleniumScraper:
             
             self.driver = self._create_driver(headless=False)
             self.headless_mode = False
+            self.wait = WebDriverWait(self.driver, self.wait_time)
             
             # Navigate to login page
             self.driver.get(config.login_url)
@@ -163,8 +167,11 @@ class RedmineSeleniumScraper:
                 
                 logger.info("Credentials submitted, waiting for response...")
                 
-                # Wait a moment for the form submission to process
-                time.sleep(3)
+                # Wait for form submission to process
+
+                self.wait.until(
+                    lambda d: d.current_url != config.login_url
+                )
                 
                 # Wait for authentication to complete by monitoring URL changes
                 max_wait = int(os.getenv('TWOFA_WAIT', '300'))
@@ -172,7 +179,10 @@ class RedmineSeleniumScraper:
                 last_url = self.driver.current_url
                 
                 # Check if we're immediately redirected to 2FA
-                time.sleep(2)  # Allow initial redirect
+
+                self.wait.until(
+                    lambda d: d.current_url != config.login_url or True
+                )
                 current_url = self.driver.current_url
                 
                 # Skip 2FA handling if configured for test environment
@@ -187,7 +197,10 @@ class RedmineSeleniumScraper:
                     try:
                         logger.info("SKIP_2FA enabled: attempting immediate projects access")
                         self.driver.get(config.projects_url)
-                        time.sleep(10)
+
+                        self.wait.until(
+                            EC.presence_of_element_located((By.TAG_NAME, "body"))
+                        )
                         if 'login' not in self.driver.current_url.lower():
                             self.is_authenticated = True
                             logger.info("Bypassed 2FA via immediate projects access")
@@ -230,7 +243,10 @@ class RedmineSeleniumScraper:
                                 # Try to navigate to projects page to verify authentication
                                 try:
                                     self.driver.get(config.projects_url)
-                                    time.sleep(3)  # Wait for page load
+
+                                    self.wait.until(
+                                        EC.presence_of_element_located((By.TAG_NAME, "body"))
+                                    )
                                     
                                     final_url = self.driver.current_url
                                     
@@ -260,7 +276,10 @@ class RedmineSeleniumScraper:
                                             print("="*60 + "\n")
                                             
                                             # Give user a moment to see the message
-                                            time.sleep(2)
+
+                                            self.wait.until(
+                                                lambda d: True
+                                            )
                                             
                                             # Switch to headless mode (this will close the visible browser)
                                             self._switch_to_headless()
@@ -281,7 +300,10 @@ class RedmineSeleniumScraper:
                             # Try to navigate directly to projects page
                             try:
                                 self.driver.get(config.projects_url)
-                                time.sleep(2)
+
+                                self.wait.until(
+                                    EC.presence_of_element_located((By.TAG_NAME, "body"))
+                                )
                                 if 'login' not in self.driver.current_url.lower():
                                     self.is_authenticated = True
                                     logger.info("Bypassed 2FA - authenticated successfully")
@@ -303,7 +325,8 @@ class RedmineSeleniumScraper:
                     except Exception as e:
                         logger.debug(f"Error during URL monitoring: {e}")
                     
-                    time.sleep(2)  # Check every 2 seconds
+                    poll_interval = int(os.getenv('POLL_INTERVAL', '2'))
+                    time.sleep(poll_interval)  # Check every N seconds
                 
                 # Timeout reached
                 current_url = self.driver.current_url
@@ -348,6 +371,11 @@ class RedmineSeleniumScraper:
             self.driver.get(config.projects_url)
             
             # Wait for page to load
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+            
             wait = WebDriverWait(self.driver, 10)
             
             # Debug: Log page title and source
@@ -495,7 +523,10 @@ class RedmineSeleniumScraper:
             self.driver.get(members_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():
@@ -803,7 +834,10 @@ class RedmineSeleniumScraper:
             self.driver.get(issues_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Debug: Log page title and current URL
             logger.debug(f"Page title: {self.driver.title}")
@@ -1034,7 +1068,7 @@ class RedmineSeleniumScraper:
                                             # Try to identify cell content by position or content
                                             if cell_idx == 0 and not issue_data.get('tracker'):
                                                 # First cell might be tracker or checkbox
-                                                if not cell_text.startswith('#') and cell_text not in ['', '✓']:
+                                                if not cell_text.startswith('#') and cell_text not in ['', '✁']:
                                                     issue_data['tracker'] = cell_text
                                             elif 'status' not in issue_data and cell_text in ['New', 'Open', 'Closed', 'Resolved', 'In Progress', '新規', '進行中', '完了']:
                                                 issue_data['status'] = cell_text
@@ -1162,7 +1196,10 @@ class RedmineSeleniumScraper:
             self.driver.get(issue_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():
@@ -1323,7 +1360,10 @@ class RedmineSeleniumScraper:
             self.driver.get(new_issue_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():
@@ -1425,7 +1465,10 @@ class RedmineSeleniumScraper:
             self.driver.get(new_issue_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():
@@ -1656,7 +1699,10 @@ class RedmineSeleniumScraper:
             self.driver.get(new_issue_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():
@@ -1732,7 +1778,10 @@ class RedmineSeleniumScraper:
             self.driver.get(edit_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():
@@ -1846,7 +1895,10 @@ class RedmineSeleniumScraper:
             self.driver.get(new_issue_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():
@@ -1921,7 +1973,10 @@ class RedmineSeleniumScraper:
                 logger.debug("Submit button clicked")
                 
                 # Wait for redirect
-                time.sleep(3)
+
+                self.wait.until(
+                    lambda d: '/issues/' in d.current_url or 'new' not in d.current_url
+                )
                 
                 # Check if creation was successful
                 current_url = self.driver.current_url
@@ -2000,7 +2055,10 @@ class RedmineSeleniumScraper:
             self.driver.get(edit_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():
@@ -2131,7 +2189,10 @@ class RedmineSeleniumScraper:
                 submit_button.click()
                 
                 # Wait for redirect
-                time.sleep(3)
+
+                self.wait.until(
+                    lambda d: '/issues/' in d.current_url
+                )
                 
                 # Check if update was successful
                 current_url = self.driver.current_url
@@ -2455,7 +2516,10 @@ class RedmineSeleniumScraper:
             self.driver.get(time_entries_url)
             
             # Wait for page to load
-            time.sleep(2)
+
+            self.wait.until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
             
             # Check if redirected to login page
             if 'login' in self.driver.current_url.lower():
@@ -2588,7 +2652,7 @@ class RedmineSeleniumScraper:
                                     # Method 1: Identify by column position and content pattern
                                     # First column: checkbox or user name
                                     if cell_idx == 0:
-                                        if not cell_text.isdigit() and cell_text != '✓':
+                                        if not cell_text.isdigit() and cell_text != '✁':
                                             # Try to get from user link
                                             try:
                                                 user_link = cell.find_element(By.TAG_NAME, "a")

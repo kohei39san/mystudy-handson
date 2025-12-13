@@ -84,6 +84,7 @@ python src/redmine_mcp_server.py
 | `REQUEST_TIMEOUT` | リクエストタイムアウト（秒） | `30` | × |
 | `MAX_RETRIES` | 最大リトライ回数 | `3` | × |
 | `RETRY_DELAY` | リトライ間隔（秒） | `1.0` | × |
+| `SELENIUM_WAIT` | WebDriverWaitのタイムアウト（秒） | `3` | × |
 
 ## 利用例
 
