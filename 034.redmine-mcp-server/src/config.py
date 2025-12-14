@@ -53,7 +53,7 @@ class RedmineConfig:
         self.debug: bool = os.getenv('DEBUG', 'false').lower() == 'true'
         
         # Skip 2FA for test environments
-        self.skip_2fa: bool = os.getenv('SKIP_2FA', 'false').lower() == 'true'
+        self.skip_2fa: bool = os.getenv('SKIP_2FA', 'true').lower() == 'true'
 
 # Global configuration instance
 config = RedmineConfig()

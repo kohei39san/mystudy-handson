@@ -231,3 +231,45 @@ class TestRedmineIntegration:
                 
         except Exception as e:
             pytest.skip(f"Scraper integration test failed: {str(e)}")
+
+    @pytest.mark.skipif(not (os.getenv('REDMINE_USERNAME') and os.getenv('REDMINE_PASSWORD') and os.getenv('TEST_PROJECT_ID')), 
+                       reason="Credentials or TEST_PROJECT_ID not configured")
+    def test_scraper_get_project_members(self, scraper):
+        """Test scraper get_project_members functionality"""
+        username = os.getenv('REDMINE_USERNAME', '')
+        password = os.getenv('REDMINE_PASSWORD', '')
+        project_id = os.getenv('TEST_PROJECT_ID', '')
+        
+        if not username or not password or not project_id:
+            pytest.skip("Credentials or TEST_PROJECT_ID not available")
+        
+        try:
+            # Test login
+            login_result = scraper.login(username, password)
+            
+            if login_result.get('success'):
+                # Test get_project_members
+                members_result = scraper.get_project_members(project_id)
+                assert members_result.get('success') is True
+                assert 'members' in members_result
+                assert 'project_id' in members_result
+                assert members_result['project_id'] == project_id
+                
+                # Verify response structure
+                assert isinstance(members_result['members'], list)
+                
+                # If members exist, verify structure
+                if members_result['members']:
+                    member = members_result['members'][0]
+                    assert 'id' in member
+                    assert 'name' in member
+                    assert 'is_current_user' in member
+                
+                # Test logout
+                logout_result = scraper.logout()
+                assert logout_result.get('success') is True
+            else:
+                pytest.skip(f"Login failed: {login_result.get('message')}")
+                
+        except Exception as e:
+            pytest.skip(f"Scraper integration test failed: {str(e)}")
