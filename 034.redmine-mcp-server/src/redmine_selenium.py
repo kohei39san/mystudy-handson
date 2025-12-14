@@ -2486,12 +2486,12 @@ class RedmineSeleniumScraper:
             
             # Add column configuration for time entries
             filter_params.extend([
-                "c[]=hours",
                 "c[]=spent_on",
-                "c[]=activity",
                 "c[]=user",
+                "c[]=activity",
                 "c[]=issue",
-                "c[]=comments"
+                "c[]=comments",
+                "c[]=hours"
             ])
             
             # Add pagination
@@ -2586,164 +2586,48 @@ class RedmineSeleniumScraper:
             
             # Extract time entries from table
             try:
-                # Look for time entries table
-                time_entries_table = None
-                try:
-                    time_entries_table = self.driver.find_element(By.CSS_SELECTOR, "#content table.list")
-                    logger.debug("Found time entries table")
-                except Exception as e:
-                    logger.debug(f"Time entries table selector failed: {e}")
-                    time_entries_table = None
+                time_entries_table = self.driver.find_element(By.CSS_SELECTOR, "#content table.list")
+                logger.debug("Found time entries table")
                 
-                if time_entries_table:
-                    rows = time_entries_table.find_elements(By.TAG_NAME, "tr")
-                    logger.debug(f"Found {len(rows)} rows in time entries table")
-                    
-                    # Skip header row(s) - look for rows with td elements
-                    data_rows = []
-                    for row in rows:
-                        cells = row.find_elements(By.TAG_NAME, "td")
-                        if cells:  # Has td elements, likely a data row
-                            data_rows.append(row)
-                    
-                    logger.debug(f"Found {len(data_rows)} data rows")
-                    
-                    for row_idx, row in enumerate(data_rows):
-                        cells = row.find_elements(By.TAG_NAME, "td")
-                        logger.debug(f"Row {row_idx}: {len(cells)} cells")
-                        
-                        if len(cells) >= 1:
+                rows = time_entries_table.find_elements(By.TAG_NAME, "tr")
+                logger.debug(f"Found {len(rows)} rows in time entries table")
+                
+                # Skip header row - process data rows only
+                for row_idx, row in enumerate(rows[1:]):  # Skip first row (header)
+                    cells = row.find_elements(By.TAG_NAME, "td")
+                    if len(cells) >= 7:  # Need at least 7 columns (0-6)
+                        try:
                             entry_data = {}
+                            # cells[0]: checkbox (empty)
+                            # cells[1]: Date (spent_on)
+                            entry_data['spent_on'] = cells[1].text.strip()
+                            # cells[2]: User
+                            entry_data['user'] = cells[2].text.strip()
+                            # cells[3]: Activity
+                            entry_data['activity'] = cells[3].text.strip()
+                            # cells[4]: Issue
+                            issue_text = cells[4].text.strip()
+                            if issue_text:
+                                entry_data['issue'] = issue_text
+                                # Extract issue ID
+                                issue_match = re.search(r'#(\d+)', issue_text)
+                                if issue_match:
+                                    entry_data['issue_id'] = issue_match.group(1)
+                            # cells[5]: Comments
+                            comments = cells[5].text.strip()
+                            if comments:
+                                entry_data['comments'] = comments
+                            # cells[6]: Hours
+                            entry_data['hours'] = cells[6].text.strip()
                             
-                            try:
-                                # Look for issue ID or entry identifier link
-                                entry_link = None
-                                entry_id = None
-                                
-                                for cell_idx, cell in enumerate(cells):
-                                    # Look for issue links or entry links
-                                    links = cell.find_elements(By.TAG_NAME, "a")
-                                    for link in links:
-                                        href = link.get_attribute("href")
-                                        link_text = link.text.strip()
-                                        
-                                        # Try to extract issue ID
-                                        if href and '/issues/' in href:
-                                            id_match = re.search(r'/issues/(\d+)', href)
-                                            if id_match:
-                                                entry_data['issue_id'] = id_match.group(1)
-                                                entry_link = link
-                                                break
-                                        
-                                        # Try to extract other entry identifiers
-                                        if href and link_text:
-                                            entry_link = link
-                                            break
-                                    
-                                    if entry_link:
-                                        break
-                                
-                                # Extract cell values and identify them by position or content
-                                for cell_idx, cell in enumerate(cells):
-                                    cell_text = cell.text.strip()
-                                    
-                                    if not cell_text:
-                                        continue
-                                    
-                                    # Method 1: Identify by column position and content pattern
-                                    # First column: checkbox or user name
-                                    if cell_idx == 0:
-                                        if not cell_text.isdigit() and cell_text != '':
-                                            # Try to get from user link
-                                            try:
-                                                user_link = cell.find_element(By.TAG_NAME, "a")
-                                                user_text = user_link.text.strip()
-                                                if user_text:
-                                                    entry_data['user'] = user_text
-                                                    # Try to extract user ID
-                                                    user_href = user_link.get_attribute("href")
-                                                    if user_href:
-                                                        user_id_match = re.search(r'/users/(\d+)', user_href)
-                                                        if user_id_match:
-                                                            entry_data['user_id'] = user_id_match.group(1)
-                                            except:
-                                                entry_data['user'] = cell_text
-                                    
-                                    # Look for hours (numeric value, often in cell with decimal)
-                                    elif re.match(r'^\d+\.?\d*$', cell_text):
-                                        if 'hours' not in entry_data:
-                                            entry_data['hours'] = cell_text
-                                    
-                                    # Look for date (YYYY-MM-DD format)
-                                    elif re.match(r'^\d{4}-\d{2}-\d{2}', cell_text):
-                                        if 'spent_on' not in entry_data:
-                                            entry_data['spent_on'] = cell_text.split()[0]  # Take only date part
-                                    
-                                    # Activity (usually a label-like string)
-                                    elif cell_idx > 0 and 'activity' not in entry_data and not re.match(r'^\d+', cell_text):
-                                        # Check if it looks like an activity
-                                        if len(cell_text) > 2 and len(cell_text) < 50:
-                                            # Try to distinguish from other columns
-                                            if 'issue' not in entry_data or cell_idx < 4:
-                                                entry_data['activity'] = cell_text
-                                    
-                                    # Comments (usually longer text)
-                                    elif 'comments' not in entry_data and len(cell_text) > 10:
-                                        entry_data['comments'] = cell_text
-                                
-                                # If we have at least hours and date, it's a valid entry
-                                if entry_data.get('hours') and entry_data.get('spent_on'):
-                                    time_entries.append(entry_data)
-                                    logger.debug(f"Added time entry: {entry_data}")
-                                
-                            except Exception as e:
-                                logger.debug(f"Error processing row {row_idx}: {e}")
-                                continue
+                            time_entries.append(entry_data)
+                            logger.debug(f"Added time entry: {entry_data}")
+                        except Exception as e:
+                            logger.debug(f"Error processing row {row_idx}: {e}")
+                            continue
                 
             except Exception as e:
                 logger.debug(f"Error processing time entries table: {e}")
-            
-            # Alternative method: look for any time entry rows directly
-            if not time_entries:
-                logger.debug("No time entries found in table, trying alternative methods")
-                try:
-                    # Look for rows that likely contain time entry data
-                    rows = self.driver.find_elements(By.CSS_SELECTOR, "table tr")
-                    logger.debug(f"Found {len(rows)} rows on page")
-                    
-                    for row in rows:
-                        cells = row.find_elements(By.TAG_NAME, "td")
-                        if len(cells) >= 2:  # Time entries need at least 2 columns
-                            try:
-                                row_text = row.text.strip()
-                                # Look for patterns that indicate a time entry row
-                                # e.g., contains hours (number), date, and other identifiers
-                                
-                                entry_data = {}
-                                cell_texts = [cell.text.strip() for cell in cells]
-                                
-                                # Look for hours (first numeric value with decimals)
-                                for text in cell_texts:
-                                    if re.match(r'^\d+\.?\d*$', text):
-                                        entry_data['hours'] = text
-                                        break
-                                
-                                # Look for date (YYYY-MM-DD)
-                                for text in cell_texts:
-                                    if re.match(r'^\d{4}-\d{2}-\d{2}', text):
-                                        entry_data['spent_on'] = text.split()[0]
-                                        break
-                                
-                                if entry_data.get('hours') and entry_data.get('spent_on'):
-                                    time_entries.append(entry_data)
-                                    logger.debug(f"Added time entry from alternative method: {entry_data}")
-                                    
-                            except Exception as e:
-                                logger.debug(f"Error processing alternative row: {e}")
-                                continue
-                                
-                except Exception as e:
-                    logger.debug(f"Error finding time entry rows: {e}")
             
             # Calculate pagination info
             total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
