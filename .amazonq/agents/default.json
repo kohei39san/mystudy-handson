@@ -13,7 +13,8 @@
         "REQUEST_TIMEOUT": "30",
         "MAX_RETRIES": "3",
         "RETRY_DELAY": "1.0",
-        "SELENIUM_WAIT": "60"
+        "SELENIUM_WAIT": "60",
+        "REDMINE_URL": "https://redmine.p01.acn3-dev.com/"
       },
       "timeout": 60000,
       "disabled": false

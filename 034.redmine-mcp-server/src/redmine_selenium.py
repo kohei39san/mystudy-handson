@@ -19,6 +19,23 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 
+# Import schemas for response validation
+try:
+    from schemas import (
+        LoginResponse, ProjectsResponse, ProjectMembersResponse, IssuesResponse,
+        IssueDetailResponse, TrackersResponse, StatusesResponse, FieldsResponse,
+        TimeEntriesResponse, CreateIssueResponse, UpdateIssueResponse,
+        ServerInfoResponse, GeneralResponse, ProjectInfo, MemberInfo, IssueInfo,
+        TrackerInfo, StatusInfo, FieldInfo, TimeEntryInfo, ServerInfo
+    )
+except ImportError:
+    # If running standalone, define minimal classes
+    class LoginResponse:
+        pass
+    class ProjectsResponse:
+        pass
+    # Add other minimal classes as needed...
+
 # Load environment variables
 load_dotenv()
 
@@ -208,11 +225,12 @@ class RedmineSeleniumScraper:
                                     self._switch_to_headless()
                                 except Exception:
                                     logger.debug("_switch_to_headless failed during SKIP_2FA bypass")
-                            return {
-                                'success': True,
-                                'message': 'Successfully logged in to Redmine (2FA bypassed)',
-                                'redirect_url': self.driver.current_url
-                            }
+                            response = LoginResponse(
+                                success=True,
+                                message='Successfully logged in to Redmine (2FA bypassed)',
+                                redirect_url=self.driver.current_url
+                            )
+                            return response.model_dump()
                     except Exception as e:
                         logger.debug(f"SKIP_2FA immediate check failed: {e}")
 
@@ -284,11 +302,12 @@ class RedmineSeleniumScraper:
                                             if self.auto_switch_headless:
                                                 self._switch_to_headless()
                                             
-                                            return {
-                                                'success': True,
-                                                'message': 'Successfully logged in to Redmine',
-                                                'redirect_url': final_url
-                                            }
+                                            response = LoginResponse(
+                                                success=True,
+                                                message='Successfully logged in to Redmine',
+                                                redirect_url=final_url
+                                            )
+                                            return response.model_dump()
                                 except Exception as e:
                                     logger.debug(f"Error checking projects access: {e}")
                                     # Continue monitoring even if there's an error
@@ -309,11 +328,12 @@ class RedmineSeleniumScraper:
                                     logger.info("Bypassed 2FA - authenticated successfully")
                                     if self.auto_switch_headless:
                                         self._switch_to_headless()
-                                    return {
-                                        'success': True,
-                                        'message': 'Successfully logged in to Redmine (2FA bypassed)',
-                                        'redirect_url': self.driver.current_url
-                                    }
+                                    response = LoginResponse(
+                                        success=True,
+                                        message='Successfully logged in to Redmine (2FA bypassed)',
+                                        redirect_url=self.driver.current_url
+                                    )
+                                    return response.model_dump()
                             except Exception as e:
                                 logger.debug(f"Error bypassing 2FA: {e}")
                         elif 'twofa' in current_url.lower():
@@ -332,38 +352,42 @@ class RedmineSeleniumScraper:
                 # Timeout reached
                 current_url = self.driver.current_url
                 logger.warning(f"Authentication not completed within {max_wait} seconds. Final URL: {current_url}")
-                return {
-                    'success': False,
-                    'message': f'Authentication not completed within {max_wait} seconds. Please try again.'
-                }
+                response = LoginResponse(
+                    success=False,
+                    message=f'Authentication not completed within {max_wait} seconds. Please try again.'
+                )
+                return response.model_dump()
                 
             except TimeoutException:
                 logger.error("Login form not found or page load timeout")
-                return {
-                    'success': False,
-                    'message': 'Login form not found or page load timeout'
-                }
+                response = LoginResponse(
+                    success=False,
+                    message='Login form not found or page load timeout'
+                )
+                return response.model_dump()
                 
         except Exception as e:
             logger.error(f"Login error: {e}")
-            return {
-                'success': False,
-                'message': f"Login error: {str(e)}"
-            }
+            response = LoginResponse(
+                success=False,
+                message=f"Login error: {str(e)}"
+            )
+            return response.model_dump()
     
     def get_projects(self) -> Dict[str, Any]:
         """
         Get list of projects from Redmine
         
         Returns:
-            Dict with projects list and status
+            Dict following ProjectsResponse schema: {'success': bool, 'message': str, 'projects': List[ProjectInfo]}
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.',
-                'projects': []
-            }
+            response = ProjectsResponse(
+                success=False,
+                message='Not authenticated. Please login first.',
+                projects=[]
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Fetching projects from {config.projects_url}")
@@ -391,11 +415,12 @@ class RedmineSeleniumScraper:
             if 'login' in self.driver.current_url.lower():
                 logger.warning("Redirected to login page - session expired")
                 self.is_authenticated = False
-                return {
-                    'success': False,
-                    'message': 'Session expired. Please login again.',
-                    'projects': []
-                }
+                response = ProjectsResponse(
+                    success=False,
+                    message='Session expired. Please login again.',
+                    projects=[]
+                )
+                return response.model_dump()
             
             # Method 1: Look for project table
             try:
@@ -479,25 +504,30 @@ class RedmineSeleniumScraper:
             logger.info(f"Found {len(unique_projects)} projects")
             
             if unique_projects:
-                return {
-                    'success': True,
-                    'message': f'Successfully retrieved {len(unique_projects)} projects',
-                    'projects': unique_projects
-                }
+                # Convert projects dict to ProjectInfo objects
+                project_infos = [ProjectInfo(**project) for project in unique_projects]
+                response = ProjectsResponse(
+                    success=True,
+                    message=f'Successfully retrieved {len(unique_projects)} projects',
+                    projects=project_infos
+                )
+                return response.model_dump()
             else:
-                return {
-                    'success': False,
-                    'message': 'No projects found on the page',
-                    'projects': []
-                }
+                response = ProjectsResponse(
+                    success=False,
+                    message='No projects found on the page',
+                    projects=[]
+                )
+                return response.model_dump()
                 
         except Exception as e:
             logger.error(f"Error fetching projects: {e}")
-            return {
-                'success': False,
-                'message': f"Error fetching projects: {str(e)}",
-                'projects': []
-            }
+            response = ProjectsResponse(
+                success=False,
+                message=f"Error fetching projects: {str(e)}",
+                projects=[]
+            )
+            return response.model_dump()
     
     def get_project_members(self, project_id: str) -> Dict[str, Any]:
         """
@@ -507,14 +537,15 @@ class RedmineSeleniumScraper:
             project_id: Project ID to get members for
             
         Returns:
-            Dict with project members list
+            Dict following ProjectMembersResponse schema
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.',
-                'members': []
-            }
+            response = ProjectMembersResponse(
+                success=False,
+                message='Not authenticated. Please login first.',
+                members=[]
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Getting project members for project: {project_id}")
@@ -533,19 +564,21 @@ class RedmineSeleniumScraper:
             if 'login' in self.driver.current_url.lower():
                 logger.warning("Redirected to login page - session expired")
                 self.is_authenticated = False
-                return {
-                    'success': False,
-                    'message': 'Session expired. Please login again.',
-                    'members': []
-                }
+                response = ProjectMembersResponse(
+                    success=False,
+                    message='Session expired. Please login again.',
+                    members=[]
+                )
+                return response.model_dump()
             
             # Check if members page is accessible
             if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
-                return {
-                    'success': False,
-                    'message': f'Project {project_id} not found or members page not accessible.',
-                    'members': []
-                }
+                response = ProjectMembersResponse(
+                    success=False,
+                    message=f'Project {project_id} not found or members page not accessible.',
+                    members=[]
+                )
+                return response.model_dump()
             
             members = []
             
@@ -653,27 +686,29 @@ class RedmineSeleniumScraper:
             
             logger.info(f"Found {len(members)} project members")
             
-            return {
-                'success': True,
-                'message': f'Successfully retrieved {len(members)} project members',
-                'members': members,
-                'project_id': project_id
-            }
+            member_infos = [MemberInfo(**member) for member in members]
+            response = ProjectMembersResponse(
+                success=True,
+                message=f'Successfully retrieved {len(members)} project members',
+                members=member_infos
+            )
+            return response.model_dump()
             
         except Exception as e:
             logger.error(f"Error getting project members: {e}")
-            return {
-                'success': False,
-                'message': f"Error getting project members: {str(e)}",
-                'members': []
-            }
+            response = ProjectMembersResponse(
+                success=False,
+                message=f"Error getting project members: {str(e)}",
+                members=[]
+            )
+            return response.model_dump()
     
     def logout(self) -> Dict[str, Any]:
         """
         Logout from Redmine and close browser
         
         Returns:
-            Dict with logout status
+            Dict following GeneralResponse schema: {'success': bool, 'message': str}
         """
         try:
             if self.driver:
@@ -692,10 +727,11 @@ class RedmineSeleniumScraper:
             self.is_authenticated = False
             self.headless_mode = False
             
-            return {
-                'success': True,
-                'message': 'Successfully logged out from Redmine'
-            }
+            response = GeneralResponse(
+                success=True,
+                message='Successfully logged out from Redmine'
+            )
+            return response.model_dump()
             
         except Exception as e:
             logger.error(f"Logout error: {e}")
@@ -710,10 +746,11 @@ class RedmineSeleniumScraper:
             self.is_authenticated = False
             self.headless_mode = False
             
-            return {
-                'success': True,
-                'message': f'Logged out (with warning: {str(e)})'
-            }
+            response = GeneralResponse(
+                success=True,
+                message=f'Logged out (with warning: {str(e)})'
+            )
+            return response.model_dump()
     
     def search_issues(self, **kwargs) -> Dict[str, Any]:
         """
@@ -730,21 +767,19 @@ class RedmineSeleniumScraper:
             notes: Notes text search
             q: General text search (searches across multiple fields)
             page: Page number for pagination (default: 1)
-            per_page: Items per page (default: 25)
             
         Returns:
-            Dict with search results and pagination info
+            Dict following IssuesResponse schema
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.',
-                'issues': [],
-                'total_count': 0,
-                'page': 1,
-                'per_page': 25,
-                'total_pages': 0
-            }
+            response = IssuesResponse(
+                success=False,
+                message='Not authenticated. Please login first.',
+                issues=[],
+                total_count=0,
+                current_page=1
+            )
+            return response.model_dump()
         
         try:
             logger.info("Searching for issues")
@@ -848,15 +883,14 @@ class RedmineSeleniumScraper:
             if 'login' in self.driver.current_url.lower():
                 logger.warning("Redirected to login page - session expired")
                 self.is_authenticated = False
-                return {
-                    'success': False,
-                    'message': 'Session expired. Please login again.',
-                    'issues': [],
-                    'total_count': 0,
-                    'page': kwargs.get('page', 1),
-                    'per_page': kwargs.get('per_page', 25),
-                    'total_pages': 0
-                }
+                response = IssuesResponse(
+                    success=False,
+                    message='Session expired. Please login again.',
+                    issues=[],
+                    total_count=0,
+                    current_page=kwargs.get('page', 1)
+                )
+                return response.model_dump()
             
             issues = []
             
@@ -1138,39 +1172,38 @@ class RedmineSeleniumScraper:
             
             # Get pagination parameters
             page = kwargs.get('page', 1)
-            per_page = kwargs.get('per_page', 25)
             
-            # Calculate pagination info
-            total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
+            # Check if there is a next page based on pagination element
+            has_next = self._has_next_page()
             
-            logger.info(f"Found {len(issues)} issues on page {page}, total: {total_count}")
+            logger.info(f"Found {len(issues)} issues on page {page}, total: {total_count}, has_next: {has_next}")
             
             # If we have issues but no total count, estimate from issues found
             if issues and total_count == 0:
                 total_count = len(issues)
                 logger.debug(f"Estimated total count from found issues: {total_count}")
             
-            return {
-                'success': True,
-                'message': f'Found {total_count} issues (showing page {page})',
-                'issues': issues,
-                'total_count': total_count,
-                'page': page,
-                'per_page': per_page,
-                'total_pages': total_pages
-            }
+            issue_infos = [IssueInfo(**issue) for issue in issues]
+            response = IssuesResponse(
+                success=True,
+                message=f"Found {total_count} issues (showing page {page}){' - more pages available' if has_next else ''}",
+                issues=issue_infos,
+                total_count=total_count,
+                current_page=page,
+                has_next=has_next
+            )
+            return response.model_dump()
             
         except Exception as e:
             logger.error(f"Error searching issues: {e}")
-            return {
-                'success': False,
-                'message': f"Error searching issues: {str(e)}",
-                'issues': [],
-                'total_count': 0,
-                'page': kwargs.get('page', 1),
-                'per_page': kwargs.get('per_page', 25),
-                'total_pages': 0
-            }
+            response = IssuesResponse(
+                success=False,
+                message=f"Error searching issues: {str(e)}",
+                issues=[],
+                total_count=0,
+                current_page=kwargs.get('page', 1)
+            )
+            return response.model_dump()
     
     def get_issue_details(self, issue_id: str) -> Dict[str, Any]:
         """
@@ -1183,11 +1216,12 @@ class RedmineSeleniumScraper:
             Dict with issue details
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.',
-                'issue': {}
-            }
+            response = IssueDetailResponse(
+                success=False,
+                message='Not authenticated. Please login first.',
+                issue=IssueInfo(id=issue_id, subject="", description="")
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Fetching details for issue #{issue_id}")
@@ -1206,19 +1240,21 @@ class RedmineSeleniumScraper:
             if 'login' in self.driver.current_url.lower():
                 logger.warning("Redirected to login page - session expired")
                 self.is_authenticated = False
-                return {
-                    'success': False,
-                    'message': 'Session expired. Please login again.',
-                    'issue': {}
-                }
+                response = IssueDetailResponse(
+                    success=False,
+                    message='Session expired. Please login again.',
+                    issue=None
+                )
+                return response.model_dump()
             
             # Check if issue exists
             if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
-                return {
-                    'success': False,
-                    'message': f'Issue #{issue_id} not found.',
-                    'issue': {}
-                }
+                response = IssueDetailResponse(
+                    success=False,
+                    message=f'Issue #{issue_id} not found.',
+                    issue=IssueInfo(id=issue_id, subject="", description="")
+                )
+                return response.model_dump()
             
             issue_details = {'id': issue_id}
             
@@ -1318,19 +1354,41 @@ class RedmineSeleniumScraper:
             
             logger.info(f"Successfully retrieved details for issue #{issue_id}: {list(issue_details.keys())}")
             
-            return {
-                'success': True,
-                'message': f'Successfully retrieved details for issue #{issue_id}',
-                'issue': issue_details
-            }
+            # Create IssueInfo object from collected details
+            issue_info = IssueInfo(
+                id=issue_details.get('id', issue_id),
+                subject=issue_details.get('subject', ''),
+                description=issue_details.get('description', ''),
+                tracker=issue_details.get('tracker', ''),
+                status=issue_details.get('status', ''),
+                priority=issue_details.get('priority', ''),
+                assigned_to=issue_details.get('assigned_to', ''),
+                category=issue_details.get('category', ''),
+                target_version=issue_details.get('target_version', ''),
+                start_date=issue_details.get('start_date', ''),
+                due_date=issue_details.get('due_date', ''),
+                estimated_time=issue_details.get('estimated_time', ''),
+                created_on=issue_details.get('created_on', ''),
+                updated_on=issue_details.get('updated_on', ''),
+                progress=issue_details.get('done_ratio', ''),
+                spent_time=issue_details.get('spent_time', '')
+            )
+            
+            response = IssueDetailResponse(
+                success=True,
+                message=f'Successfully retrieved details for issue #{issue_id}',
+                issue=issue_info
+            )
+            return response.model_dump()
             
         except Exception as e:
             logger.error(f"Error fetching issue details: {e}")
-            return {
-                'success': False,
-                'message': f"Error fetching issue details: {str(e)}",
-                'issue': {}
-            }
+            response = IssueDetailResponse(
+                success=False,
+                message=f"Error fetching issue details: {str(e)}",
+                issue=IssueInfo(id=issue_id, subject="", description="")
+            )
+            return response.model_dump()
     
     def get_available_trackers(self, project_id: str = None) -> Dict[str, Any]:
         """
@@ -1343,11 +1401,12 @@ class RedmineSeleniumScraper:
             Dict with available tracker options
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.',
-                'trackers': []
-            }
+            response = TrackersResponse(
+                success=False,
+                message='Not authenticated. Please login first.',
+                trackers=[]
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Getting available trackers for project: {project_id or 'all'}")
@@ -1370,11 +1429,12 @@ class RedmineSeleniumScraper:
             if 'login' in self.driver.current_url.lower():
                 logger.warning("Redirected to login page - session expired")
                 self.is_authenticated = False
-                return {
-                    'success': False,
-                    'message': 'Session expired. Please login again.',
-                    'trackers': []
-                }
+                response = TrackersResponse(
+                    success=False,
+                    message='Session expired. Please login again.',
+                    trackers=[]
+                )
+                return response.model_dump()
             
             # Get tracker options
             try:
@@ -1418,26 +1478,30 @@ class RedmineSeleniumScraper:
                 
                 logger.info(f"Found {len(available_trackers)} available trackers")
                 
-                return {
-                    'success': True,
-                    'message': f'Found {len(available_trackers)} available trackers',
-                    'trackers': available_trackers
-                }
+                tracker_infos = [TrackerInfo(**tracker) for tracker in available_trackers]
+                response = TrackersResponse(
+                    success=True,
+                    message=f'Found {len(available_trackers)} available trackers',
+                    trackers=tracker_infos
+                )
+                return response.model_dump()
                 
             except NoSuchElementException:
-                return {
-                    'success': False,
-                    'message': 'Tracker field not found on new issue page.',
-                    'trackers': []
-                }
+                response = TrackersResponse(
+                    success=False,
+                    message='Tracker field not found on new issue page.',
+                    trackers=[]
+                )
+                return response.model_dump()
             
         except Exception as e:
             logger.error(f"Error getting available trackers: {e}")
-            return {
-                'success': False,
-                'message': f"Error getting available trackers: {str(e)}",
-                'trackers': []
-            }
+            response = TrackersResponse(
+                success=False,
+                message=f"Error getting available trackers: {str(e)}",
+                trackers=[]
+            )
+            return response.model_dump()
     
     def get_tracker_fields(self, project_id: str, tracker_id: str) -> Dict[str, Any]:
         """
@@ -1448,14 +1512,15 @@ class RedmineSeleniumScraper:
             tracker_id: Tracker ID (required)
             
         Returns:
-            Dict with field information including required/optional status and input types
+            Dict following FieldsResponse schema
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.',
-                'fields': []
-            }
+            response = FieldsResponse(
+                success=False,
+                message='Not authenticated. Please login first.',
+                fields=[]
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Getting tracker fields for project {project_id}, tracker {tracker_id}")
@@ -1475,11 +1540,12 @@ class RedmineSeleniumScraper:
             if 'login' in self.driver.current_url.lower():
                 logger.warning("Redirected to login page - session expired")
                 self.is_authenticated = False
-                return {
-                    'success': False,
-                    'message': 'Session expired. Please login again.',
-                    'fields': []
-                }
+                response = FieldsResponse(
+                    success=False,
+                    message='Session expired. Please login again.',
+                    fields=[]
+                )
+                return response.model_dump()
             
             fields = []
             
@@ -1593,24 +1659,22 @@ class RedmineSeleniumScraper:
             
             logger.info(f"Found {len(fields)} total fields: {len(required_fields)} required, {len(optional_fields)} optional, {len(custom_fields)} custom")
             
-            return {
-                'success': True,
-                'message': f'Found {len(fields)} fields ({len(required_fields)} required, {len(optional_fields)} optional, {len(custom_fields)} custom)',
-                'fields': fields,
-                'required_fields': required_fields,
-                'optional_fields': optional_fields,
-                'custom_fields': custom_fields,
-                'standard_fields': standard_fields,
-                'tracker_id': tracker_id
-            }
+            field_infos = [FieldInfo(**field) for field in fields]
+            response = FieldsResponse(
+                success=True,
+                message=f'Found {len(fields)} fields ({len(required_fields)} required, {len(optional_fields)} optional, {len(custom_fields)} custom)',
+                fields=field_infos
+            )
+            return response.model_dump()
             
         except Exception as e:
             logger.error(f"Error getting tracker fields: {e}")
-            return {
-                'success': False,
-                'message': f"Error getting tracker fields: {str(e)}",
-                'fields': []
-            }
+            response = FieldsResponse(
+                success=False,
+                message=f"Error getting tracker fields: {str(e)}",
+                fields=[]
+            )
+            return response.model_dump()
     
     def _get_field_label(self, element, field_id: str) -> str:
         """Get field label from various sources"""
@@ -1674,6 +1738,26 @@ class RedmineSeleniumScraper:
         
         return False
     
+    def _has_next_page(self) -> bool:
+        """
+        Check if there is a next page by looking for the next page navigation element
+        
+        Returns:
+            bool: True if next page exists, False otherwise
+        """
+        try:
+            # Look for next page link in pagination
+            next_page_element = self.driver.find_element(By.CSS_SELECTOR, "#content > span > ul > li.next.page")
+            # Check if the element exists and is not disabled
+            if next_page_element and next_page_element.is_enabled():
+                return True
+        except NoSuchElementException:
+            logger.debug("No next page element found")
+        except Exception as e:
+            logger.debug(f"Error checking for next page: {e}")
+        
+        return False
+    
     def get_creation_statuses(self, project_id: str, tracker_id: str) -> Dict[str, Any]:
         """
         Get available status options from new issue creation page for a specific tracker
@@ -1686,11 +1770,12 @@ class RedmineSeleniumScraper:
             Dict with available status options for creation
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.',
-                'statuses': []
-            }
+            response = StatusesResponse(
+                success=False,
+                message='Not authenticated. Please login first.',
+                statuses=[]
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Getting creation statuses for project {project_id}, tracker {tracker_id}")
@@ -1709,11 +1794,12 @@ class RedmineSeleniumScraper:
             if 'login' in self.driver.current_url.lower():
                 logger.warning("Redirected to login page - session expired")
                 self.is_authenticated = False
-                return {
-                    'success': False,
-                    'message': 'Session expired. Please login again.',
-                    'statuses': []
-                }
+                response = StatusesResponse(
+                    success=False,
+                    message='Session expired. Please login again.',
+                    statuses=[]
+                )
+                return response.model_dump()
             
             # Get status options
             try:
@@ -1726,33 +1812,37 @@ class RedmineSeleniumScraper:
                     value = option.get_attribute('value')
                     text = option.text.strip()
                     if value:  # Skip empty values
-                        available_statuses.append({
-                            'value': value,
-                            'text': text
-                        })
+                        status_info = StatusInfo(
+                            value=value,
+                            text=text
+                        )
+                        available_statuses.append(status_info)
                 
                 logger.info(f"Found {len(available_statuses)} creation statuses")
                 
-                return {
-                    'success': True,
-                    'message': f'Found {len(available_statuses)} creation statuses for tracker {tracker_id}',
-                    'statuses': available_statuses
-                }
+                response = StatusesResponse(
+                    success=True,
+                    message=f'Found {len(available_statuses)} creation statuses for tracker {tracker_id}',
+                    statuses=available_statuses
+                )
+                return response.model_dump()
                 
             except NoSuchElementException:
-                return {
-                    'success': False,
-                    'message': 'Status field not found on new issue page.',
-                    'statuses': []
-                }
+                response = StatusesResponse(
+                    success=False,
+                    message='Status field not found on new issue page.',
+                    statuses=[]
+                )
+                return response.model_dump()
             
         except Exception as e:
             logger.error(f"Error getting creation statuses: {e}")
-            return {
-                'success': False,
-                'message': f"Error getting creation statuses: {str(e)}",
-                'statuses': []
-            }
+            response = StatusesResponse(
+                success=False,
+                message=f"Error getting creation statuses: {str(e)}",
+                statuses=[]
+            )
+            return response.model_dump()
     
     def get_available_statuses(self, issue_id: str) -> Dict[str, Any]:
         """
@@ -1762,14 +1852,15 @@ class RedmineSeleniumScraper:
             issue_id: Issue ID to get available statuses for
             
         Returns:
-            Dict with available status options
+            Dict following StatusesResponse schema
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.',
-                'statuses': []
-            }
+            response = StatusesResponse(
+                success=False,
+                message='Not authenticated. Please login first.',
+                statuses=[]
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Getting available statuses for issue #{issue_id}")
@@ -1796,11 +1887,12 @@ class RedmineSeleniumScraper:
             
             # Check if edit page is accessible
             if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
-                return {
-                    'success': False,
-                    'message': f'Issue #{issue_id} not found or not editable.',
-                    'statuses': []
-                }
+                response = StatusesResponse(
+                    success=False,
+                    message=f'Issue #{issue_id} not found or not editable.',
+                    statuses=[]
+                )
+                return response.model_dump()
             
             # Get status options
             try:
@@ -1813,33 +1905,37 @@ class RedmineSeleniumScraper:
                     value = option.get_attribute('value')
                     text = option.text.strip()
                     if value:  # Skip empty values
-                        available_statuses.append({
-                            'value': value,
-                            'text': text
-                        })
+                        status_info = StatusInfo(
+                            value=value,
+                            text=text
+                        )
+                        available_statuses.append(status_info)
                 
                 logger.info(f"Found {len(available_statuses)} available statuses")
                 
-                return {
-                    'success': True,
-                    'message': f'Found {len(available_statuses)} available statuses for issue #{issue_id}',
-                    'statuses': available_statuses
-                }
+                response = StatusesResponse(
+                    success=True,
+                    message=f'Found {len(available_statuses)} available statuses for issue #{issue_id}',
+                    statuses=available_statuses
+                )
+                return response.model_dump()
                 
             except NoSuchElementException:
-                return {
-                    'success': False,
-                    'message': 'Status field not found on edit page.',
-                    'statuses': []
-                }
+                response = StatusesResponse(
+                    success=False,
+                    message='Status field not found on edit page.',
+                    statuses=[]
+                )
+                return response.model_dump()
             
         except Exception as e:
             logger.error(f"Error getting available statuses: {e}")
-            return {
-                'success': False,
-                'message': f"Error getting available statuses: {str(e)}",
-                'statuses': []
-            }
+            response = StatusesResponse(
+                success=False,
+                message=f"Error getting available statuses: {str(e)}",
+                statuses=[]
+            )
+            return response.model_dump()
     
     def create_issue(self, project_id: str, issue_tracker_id: str, **kwargs) -> Dict[str, Any]:
         """
@@ -1860,13 +1956,14 @@ class RedmineSeleniumScraper:
             issue[watcher_user_ids][]: Watcher user IDs (checkbox)
             
         Returns:
-            Dict with creation status
+            Dict following CreateIssueResponse schema
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.'
-            }
+            response = CreateIssueResponse(
+                success=False,
+                message='Not authenticated. Please login first.'
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Creating issue in project {project_id}")
@@ -1874,10 +1971,11 @@ class RedmineSeleniumScraper:
             # Tracker ID validation
             tracker_validation = self._validate_tracker_for_project(project_id, issue_tracker_id)
             if not tracker_validation['valid']:
-                return {
-                    'success': False,
-                    'message': f"Invalid tracker ID: {tracker_validation['message']}"
-                }
+                response = CreateIssueResponse(
+                    success=False,
+                    message=f"Invalid tracker ID: {tracker_validation['message']}"
+                )
+                return response.model_dump()
             
             # Add tracker_id to kwargs before validation
             kwargs['issue_tracker_id'] = issue_tracker_id
@@ -1885,10 +1983,11 @@ class RedmineSeleniumScraper:
             # Validate fields BEFORE navigating to create page
             validation_result = self._validate_fields(project_id, issue_tracker_id, kwargs)
             if not validation_result['valid']:
-                return {
-                    'success': False,
-                    'message': f"Field validation failed: {validation_result['message']}"
-                }
+                response = CreateIssueResponse(
+                    success=False,
+                    message=f"Field validation failed: {validation_result['message']}"
+                )
+                return response.model_dump()
             
             # Navigate to new issue page with tracker_id in URL
             new_issue_url = f"{config.base_url}/projects/{project_id}/issues/new?issue[tracker_id]={issue_tracker_id}"
@@ -1912,10 +2011,11 @@ class RedmineSeleniumScraper:
             
             # Check if new issue page is accessible
             if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
-                return {
-                    'success': False,
-                    'message': f'Project {project_id} not found or not accessible.'
-                }
+                response = CreateIssueResponse(
+                    success=False,
+                    message=f'Project {project_id} not found or not accessible.'
+                )
+                return response.model_dump()
             
             # Debug: Log page title and form elements
             logger.debug(f"New issue page title: {self.driver.title}")
@@ -2020,10 +2120,11 @@ class RedmineSeleniumScraper:
             
         except Exception as e:
             logger.error(f"Error creating issue: {e}")
-            return {
-                'success': False,
-                'message': f"Error creating issue: {str(e)}"
-            }
+            response = CreateIssueResponse(
+                success=False,
+                message=f"Error creating issue: {str(e)}"
+            )
+            return response.model_dump()
     
     def update_issue(self, issue_id: str, **kwargs) -> Dict[str, Any]:
         """
@@ -2040,13 +2141,14 @@ class RedmineSeleniumScraper:
             notes: Update notes/comment
             
         Returns:
-            Dict with update status
+            Dict following UpdateIssueResponse schema
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.'
-            }
+            response = UpdateIssueResponse(
+                success=False,
+                message='Not authenticated. Please login first.'
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Updating issue #{issue_id} with params: {list(kwargs.keys())}")
@@ -2434,21 +2536,19 @@ class RedmineSeleniumScraper:
             end_date: End date for filtering (YYYY-MM-DD format, optional)
             user_id: User ID to filter by (optional)
             page: Page number for pagination (default: 1)
-            per_page: Items per page (default: 25)
             
         Returns:
-            Dict with time entries list and pagination info
+            Dict following TimeEntriesResponse schema
         """
         if not self.is_authenticated or not self.driver:
-            return {
-                'success': False,
-                'message': 'Not authenticated. Please login first.',
-                'time_entries': [],
-                'total_count': 0,
-                'page': 1,
-                'per_page': 25,
-                'total_pages': 0
-            }
+            response = TimeEntriesResponse(
+                success=False,
+                message='Not authenticated. Please login first.',
+                time_entries=[],
+                total_count=0,
+                current_page=1
+            )
+            return response.model_dump()
         
         try:
             logger.info(f"Fetching time entries for project: {project_id}")
@@ -2496,7 +2596,6 @@ class RedmineSeleniumScraper:
             
             # Add pagination
             page = kwargs.get('page', 1)
-            per_page = kwargs.get('per_page', 25)
             
             # Append parameters to URL
             from urllib.parse import quote
@@ -2526,27 +2625,27 @@ class RedmineSeleniumScraper:
             if 'login' in self.driver.current_url.lower():
                 logger.warning("Redirected to login page - session expired")
                 self.is_authenticated = False
-                return {
-                    'success': False,
-                    'message': 'Session expired. Please login again.',
-                    'time_entries': [],
-                    'total_count': 0,
-                    'page': page,
-                    'per_page': per_page,
-                    'total_pages': 0
-                }
+                response = TimeEntriesResponse(
+                    success=False,
+                    message='Session expired. Please login again.',
+                    time_entries=[],
+                    total_count=0,
+                    current_page=page,
+                    has_next=False
+                )
+                return response.model_dump()
             
             # Check if project is accessible
             if '404' in self.driver.page_source or 'not found' in self.driver.page_source.lower():
-                return {
-                    'success': False,
-                    'message': f'Project {project_id} not found or time entries not accessible.',
-                    'time_entries': [],
-                    'total_count': 0,
-                    'page': page,
-                    'per_page': per_page,
-                    'total_pages': 0
-                }
+                response = TimeEntriesResponse(
+                    success=False,
+                    message=f'Project {project_id} not found or time entries not accessible.',
+                    time_entries=[],
+                    total_count=0,
+                    current_page=page,
+                    has_next=False
+                )
+                return response.model_dump()
             
             time_entries = []
             total_count = 0
@@ -2629,37 +2728,38 @@ class RedmineSeleniumScraper:
             except Exception as e:
                 logger.debug(f"Error processing time entries table: {e}")
             
-            # Calculate pagination info
-            total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
+            # Check if there is a next page based on pagination element
+            has_next = self._has_next_page()
             
             # If we found time entries but no total count, estimate from entries found
             if time_entries and total_count == 0:
                 total_count = len(time_entries)
                 logger.debug(f"Estimated total count from found entries: {total_count}")
             
-            logger.info(f"Found {len(time_entries)} time entries on page {page}, total: {total_count}")
+            logger.info(f"Found {len(time_entries)} time entries on page {page}, total: {total_count}, has_next: {has_next}")
             
-            return {
-                'success': True,
-                'message': f'Found {total_count} time entries (showing page {page})',
-                'time_entries': time_entries,
-                'total_count': total_count,
-                'page': page,
-                'per_page': per_page,
-                'total_pages': total_pages
-            }
+            time_entry_infos = [TimeEntryInfo(**entry) for entry in time_entries]
+            response = TimeEntriesResponse(
+                success=True,
+                message=f"Found {total_count} time entries (showing page {page}){' - more pages available' if has_next else ''}",
+                time_entries=time_entry_infos,
+                total_count=total_count,
+                current_page=page,
+                has_next=has_next
+            )
+            return response.model_dump()
             
         except Exception as e:
             logger.error(f"Error fetching time entries: {e}")
-            return {
-                'success': False,
-                'message': f"Error fetching time entries: {str(e)}",
-                'time_entries': [],
-                'total_count': 0,
-                'page': kwargs.get('page', 1),
-                'per_page': kwargs.get('per_page', 25),
-                'total_pages': 0
-            }
+            response = TimeEntriesResponse(
+                success=False,
+                message=f"Error fetching time entries: {str(e)}",
+                time_entries=[],
+                total_count=0,
+                current_page=kwargs.get('page', 1),
+                has_next=False
+            )
+            return response.model_dump()
     
     def __del__(self):
         """Cleanup when object is destroyed"""
