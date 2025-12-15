@@ -30,7 +30,22 @@ from mcp.types import (
     LoggingLevel,
     ServerCapabilities
 )
-from pydantic import BaseModel, Field
+
+# Import Pydantic schemas from separate module
+from schemas import (
+    LoginRequest,
+    EmptyRequest,
+    SearchIssuesRequest,
+    CreateIssueRequest,
+    UpdateIssueRequest,
+    IssueIdRequest,
+    ProjectIdRequest,
+    TrackerFieldsRequest,
+    TimeEntriesRequest,
+    CreationStatusesRequest,
+    AvailableStatusesRequest,
+    OptionalProjectIdRequest
+)
 
 # Import our modules with proper error handling
 try:
@@ -68,277 +83,72 @@ class RedmineMCPServer:
                 Tool(
                     name="redmine_login",
                     description="Login to Redmine using username and password",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "username": {
-                                "type": "string",
-                                "description": "Redmine username"
-                            },
-                            "password": {
-                                "type": "string",
-                                "description": "Redmine password"
-                            }
-                        },
-                        "required": ["username", "password"]
-                    }
+                    inputSchema=LoginRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_projects",
                     description="Get list of projects from Redmine (requires authentication)",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
+                    inputSchema=EmptyRequest.model_json_schema()
                 ),
                 Tool(
                     name="logout",
                     description="Logout from Redmine and clear session",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
+                    inputSchema=EmptyRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_server_info",
                     description="Get information about the Redmine server configuration",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
+                    inputSchema=EmptyRequest.model_json_schema()
                 ),
                 Tool(
                     name="search_issues",
                     description="Search for issues in Redmine with various filters",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "status_id": {
-                                "type": "string",
-                                "description": "Status ID or name"
-                            },
-                            "tracker_id": {
-                                "type": "string",
-                                "description": "Tracker ID or name"
-                            },
-                            "assigned_to_id": {
-                                "type": "string",
-                                "description": "Assigned user ID or name"
-                            },
-                            "parent_id": {
-                                "type": "string",
-                                "description": "Parent issue ID"
-                            },
-                            "project_id": {
-                                "type": "string",
-                                "description": "Project ID or identifier"
-                            },
-                            "subject": {
-                                "type": "string",
-                                "description": "Subject text search"
-                            },
-                            "description": {
-                                "type": "string",
-                                "description": "Description text search"
-                            },
-                            "notes": {
-                                "type": "string",
-                                "description": "Notes text search"
-                            },
-                            "q": {
-                                "type": "string",
-                                "description": "General text search (searches across multiple fields)"
-                            },
-                            "page": {
-                                "type": "integer",
-                                "description": "Page number for pagination (default: 1)",
-                                "minimum": 1
-                            },
-                            "per_page": {
-                                "type": "integer",
-                                "description": "Items per page (default: 25)",
-                                "minimum": 1,
-                                "maximum": 100
-                            }
-                        },
-                        "required": []
-                    }
+                    inputSchema=SearchIssuesRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_issue_details",
                     description="Get detailed information about a specific issue",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "issue_id": {
-                                "type": "string",
-                                "description": "Issue ID to retrieve details for"
-                            }
-                        },
-                        "required": ["issue_id"]
-                    }
+                    inputSchema=IssueIdRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_available_trackers",
                     description="Get available tracker options from issue creation page",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "project_id": {
-                                "type": "string",
-                                "description": "Project ID to get trackers for (optional)"
-                            }
-                        },
-                        "required": []
-                    }
+                    inputSchema=OptionalProjectIdRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_creation_statuses",
                     description="Get available status options from new issue creation page for a specific tracker",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "project_id": {
-                                "type": "string",
-                                "description": "Project ID"
-                            },
-                            "tracker_id": {
-                                "type": "string",
-                                "description": "Tracker ID"
-                            }
-                        },
-                        "required": ["project_id", "tracker_id"]
-                    }
+                    inputSchema=CreationStatusesRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_available_statuses",
                     description="Get available status options for a specific issue",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "issue_id": {
-                                "type": "string",
-                                "description": "Issue ID to get available statuses for"
-                            }
-                        },
-                        "required": ["issue_id"]
-                    }
+                    inputSchema=AvailableStatusesRequest.model_json_schema()
                 ),
                 Tool(
                     name="create_issue",
                     description="Create a new issue in Redmine",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "project_id": {
-                                "type": "string",
-                                "description": "Project ID to create issue in"
-                            },
-                            "issue_tracker_id": {
-                                "type": "string",
-                                "description": "Tracker ID (required)"
-                            },
-                            "issue_subject": {
-                                "type": "string",
-                                "description": "Issue subject/title (required)"
-                            },
-                            "fields": {
-                                "type": "object",
-                                "description": "Additional issue fields as key-value pairs (e.g., issue_description, issue_status_id, issue_assigned_to_id, custom fields)"
-                            }
-                        },
-                        "required": ["project_id", "issue_tracker_id", "issue_subject"]
-                    }
+                    inputSchema=CreateIssueRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_tracker_fields",
                     description="Get available fields for a specific tracker from new issue page",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "project_id": {
-                                "type": "string",
-                                "description": "Project ID"
-                            },
-                            "issue_tracker_id": {
-                                "type": "string",
-                                "description": "Tracker ID (required)"
-                            }
-                        },
-                        "required": ["project_id", "issue_tracker_id"]
-                    }
+                    inputSchema=TrackerFieldsRequest.model_json_schema()
                 ),
                 Tool(
                     name="update_issue",
                     description="Update an issue with new field values",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "issue_id": {
-                                "type": "string",
-                                "description": "Issue ID to update"
-                            },
-                            "fields": {
-                                "type": "object",
-                                "description": "Fields to update as key-value pairs (e.g., subject, description, status_id, assigned_to_id, notes)"
-                            }
-                        },
-                        "required": ["issue_id"]
-                    }
+                    inputSchema=UpdateIssueRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_project_members",
                     description="Get project members from project settings page",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "project_id": {
-                                "type": "string",
-                                "description": "Project ID to get members for"
-                            }
-                        },
-                        "required": ["project_id"]
-                    }
+                    inputSchema=ProjectIdRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_time_entries",
-                    description="Get time entries (work hours) for a project with optional filters",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "project_id": {
-                                "type": "string",
-                                "description": "Project ID to get time entries for (required)"
-                            },
-                            "start_date": {
-                                "type": "string",
-                                "description": "Start date for filtering in YYYY-MM-DD format (optional)"
-                            },
-                            "end_date": {
-                                "type": "string",
-                                "description": "End date for filtering in YYYY-MM-DD format (optional)"
-                            },
-                            "user_id": {
-                                "type": "string",
-                                "description": "User ID to filter by (optional)"
-                            },
-                            "page": {
-                                "type": "integer",
-                                "description": "Page number for pagination (default: 1)",
-                                "minimum": 1
-                            },
-                            "per_page": {
-                                "type": "integer",
-                                "description": "Items per page (default: 25)",
-                                "minimum": 1,
-                                "maximum": 100
-                            }
-                        },
-                        "required": ["project_id"]
-                    }
+                    description="Get time entries (作業時間) for a project with optional filters",
+                    inputSchema=TimeEntriesRequest.model_json_schema()
                 )
             ]
         

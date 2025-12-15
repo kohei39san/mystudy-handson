@@ -75,3 +75,5 @@ htmlcov/
 .coverage
 .coverage.*
 coverage.*
+
+.amazonq/

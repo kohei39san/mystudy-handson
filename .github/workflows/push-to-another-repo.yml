@@ -1,5 +1,7 @@
 name: Push to Another Repository
 
+# This workflow is designed for original (non-fork) repositories
+# It syncs content to a target repository specified in secrets
 on:
   push:
     branches:
@@ -29,6 +31,8 @@ permissions:
 jobs:
   push-to-another-repo:
     runs-on: ubuntu-latest
+    # Only run on non-fork repositories
+    if: github.event.repository.fork == false
     steps:
       - name: Checkout source repository
         uses: actions/checkout@v6
@@ -90,11 +94,8 @@ jobs:
 
       - name: Clone target repository
         run: |
-          # Determine which token to use
-          TOKEN="${{ secrets.TARGET_REPO_PAT }}"
-
-          # Clone the target repository
-          git clone "https://x-access-token:$TOKEN@github.com/$TARGET_REPO.git" target_repo
+          # Clone the target repository using TARGET_REPO_PAT
+          git clone "https://x-access-token:${{ secrets.TARGET_REPO_PAT }}@github.com/$TARGET_REPO.git" target_repo
 
           # Create and checkout a new branch in the target repository
           cd target_repo

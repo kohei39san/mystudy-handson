@@ -1,0 +1,157 @@
+name: Fork to Upstream PR
+
+# This workflow is designed for forked repositories
+# It creates PRs to the upstream (parent) repository
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      pr_title:
+        description: "Pull request title"
+        required: true
+        default: "Update from fork"
+      pr_body:
+        description: "Pull request body"
+        required: false
+        default: "This PR contains updates from a fork of the repository."
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-upstream-pr:
+    runs-on: ubuntu-latest
+    # Only run on forked repositories
+    if: github.event.repository.fork == true
+    steps:
+      - name: Get upstream repository info
+        id: upstream
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: repo } = await github.rest.repos.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+
+            if (!repo.fork || !repo.parent) {
+              core.setFailed('This workflow should only run on forked repositories');
+              return;
+            }
+
+            console.log('Fork detected:', {
+              fork: repo.full_name,
+              upstream: repo.parent.full_name
+            });
+
+            core.setOutput('upstream_owner', repo.parent.owner.login);
+            core.setOutput('upstream_repo', repo.parent.name);
+            core.setOutput('upstream_full_name', repo.parent.full_name);
+
+      - name: Set default values
+        id: set_defaults
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "PR_TITLE=Update from fork - $(date +%Y/%m/%d)" >> $GITHUB_ENV
+            echo "PR_BODY=This PR contains updates from the fork repository." >> $GITHUB_ENV
+          else
+            echo "PR_TITLE=${{ inputs.pr_title }}" >> $GITHUB_ENV
+            echo "PR_BODY=${{ inputs.pr_body }}" >> $GITHUB_ENV
+          fi
+
+          echo "UPSTREAM_REPO=${{ steps.upstream.outputs.upstream_full_name }}" >> $GITHUB_ENV
+          echo "UPSTREAM_OWNER=${{ steps.upstream.outputs.upstream_owner }}" >> $GITHUB_ENV
+          echo "UPSTREAM_REPO_NAME=${{ steps.upstream.outputs.upstream_repo }}" >> $GITHUB_ENV
+
+      - name: Create pull request to upstream
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.TARGET_REPO_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const upstreamOwner = process.env.UPSTREAM_OWNER;
+            const upstreamRepo = process.env.UPSTREAM_REPO_NAME;
+            const title = process.env.PR_TITLE;
+            const body = process.env.PR_BODY;
+
+            // Get the current branch (usually 'main')
+            const currentBranch = context.ref.replace('refs/heads/', '');
+
+            // For fork to upstream PRs, the head is fork_owner:branch
+            const forkOwner = context.repo.owner;
+            const head = `${forkOwner}:${currentBranch}`;
+
+            console.log(`Creating PR from ${head} to ${upstreamOwner}/${upstreamRepo}:main`);
+
+            // Debug: Check token permissions
+            const tokenType = '${{ secrets.TARGET_REPO_PAT && 'TARGET_REPO_PAT' || 'GITHUB_TOKEN' }}';
+            console.log(`Using token: ${tokenType}`);
+
+            try {
+              // First, verify access to upstream repository
+              console.log('Checking access to upstream repository...');
+              const repoAccess = await github.rest.repos.get({
+                owner: upstreamOwner,
+                repo: upstreamRepo
+              });
+              console.log(`Upstream repository accessible: ${repoAccess.data.full_name}`);
+              
+              // Check if PR already exists
+              console.log('Checking for existing PRs...');
+              const existingPRs = await github.rest.pulls.list({
+                owner: upstreamOwner,
+                repo: upstreamRepo,
+                head: head,
+                state: 'open'
+              });
+              
+              if (existingPRs.data.length > 0) {
+                // Update existing PR
+                const prNumber = existingPRs.data[0].number;
+                console.log(`Updating existing PR #${prNumber}...`);
+                const response = await github.rest.pulls.update({
+                  owner: upstreamOwner,
+                  repo: upstreamRepo,
+                  pull_number: prNumber,
+                  title: title,
+                  body: body
+                });
+                console.log(`Pull request updated: ${response.data.html_url}`);
+              } else {
+                // Create new PR
+                console.log('Creating new PR...');
+                const response = await github.rest.pulls.create({
+                  owner: upstreamOwner,
+                  repo: upstreamRepo,
+                  head: head,
+                  base: 'main',
+                  title: title,
+                  body: body
+                });
+                console.log(`Pull request created: ${response.data.html_url}`);
+              }
+            } catch (error) {
+              console.error('Error details:', {
+                status: error.status,
+                message: error.message,
+                url: error.response?.url,
+                permissions: error.response?.headers?.['x-accepted-github-permissions']
+              });
+              
+              if (error.status === 404) {
+                if (tokenType === 'GITHUB_TOKEN') {
+                  core.setFailed(`Cannot access private upstream repository with GITHUB_TOKEN. Please set TARGET_REPO_PAT secret with access to ${upstreamOwner}/${upstreamRepo}`);
+                } else {
+                  core.setFailed(`TARGET_REPO_PAT cannot access ${upstreamOwner}/${upstreamRepo}. Please check:\n1. Token has 'pull_requests: write' permission\n2. Token has access to the upstream repository\n3. Repository exists and is accessible`);
+                }
+              } else if (error.status === 403) {
+                core.setFailed(`Permission denied. TARGET_REPO_PAT needs 'pull_requests: write' permission for ${upstreamOwner}/${upstreamRepo}`);
+              } else if (error.status === 422) {
+                console.log('Note: A pull request may already exist or no changes were detected');
+              } else {
+                core.setFailed(`Failed to create/update pull request: ${error.message}`);
+              }
+            }
