@@ -1291,6 +1291,7 @@ class RedmineSeleniumScraper:
                 pass
             
             # Extract all fields from div.attribute elements
+            custom_fields = {}
             try:
                 attribute_divs = self.driver.find_elements(By.CSS_SELECTOR, "div.attribute")
                 # Process attribute divs
@@ -1314,10 +1315,39 @@ class RedmineSeleniumScraper:
                         # Create field key by cleaning the field name
                         field_key = field_name_raw.lower().replace(':', '').replace(' ', '_').replace('　', '_')
                         
-                        # Store the field
+                        # Store in issue_details for known fields
                         issue_details[field_key] = field_value
                         
-                        logger.debug(f"Field: '{field_name_raw}' -> '{field_key}' = '{field_value}'")
+                        # Also store as custom field if it's not a standard field
+                        standard_fields = ['status', 'priority', 'assigned_to', 'category', 
+                                         'target_version', 'start_date', 'due_date', 'estimated_time', 
+                                         'done_ratio', 'spent_time', 'progress']
+                        
+                        # Also check common Japanese field names
+                        japanese_standard_fields = ['ステータス', '優先度', '担当者', 'カテゴリ', 
+                                                  '対象バージョン', '開始日', '期日', '予定工数', 
+                                                  '進捗率', 'spent_time', '進捗']
+                        
+                        # Check if this is a custom field by examining the div's CSS classes
+                        custom_field_id = None
+                        div_classes = div.get_attribute("class") or ""
+                        
+                        # Look for cf_{id} pattern in CSS classes
+                        cf_match = re.search(r'cf_(\d+)', div_classes)
+                        if cf_match:
+                            custom_field_id = cf_match.group(1)
+                        
+                        # If we found a custom field ID, use cf_{id} format
+                        if custom_field_id:
+                            custom_fields[f"cf_{custom_field_id}"] = field_value
+                            logger.debug(f"Custom field: cf_{custom_field_id} = '{field_value}'")
+                        elif (field_key not in standard_fields and 
+                              field_name_raw.rstrip(':') not in japanese_standard_fields):
+                            # Fallback: use original label name if no ID found and not a standard field
+                            custom_fields[field_name_raw] = field_value
+                            logger.debug(f"Custom field (fallback): '{field_name_raw}' = '{field_value}'")
+                        
+                        logger.debug(f"Field: '{field_name_raw}' -> '{field_key}' = '{field_value}' (classes: {div_classes})")
                         
                     except Exception as e:
                         logger.debug(f"Error processing attribute div: {e}")
@@ -1371,7 +1401,8 @@ class RedmineSeleniumScraper:
                 created_on=issue_details.get('created_on', ''),
                 updated_on=issue_details.get('updated_on', ''),
                 progress=issue_details.get('done_ratio', ''),
-                spent_time=issue_details.get('spent_time', '')
+                spent_time=issue_details.get('spent_time', ''),
+                custom_fields=custom_fields if custom_fields else None
             )
             
             response = IssueDetailResponse(

@@ -4,7 +4,7 @@ All input validation and JSON schema definitions for MCP tools
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 
 
 # Request schemas (used for inputSchema)
@@ -141,6 +141,14 @@ class IssueInfo(BaseModel):
     created_on: Optional[str] = None
     updated_on: Optional[str] = None
     url: Optional[str] = None
+    category: Optional[str] = None
+    target_version: Optional[str] = None
+    start_date: Optional[str] = None
+    due_date: Optional[str] = None
+    estimated_time: Optional[str] = None
+    progress: Optional[str] = None
+    spent_time: Optional[str] = None
+    custom_fields: Optional[Dict[str, str]] = None
 
 
 class IssuesResponse(BaseModel):
@@ -158,7 +166,6 @@ class IssueDetailResponse(BaseModel):
     success: bool
     message: str
     issue: Optional[IssueInfo] = None
-    custom_fields: Optional[List[dict]] = None
     journals: Optional[List[dict]] = None
 
 

@@ -736,6 +736,162 @@ class TestIssuesTools:
         assert dumped['issue']['id'] == "1"
         assert isinstance(dumped['issue'], dict)
 
+    @patch('selenium.webdriver.support.ui.WebDriverWait')
+    def test_get_issue_details_with_custom_fields(self, mock_wait, mock_selenium_driver):
+        """Test get issue details retrieves custom fields correctly"""
+        scraper = RedmineSeleniumScraper()
+        scraper.is_authenticated = True
+        scraper.driver = mock_selenium_driver
+        
+        # Mock WebDriverWait
+        mock_wait_instance = Mock()
+        mock_wait_instance.until.return_value = True
+        mock_wait.return_value = mock_wait_instance
+        scraper.wait = mock_wait_instance
+        
+        mock_selenium_driver.current_url = "http://test/issues/1"
+        mock_selenium_driver.page_source = "issue details page"
+        
+        # Mock subject element
+        mock_subject = Mock()
+        mock_subject.text = "Test Issue"
+        
+        # Mock attribute divs with standard and custom fields
+        mock_attr1 = Mock()
+        mock_label1 = Mock()
+        mock_label1.text = "Status:"
+        mock_value1 = Mock()
+        mock_value1.text = "New"
+        mock_attr1.find_element.side_effect = lambda by, sel: mock_label1 if "label" in sel else mock_value1
+        mock_attr1.get_attribute.return_value = "attribute status"
+        
+        mock_attr2 = Mock()
+        mock_label2 = Mock()
+        mock_label2.text = "カスタムフィールド1:"  # Custom field in Japanese
+        mock_value2 = Mock()
+        mock_value2.text = "カスタム値"
+        mock_attr2.find_element.side_effect = lambda by, sel: mock_label2 if "label" in sel else mock_value2
+        mock_attr2.get_attribute.return_value = "attribute cf_5"  # Custom field with ID 5
+        
+        mock_attr3 = Mock()
+        mock_label3 = Mock()
+        mock_label3.text = "Custom Field 2:"  # Custom field in English
+        mock_value3 = Mock()
+        mock_value3.text = "Custom Value 2"
+        mock_attr3.find_element.side_effect = lambda by, sel: mock_label3 if "label" in sel else mock_value3
+        mock_attr3.get_attribute.return_value = "attribute cf_10"  # Custom field with ID 10
+        
+        def mock_find_element(by, selector):
+            if selector == ".subject h3":
+                return mock_subject
+            raise NoSuchElementException()
+        
+        def mock_find_elements(by, selector):
+            if selector == "div.attribute":
+                return [mock_attr1, mock_attr2, mock_attr3]
+            return []
+        
+        mock_selenium_driver.find_element.side_effect = mock_find_element
+        mock_selenium_driver.find_elements.side_effect = mock_find_elements
+        
+        result = scraper.get_issue_details("1")
+        
+        # Validate response structure using schema
+        response = IssueDetailResponse(**result)
+        assert response.success is True
+        assert response.issue.id == "1"
+        assert response.issue.status == "New"
+        
+        # Verify custom fields are captured with cf_{id} format
+        assert response.issue.custom_fields is not None
+        assert "cf_5" in response.issue.custom_fields
+        assert "cf_10" in response.issue.custom_fields
+        assert response.issue.custom_fields["cf_5"] == "カスタム値"
+        assert response.issue.custom_fields["cf_10"] == "Custom Value 2"
+        
+        # Verify model_dump includes custom fields in correct format
+        dumped = response.model_dump()
+        assert dumped['success'] is True
+        assert dumped['issue']['custom_fields'] is not None
+        assert "cf_5" in dumped['issue']['custom_fields']
+        assert "cf_10" in dumped['issue']['custom_fields']
+
+    @patch('selenium.webdriver.support.ui.WebDriverWait')
+    def test_get_issue_details_multiple_custom_fields(self, mock_wait, mock_selenium_driver):
+        """Test get issue details retrieves multiple custom fields correctly"""
+        scraper = RedmineSeleniumScraper()
+        scraper.is_authenticated = True
+        scraper.driver = mock_selenium_driver
+        
+        # Mock WebDriverWait
+        mock_wait_instance = Mock()
+        mock_wait_instance.until.return_value = True
+        mock_wait.return_value = mock_wait_instance
+        scraper.wait = mock_wait_instance
+        
+        mock_selenium_driver.current_url = "http://test/issues/1"
+        mock_selenium_driver.page_source = "issue details page"
+        
+        # Mock subject element
+        mock_subject = Mock()
+        mock_subject.text = "Test Issue with Multiple Custom Fields"
+        
+        # Create 5 custom fields to test multiple field handling
+        custom_field_mocks = []
+        custom_field_data = [
+            ("cf_1", "Company", "ACME Corp"),
+            ("cf_3", "Department", "Engineering"),
+            ("cf_7", "Priority Level", "High"),
+            ("cf_12", "Due Date Extended", "2025-12-31"),
+            ("cf_15", "Project Phase", "Implementation")
+        ]
+        
+        for cf_class, cf_label, cf_value in custom_field_data:
+            mock_attr = Mock()
+            mock_label = Mock()
+            mock_label.text = f"{cf_label}:"
+            mock_value_elem = Mock()
+            mock_value_elem.text = cf_value
+            mock_attr.find_element.side_effect = lambda by, sel, l=mock_label, v=mock_value_elem: l if "label" in sel else v
+            mock_attr.get_attribute.return_value = f"attribute {cf_class}"
+            custom_field_mocks.append(mock_attr)
+        
+        def mock_find_element(by, selector):
+            if selector == ".subject h3":
+                return mock_subject
+            raise NoSuchElementException()
+        
+        def mock_find_elements(by, selector):
+            if selector == "div.attribute":
+                return custom_field_mocks
+            return []
+        
+        mock_selenium_driver.find_element.side_effect = mock_find_element
+        mock_selenium_driver.find_elements.side_effect = mock_find_elements
+        
+        result = scraper.get_issue_details("1")
+        
+        # Validate response structure using schema
+        response = IssueDetailResponse(**result)
+        assert response.success is True
+        assert response.issue.id == "1"
+        
+        # Verify all 5 custom fields are captured
+        assert response.issue.custom_fields is not None
+        assert len(response.issue.custom_fields) == 5
+        
+        # Check each custom field
+        for cf_class, cf_label, cf_value in custom_field_data:
+            assert cf_class in response.issue.custom_fields
+            assert response.issue.custom_fields[cf_class] == cf_value
+        
+        # Verify specific fields
+        assert response.issue.custom_fields["cf_1"] == "ACME Corp"
+        assert response.issue.custom_fields["cf_3"] == "Engineering"
+        assert response.issue.custom_fields["cf_7"] == "High"
+        assert response.issue.custom_fields["cf_12"] == "2025-12-31"
+        assert response.issue.custom_fields["cf_15"] == "Implementation"
+
     def test_create_issue_response_schema(self):
         """Test CreateIssueResponse schema"""
         response = CreateIssueResponse(

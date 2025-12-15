@@ -102,12 +102,11 @@ class TestRedmineMCPServer:
         server = RedmineMCPServer()
         server.scraper.is_authenticated = True
         
-        result = await server._handle_get_issue_details({'issue_id': '1'})
+        result = await server._handle_get_issue_details({'issue_id': '3'})
         
         assert isinstance(result, list)
         assert len(result) == 1
-        mock_scraper.get_issue_details.assert_called_once_with('1')
-
+        mock_scraper.get_issue_details.assert_called_once_with('3')
     @pytest.mark.asyncio
     @patch('redmine_mcp_server.RedmineSeleniumScraper')
     async def test_handle_create_issue(self, mock_scraper_class, mock_scraper):

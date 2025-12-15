@@ -37,17 +37,17 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo
             });
-
+            
             if (!repo.fork || !repo.parent) {
               core.setFailed('This workflow should only run on forked repositories');
               return;
             }
-
+            
             console.log('Fork detected:', {
               fork: repo.full_name,
               upstream: repo.parent.full_name
             });
-
+            
             core.setOutput('upstream_owner', repo.parent.owner.login);
             core.setOutput('upstream_repo', repo.parent.name);
             core.setOutput('upstream_full_name', repo.parent.full_name);
@@ -62,7 +62,7 @@ jobs:
             echo "PR_TITLE=${{ inputs.pr_title }}" >> $GITHUB_ENV
             echo "PR_BODY=${{ inputs.pr_body }}" >> $GITHUB_ENV
           fi
-
+          
           echo "UPSTREAM_REPO=${{ steps.upstream.outputs.upstream_full_name }}" >> $GITHUB_ENV
           echo "UPSTREAM_OWNER=${{ steps.upstream.outputs.upstream_owner }}" >> $GITHUB_ENV
           echo "UPSTREAM_REPO_NAME=${{ steps.upstream.outputs.upstream_repo }}" >> $GITHUB_ENV
@@ -76,20 +76,20 @@ jobs:
             const upstreamRepo = process.env.UPSTREAM_REPO_NAME;
             const title = process.env.PR_TITLE;
             const body = process.env.PR_BODY;
-
+            
             // Get the current branch (usually 'main')
             const currentBranch = context.ref.replace('refs/heads/', '');
-
+            
             // For fork to upstream PRs, the head is fork_owner:branch
             const forkOwner = context.repo.owner;
             const head = `${forkOwner}:${currentBranch}`;
-
+            
             console.log(`Creating PR from ${head} to ${upstreamOwner}/${upstreamRepo}:main`);
-
+            
             // Debug: Check token permissions
             const tokenType = '${{ secrets.TARGET_REPO_PAT && 'TARGET_REPO_PAT' || 'GITHUB_TOKEN' }}';
             console.log(`Using token: ${tokenType}`);
-
+            
             try {
               // First, verify access to upstream repository
               console.log('Checking access to upstream repository...');
