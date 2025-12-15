@@ -28,7 +28,7 @@ jobs:
       - name: Format Terraform files
         run: terraform fmt -recursive
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         name: Cache plugin dir for TFLint
         with:
           path: ~/.tflint.d/plugins
