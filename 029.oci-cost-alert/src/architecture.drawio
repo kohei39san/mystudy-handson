@@ -1,0 +1,75 @@
+<mxfile host="65bd71144e">
+    <diagram name="ページ1" id="OCI-Cost-Alert-Architecture">
+        <mxGraphModel dx="686" dy="419" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <!-- OCI Cloud Container -->
+                <mxCell id="oci-cloud" value="Oracle Cloud Infrastructure (OCI)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=1;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#FF6600;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#FF6600;dashed=0;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="80" width="740" height="500" as="geometry"/>
+                </mxCell>
+                
+                <!-- Compartment -->
+                <mxCell id="compartment" value="コンパートメント" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#00A4A6;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#147EBA;dashed=1;" parent="oci-cloud" vertex="1">
+                    <mxGeometry x="30" y="40" width="680" height="420" as="geometry"/>
+                </mxCell>
+                
+                <!-- Budget -->
+                <mxCell id="budget" value="予算&#xa;(Budget)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#FF6600;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.cost_and_usage_report;" parent="compartment" vertex="1">
+                    <mxGeometry x="80" y="80" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- Budget Alert Rule -->
+                <mxCell id="alert-rule" value="アラートルール&#xa;(Alert Rule)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.alarm;" parent="compartment" vertex="1">
+                    <mxGeometry x="280" y="80" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- Notification Topic -->
+                <mxCell id="notification-topic" value="通知トピック&#xa;(Notification Topic)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#E7157B;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.simple_notification_service_sns;" parent="compartment" vertex="1">
+                    <mxGeometry x="480" y="80" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- Email Subscription -->
+                <mxCell id="email-subscription" value="メール購読&#xa;(Email Subscription)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.email;" parent="compartment" vertex="1">
+                    <mxGeometry x="480" y="250" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- User/Admin -->
+                <mxCell id="admin-user" value="管理者" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3D;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.user;" parent="1" vertex="1">
+                    <mxGeometry x="880" y="350" width="78" height="78" as="geometry"/>
+                </mxCell>
+                
+                <!-- Connections -->
+                <!-- Budget to Alert Rule -->
+                <mxCell id="budget-to-alert" value="閾値監視" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6600;strokeWidth=2;fontColor=#FF6600;" parent="1" source="budget" target="alert-rule" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                
+                <!-- Alert Rule to Notification Topic -->
+                <mxCell id="alert-to-notification" value="アラート送信" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E7157B;strokeWidth=2;fontColor=#E7157B;" parent="1" source="alert-rule" target="notification-topic" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                
+                <!-- Notification Topic to Email Subscription -->
+                <mxCell id="notification-to-email" value="メール配信" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#E7157B;strokeWidth=2;fontColor=#E7157B;" parent="1" source="notification-topic" target="email-subscription" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                
+                <!-- Email to Admin -->
+                <mxCell id="email-to-admin" value="通知受信" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;strokeWidth=2;fontColor=#232F3E;" parent="1" source="email-subscription" target="admin-user" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                
+                <!-- Title -->
+                <mxCell id="title" value="OCI コストアラート アーキテクチャ" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=16;fontStyle=1;fontColor=#FF6600;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="20" width="280" height="30" as="geometry"/>
+                </mxCell>
+                
+                <!-- Description -->
+                <mxCell id="description" value="予算額の80%に達した際に管理者にメール通知を送信するシステム" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=12;fontColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="250" y="600" width="380" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
