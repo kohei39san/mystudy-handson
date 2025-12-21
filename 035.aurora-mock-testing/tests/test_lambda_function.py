@@ -21,9 +21,9 @@ from scripts.lambda_function import (
 class TestLambdaHandler:
     """Test cases for the main lambda_handler function"""
     
-    @patch('lambda_function.requests')
-    @patch('lambda_function.psycopg2')
-    @patch('lambda_function.boto3')
+    @patch('scripts.lambda_function.requests')
+    @patch('scripts.lambda_function.psycopg2')
+    @patch('scripts.lambda_function.boto3')
     def test_lambda_handler_success(
         self, 
         mock_boto3, 
