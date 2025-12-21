@@ -1,7 +1,9 @@
 import json
 import boto3
 import psycopg2
-import requests
+import urllib.request
+import urllib.parse
+import urllib.error
 import os
 from typing import Dict, Any, Optional
 
@@ -139,23 +141,28 @@ def fetch_api_data() -> Optional[Dict[str, Any]]:
         api_url = os.environ['API_URL']
         
         # Health check
-        health_response = requests.get(f"{api_url}/health", timeout=10)
-        health_response.raise_for_status()
-        health_data = health_response.json()
+        health_request = urllib.request.Request(f"{api_url}/health")
+        with urllib.request.urlopen(health_request, timeout=10) as health_response:
+            health_data = json.loads(health_response.read().decode('utf-8'))
         
         # Get data
-        data_response = requests.get(f"{api_url}/api/data", timeout=10)
-        data_response.raise_for_status()
-        api_data = data_response.json()
+        data_request = urllib.request.Request(f"{api_url}/api/data")
+        with urllib.request.urlopen(data_request, timeout=10) as data_response:
+            api_data = json.loads(data_response.read().decode('utf-8'))
         
         # Create new data
-        create_response = requests.post(
+        create_data_payload = json.dumps({'name': 'Lambda Created Data'}).encode('utf-8')
+        create_request = urllib.request.Request(
             f"{api_url}/api/data",
-            json={'name': 'Lambda Created Data'},
-            timeout=10
+            data=create_data_payload,
+            headers={
+                'Content-Type': 'application/json',
+                'Content-Length': str(len(create_data_payload))
+            },
+            method='POST'
         )
-        create_response.raise_for_status()
-        create_data = create_response.json()
+        with urllib.request.urlopen(create_request, timeout=10) as create_response:
+            create_data = json.loads(create_response.read().decode('utf-8'))
         
         return {
             'api_status': 'success',
@@ -164,8 +171,21 @@ def fetch_api_data() -> Optional[Dict[str, Any]]:
             'created_data': create_data
         }
         
+    except urllib.error.HTTPError as e:
+        return {
+            'api_status': 'failed',
+            'error': f'HTTP Error {e.code}: {e.reason}',
+            'error_type': 'HTTPError'
+        }
+    except urllib.error.URLError as e:
+        return {
+            'api_status': 'failed',
+            'error': f'URL Error: {e.reason}',
+            'error_type': 'URLError'
+        }
     except Exception as e:
         return {
             'api_status': 'failed',
-            'error': str(e)
+            'error': str(e),
+            'error_type': 'GeneralError'
         }
