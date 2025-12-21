@@ -16,12 +16,6 @@ variable "environment" {
   default     = "dev"
 }
 
-variable "db_name" {
-  description = "Database name"
-  type        = string
-  default     = "testdb"
-}
-
 variable "db_username" {
   description = "Database username for IAM token authentication"
   type        = string
