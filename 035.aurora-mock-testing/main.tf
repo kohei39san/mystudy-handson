@@ -22,6 +22,7 @@ resource "aws_iam_role" "rds_iam_role" {
     Name        = "${var.project_name}-${var.environment}-rds-iam-role"
     Environment = var.environment
     Project     = var.project_name
+    Terraform   = "true"
   }
 }
 
@@ -49,6 +50,7 @@ resource "aws_iam_policy" "rds_connect_policy" {
     Name        = "${var.project_name}-${var.environment}-rds-connect-policy"
     Environment = var.environment
     Project     = var.project_name
+    Terraform   = "true"
   }
 }
 
@@ -67,6 +69,7 @@ resource "aws_iam_user" "postgres_iam_user" {
     Name        = "${var.project_name}-${var.environment}-postgres-iam-user"
     Environment = var.environment
     Project     = var.project_name
+    Terraform   = "true"
   }
 }
 
