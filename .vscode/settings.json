@@ -1,6 +1,8 @@
 {
     "python.testing.pytestArgs": [
         "--cov=034.redmine-mcp-server/src",
+        "--cov=035.aurora-mock-testing/scripts",
+        "--cov-branch",
         "--cov-report=html",
         "--cov-report=term-missing",
         "--log-cli-level=DEBUG"

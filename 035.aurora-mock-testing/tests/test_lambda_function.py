@@ -60,18 +60,21 @@ class TestLambdaHandler:
         health_response.__exit__ = Mock(return_value=None)
         data_response = Mock()
         data_response.json.return_value = {
-        data_response.read.return_value = json.dumps({
             'total': 1
         }
+        data_response.read.return_value = json.dumps({
+            'total': 1
         }).encode('utf-8')
         data_response.__enter__ = Mock(return_value=data_response)
         data_response.__exit__ = Mock(return_value=None)
         create_response = Mock()
         create_response.json.return_value = {
-        create_response.read.return_value = json.dumps({
             'name': 'Lambda Created Data',
             'status': 'created'
         }
+        create_response.read.return_value = json.dumps({
+            'name': 'Lambda Created Data',
+            'status': 'created'
         }).encode('utf-8')
         create_response.__enter__ = Mock(return_value=create_response)
         create_response.__exit__ = Mock(return_value=None)
