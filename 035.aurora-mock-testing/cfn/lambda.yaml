@@ -1,0 +1,255 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Lambda function for accessing Aurora, Secrets Manager, and ECS'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: aurora-mock-testing
+    Description: Project name for resource naming
+  
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name
+  
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where Lambda will be deployed
+  
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnet IDs for Lambda function
+  
+  LambdaSecurityGroupId:
+    Type: String
+    Description: Security group ID for Lambda function
+  
+  AuroraSecretArn:
+    Type: String
+    Description: ARN of the Aurora connection secret
+  
+  ApiUrl:
+    Type: String
+    Description: URL of the Flask API
+
+Resources:
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-lambda-execution-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+      Policies:
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource: !Ref AuroraSecretArn
+        - PolicyName: RDSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-db:connect
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-lambda-execution-role'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Lambda Layer for dependencies
+  LambdaLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: !Sub '${ProjectName}-${Environment}-dependencies'
+      Description: Dependencies for Lambda function
+      Content:
+        ZipFile: |
+          # This would contain psycopg2, boto3, and other dependencies
+          # In a real deployment, you would upload a proper layer zip file
+      CompatibleRuntimes:
+        - python3.9
+
+  # Lambda Function
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-data-processor'
+      Runtime: python3.9
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 256
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroupId
+        SubnetIds: !Ref SubnetIds
+      Environment:
+        Variables:
+          AURORA_SECRET_ARN: !Ref AuroraSecretArn
+          API_URL: !Ref ApiUrl
+          AWS_REGION: !Ref AWS::Region
+      Layers:
+        - !Ref LambdaLayer
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import psycopg2
+          import requests
+          import os
+          from typing import Dict, Any, Optional
+          
+          def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+              """
+              Lambda function to process data from Aurora, Secrets Manager, and ECS
+              """
+              try:
+                  # Initialize AWS clients
+                  secrets_client = boto3.client('secretsmanager')
+                  rds_client = boto3.client('rds')
+                  
+                  # Get database connection info from Secrets Manager
+                  db_config = get_database_config(secrets_client)
+                  
+                  # Connect to Aurora and fetch data
+                  db_data = fetch_database_data(db_config)
+                  
+                  # Call ECS API
+                  api_data = fetch_api_data()
+                  
+                  # Process and return combined data
+                  result = {
+                      'statusCode': 200,
+                      'body': json.dumps({
+                          'database_data': db_data,
+                          'api_data': api_data,
+                          'processed_at': context.aws_request_id
+                      })
+                  }
+                  
+                  return result
+                  
+              except Exception as e:
+                  return {
+                      'statusCode': 500,
+                      'body': json.dumps({
+                          'error': str(e),
+                          'request_id': context.aws_request_id
+                      })
+                  }
+          
+          def get_database_config(secrets_client: boto3.client) -> Dict[str, str]:
+              """Get database configuration from Secrets Manager"""
+              secret_arn = os.environ['AURORA_SECRET_ARN']
+              
+              response = secrets_client.get_secret_value(SecretId=secret_arn)
+              secret_data = json.loads(response['SecretString'])
+              
+              return secret_data
+          
+          def fetch_database_data(db_config: Dict[str, str]) -> Optional[Dict[str, Any]]:
+              """Fetch data from Aurora PostgreSQL"""
+              try:
+                  # Generate IAM token for authentication
+                  rds_client = boto3.client('rds')
+                  token = rds_client.generate_db_auth_token(
+                      DBHostname=db_config['host'],
+                      Port=db_config['port'],
+                      DBUsername='iam_user'
+                  )
+                  
+                  # Connect to database
+                  conn = psycopg2.connect(
+                      host=db_config['host'],
+                      port=db_config['port'],
+                      database=db_config['dbname'],
+                      user='iam_user',
+                      password=token,
+                      sslmode='require'
+                  )
+                  
+                  cursor = conn.cursor()
+                  cursor.execute("SELECT version();")
+                  version = cursor.fetchone()
+                  
+                  cursor.close()
+                  conn.close()
+                  
+                  return {
+                      'connection_status': 'success',
+                      'database_version': version[0] if version else None
+                  }
+                  
+              except Exception as e:
+                  return {
+                      'connection_status': 'failed',
+                      'error': str(e)
+                  }
+          
+          def fetch_api_data() -> Optional[Dict[str, Any]]:
+              """Fetch data from ECS Flask API"""
+              try:
+                  api_url = os.environ['API_URL']
+                  response = requests.get(f"{api_url}/api/data", timeout=10)
+                  response.raise_for_status()
+                  
+                  return {
+                      'api_status': 'success',
+                      'data': response.json()
+                  }
+                  
+              except Exception as e:
+                  return {
+                      'api_status': 'failed',
+                      'error': str(e)
+                  }
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-data-processor'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # CloudWatch Log Group for Lambda
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${LambdaFunction}'
+      RetentionInDays: 7
+
+Outputs:
+  LambdaFunctionArn:
+    Description: ARN of the Lambda function
+    Value: !GetAtt LambdaFunction.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-lambda-arn'
+  
+  LambdaFunctionName:
+    Description: Name of the Lambda function
+    Value: !Ref LambdaFunction
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-lambda-name'
+  
+  LambdaExecutionRoleArn:
+    Description: ARN of the Lambda execution role
+    Value: !GetAtt LambdaExecutionRole.Arn
+    Export:
+      Name: !Sub '${ProjectName}-${Environment}-lambda-role-arn'
