@@ -1,14 +1,16 @@
 import pytest
 import json
 from unittest.mock import Mock, patch, MagicMock
-from moto import mock_secretsmanager, mock_rds
+from moto import mock_aws
 import boto3
 
 # Import the lambda function
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'scripts'))
-from lambda_function import (
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_dir = os.path.dirname(current_dir)
+sys.path.insert(0, project_dir)
+from scripts.lambda_function import (
     lambda_handler,
     get_database_config,
     fetch_database_data,
@@ -88,7 +90,7 @@ class TestLambdaHandler:
 class TestMotoIntegration:
     """Integration tests using moto for AWS service mocking"""
     
-    @mock_secretsmanager
+    @mock_aws
     def test_secrets_manager_integration(self, mock_environment):
         """Test Secrets Manager integration with moto"""
         # Create mock secret
