@@ -37,6 +37,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyCloudTrailCreationWithoutOwnerTag
             Effect: Deny
             Action: cloudtrail:CreateTrail
@@ -44,6 +45,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyCloudWatchAlarmCreationWithoutOwnerTag
             Effect: Deny
             Action: cloudwatch:PutMetricAlarm
@@ -51,6 +53,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyElasticIPAllocationWithoutOwnerTag
             Effect: Deny
             Action: ec2:AllocateAddress
@@ -58,6 +61,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyNATGatewayCreationWithoutOwnerTag
             Effect: Deny
             Action: ec2:CreateNatGateway
@@ -65,6 +69,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyVPCEndpointCreationWithoutOwnerTag
             Effect: Deny
             Action: ec2:CreateVpcEndpoint
@@ -72,6 +77,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyECSClusterCreationWithoutOwnerTag
             Effect: Deny
             Action: ecs:CreateCluster
@@ -79,6 +85,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyECSServiceCreationWithoutOwnerTag
             Effect: Deny
             Action: ecs:CreateService
@@ -86,6 +93,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyEFSCreationWithoutOwnerTag
             Effect: Deny
             Action: elasticfilesystem:CreateFileSystem
@@ -93,6 +101,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyEKSClusterCreationWithoutOwnerTag
             Effect: Deny
             Action: eks:CreateCluster
@@ -100,6 +109,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyOpenSearchDomainCreationWithoutOwnerTag
             Effect: Deny
             Action: es:CreateDomain
@@ -107,6 +117,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyFSxCreationWithoutOwnerTag
             Effect: Deny
             Action: fsx:CreateFileSystem
@@ -114,6 +125,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyKMSKeyCreationWithoutOwnerTag
             Effect: Deny
             Action: kms:CreateKey
@@ -121,6 +133,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyOpenSearchServerlessCollectionCreationWithoutOwnerTag
             Effect: Deny
             Action: aoss:CreateCollection
@@ -128,6 +141,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyRDSInstanceCreationWithoutOwnerTag
             Effect: Deny
             Action: rds:CreateDBInstance
@@ -135,6 +149,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenySecretsManagerSecretCreationWithoutOwnerTag
             Effect: Deny
             Action: secretsmanager:CreateSecret
@@ -142,6 +157,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyEC2InstanceCreationWithoutOwnerTag
             Effect: Deny
             Action:
@@ -151,6 +167,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenyVolumeCreationWithoutOwnerTag
             Effect: Deny
             Action:
@@ -160,6 +177,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
           - Sid: DenySnapshotCreationWithoutOwnerTag
             Effect: Deny
             Action:
@@ -169,6 +187,7 @@ Resources:
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
+                "aws:ResourceTag/Owner": "true"
       TargetIds: !If [HasTargets, !Ref TargetIds, !Ref 'AWS::NoValue']
 
 Outputs:
