@@ -30,29 +30,142 @@ Resources:
       Content:
         Version: '2012-10-17'
         Statement:
-          - Sid: Statement1
+          - Sid: DenyAthenaWorkGroupCreationWithoutOwnerTag
+            Effect: Deny
+            Action: athena:CreateWorkGroup
+            Resource: 'arn:aws:athena:*:*:workgroup/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyCloudTrailCreationWithoutOwnerTag
+            Effect: Deny
+            Action: cloudtrail:CreateTrail
+            Resource: 'arn:aws:cloudtrail:*:*:trail/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyCloudWatchAlarmCreationWithoutOwnerTag
+            Effect: Deny
+            Action: cloudwatch:PutMetricAlarm
+            Resource: 'arn:aws:cloudwatch:*:*:alarm:*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyElasticIPAllocationWithoutOwnerTag
+            Effect: Deny
+            Action: ec2:AllocateAddress
+            Resource: 'arn:aws:ec2:*:*:elastic-ip/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyNATGatewayCreationWithoutOwnerTag
+            Effect: Deny
+            Action: ec2:CreateNatGateway
+            Resource: 'arn:aws:ec2:*:*:natgateway/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyVPCEndpointCreationWithoutOwnerTag
+            Effect: Deny
+            Action: ec2:CreateVpcEndpoint
+            Resource: 'arn:aws:ec2:*:*:vpc-endpoint/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyECSClusterCreationWithoutOwnerTag
+            Effect: Deny
+            Action: ecs:CreateCluster
+            Resource: 'arn:aws:ecs:*:*:cluster/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyECSServiceCreationWithoutOwnerTag
+            Effect: Deny
+            Action: ecs:CreateService
+            Resource: 'arn:aws:ecs:*:*:service/*/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyEFSCreationWithoutOwnerTag
+            Effect: Deny
+            Action: elasticfilesystem:CreateFileSystem
+            Resource: 'arn:aws:elasticfilesystem:*:*:file-system/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyEKSClusterCreationWithoutOwnerTag
+            Effect: Deny
+            Action: eks:CreateCluster
+            Resource: 'arn:aws:eks:*:*:cluster/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyOpenSearchDomainCreationWithoutOwnerTag
+            Effect: Deny
+            Action: es:CreateDomain
+            Resource: 'arn:aws:es:*:*:domain/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyFSxCreationWithoutOwnerTag
+            Effect: Deny
+            Action: fsx:CreateFileSystem
+            Resource: 'arn:aws:fsx:*:*:file-system/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyKMSKeyCreationWithoutOwnerTag
+            Effect: Deny
+            Action: kms:CreateKey
+            Resource: 'arn:aws:kms:*:*:key/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyOpenSearchServerlessCollectionCreationWithoutOwnerTag
+            Effect: Deny
+            Action: aoss:CreateCollection
+            Resource: 'arn:aws:aoss:*:*:collection/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyRDSInstanceCreationWithoutOwnerTag
+            Effect: Deny
+            Action: rds:CreateDBInstance
+            Resource: 'arn:aws:rds:*:*:db:*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenySecretsManagerSecretCreationWithoutOwnerTag
+            Effect: Deny
+            Action: secretsmanager:CreateSecret
+            Resource: 'arn:aws:secretsmanager:*:*:secret:*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyEC2InstanceCreationWithoutOwnerTag
             Effect: Deny
             Action:
-              - athena:CreateWorkGroup
-              - cloudtrail:CreateTrail
-              - cloudwatch:PutMetricAlarm
-              - ec2:AllocateAddress
               - ec2:RunInstances
-              - ec2:CreateNatGateway
-              - ec2:CreateSnapshot
+            Resource:
+              - 'arn:aws:ec2:*:*:instance/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenyVolumeCreationWithoutOwnerTag
+            Effect: Deny
+            Action:
               - ec2:CreateVolume
-              - ec2:CreateVpcEndpoint
-              - ecs:CreateCluster
-              - ecs:CreateService
-              - elasticfilesystem:CreateFileSystem
-              - eks:CreateCluster
-              - es:CreateDomain
-              - fsx:CreateFileSystem
-              - kms:CreateKey
-              - aoss:CreateCollection
-              - rds:CreateDBInstance
-              - secretsmanager:CreateSecret
-            Resource: '*'
+            Resource:
+              - 'arn:aws:ec2:*:*:volume/*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+          - Sid: DenySnapshotCreationWithoutOwnerTag
+            Effect: Deny
+            Action:
+              - ec2:CreateSnapshot
+            Resource:
+              - 'arn:aws:ec2:*:*:snapshot/*'
             Condition:
               'Null':
                 'aws:RequestTag/Owner': 'true'
