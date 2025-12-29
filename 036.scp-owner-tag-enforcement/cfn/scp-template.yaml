@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'SCP to enforce Owner tag on resource creation'
+
+Parameters:
+  PolicyName:
+    Type: String
+    Default: 'EnforceOwnerTagPolicy'
+    Description: 'Name of the SCP policy'
+  
+  PolicyDescription:
+    Type: String
+    Default: 'Deny resource creation without Owner tag'
+    Description: 'Description of the SCP policy'
+
+  TargetIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: 'Comma-separated list of Organization Unit IDs or Account IDs to attach this policy to (optional)'
+
+Conditions:
+  HasTargets: !Not [!Equals [!Join ['', !Ref TargetIds], '']]
+
+Resources:
+  OwnerTagEnforcementPolicy:
+    Type: AWS::Organizations::Policy
+    Properties:
+      Name: !Ref PolicyName
+      Description: !Ref PolicyDescription
+      Type: SERVICE_CONTROL_POLICY
+      Content:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Statement1
+            Effect: Deny
+            Action:
+              - athena:CreateWorkGroup
+              - cloudtrail:CreateTrail
+              - cloudwatch:PutMetricAlarm
+              - ec2:AllocateAddress
+              - ec2:RunInstances
+              - ec2:CreateNatGateway
+              - ec2:CreateSnapshot
+              - ec2:CreateVolume
+              - ec2:CreateVpcEndpoint
+              - ecs:CreateCluster
+              - ecs:CreateService
+              - elasticfilesystem:CreateFileSystem
+              - eks:CreateCluster
+              - es:CreateDomain
+              - fsx:CreateFileSystem
+              - kms:CreateKey
+              - aoss:CreateCollection
+              - rds:CreateDBInstance
+              - secretsmanager:CreateSecret
+            Resource: '*'
+            Condition:
+              'Null':
+                'aws:RequestTag/Owner': 'true'
+      TargetIds: !If [HasTargets, !Ref TargetIds, !Ref 'AWS::NoValue']
+
+Outputs:
+  PolicyId:
+    Description: 'The unique identifier of the SCP'
+    Value: !Ref OwnerTagEnforcementPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-PolicyId'
+  
+  PolicyArn:
+    Description: 'The Amazon Resource Name (ARN) of the policy'
+    Value: !GetAtt OwnerTagEnforcementPolicy.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-PolicyArn'

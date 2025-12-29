@@ -1,0 +1,18 @@
+[
+  {
+    "ParameterKey": "PolicyName",
+    "ParameterValue": "OwnerTagPolicy"
+  },
+  {
+    "ParameterKey": "PolicyDescription",
+    "ParameterValue": "Enforce Owner tag with @example.com email format"
+  },
+  {
+    "ParameterKey": "AllowedOwnerValue",
+    "ParameterValue": "*@example.com"
+  },
+  {
+    "ParameterKey": "TargetIds",
+    "ParameterValue": ""
+  }
+]
