@@ -31,24 +31,13 @@ Parameters:
     Description: Subnet IDs for Aurora cluster (at least 2 in different AZs)
 
 Resources:
-  # Security Group for Aurora
+  # Security Group for Aurora (without inline rules to avoid circular dependency)
   AuroraSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub '${ProjectName}-${Environment}-aurora-sg'
       GroupDescription: Security group for Aurora PostgreSQL cluster
       VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          SourceSecurityGroupId: !Ref LambdaSecurityGroup
-          Description: Allow access from Lambda
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          SourceSecurityGroupId: !Ref ECSSecurityGroup
-          Description: Allow access from ECS
       Tags:
         - Key: Name
           Value: !Sub '${ProjectName}-${Environment}-aurora-sg'
@@ -57,7 +46,7 @@ Resources:
         - Key: Project
           Value: !Ref ProjectName
 
-  # Security Group for Lambda
+  # Security Group for Lambda (without inline rules to avoid circular dependency)
   LambdaSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -65,11 +54,7 @@ Resources:
       GroupDescription: Security group for Lambda functions
       VpcId: !Ref VpcId
       SecurityGroupEgress:
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          DestinationSecurityGroupId: !Ref AuroraSecurityGroup
-          Description: Allow access to Aurora
+        # Keep non-circular egress rules inline
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
@@ -83,7 +68,40 @@ Resources:
         - Key: Project
           Value: !Ref ProjectName
 
-  # Security Group for ECS
+  # Separate ingress rule for Aurora from Lambda (breaks circular dependency)
+  AuroraIngressFromLambda:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AuroraSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref LambdaSecurityGroup
+      Description: Allow access from Lambda
+
+  # Separate ingress rule for Aurora from ECS
+  AuroraIngressFromECS:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref AuroraSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref ECSSecurityGroup
+      Description: Allow access from ECS
+
+  # Separate egress rule for Lambda to Aurora (breaks circular dependency)
+  LambdaEgressToAurora:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref LambdaSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      DestinationSecurityGroupId: !Ref AuroraSecurityGroup
+      Description: Allow access to Aurora
+
+  # Security Group for ECS (without circular egress rules)
   ECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -102,11 +120,7 @@ Resources:
           CidrIp: 0.0.0.0/0
           Description: Allow HTTPS access
       SecurityGroupEgress:
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          DestinationSecurityGroupId: !Ref AuroraSecurityGroup
-          Description: Allow access to Aurora
+        # Keep non-circular egress rules inline
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
@@ -119,6 +133,17 @@ Resources:
           Value: !Ref Environment
         - Key: Project
           Value: !Ref ProjectName
+
+  # Separate egress rule for ECS to Aurora (breaks potential circular dependency)
+  ECSEgressToAurora:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref ECSSecurityGroup
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      DestinationSecurityGroupId: !Ref AuroraSecurityGroup
+      Description: Allow access to Aurora
 
   # DB Subnet Group
   DBSubnetGroup:
@@ -142,7 +167,7 @@ Resources:
       DBClusterIdentifier: !Sub '${ProjectName}-${Environment}-aurora-cluster'
       Engine: aurora-postgresql
       EngineMode: provisioned
-      EngineVersion: '15.4'
+      EngineVersion: '15.5'  # Updated from deprecated 15.4 to supported version
       DatabaseName: !Ref DatabaseName
       MasterUsername: !Ref MasterUsername
       ManageMasterUserPassword: true

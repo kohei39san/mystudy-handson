@@ -12,10 +12,6 @@ Parameters:
     Default: dev
     Description: Environment name
   
-  VpcId:
-    Type: AWS::EC2::VPC::Id
-    Description: VPC ID where Lambda will be deployed
-  
   SubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
     Description: Subnet IDs for Lambda function
@@ -78,11 +74,10 @@ Resources:
     Type: AWS::Lambda::LayerVersion
     Properties:
       LayerName: !Sub '${ProjectName}-${Environment}-dependencies'
-      Description: Dependencies for Lambda function
+      Description: Dependencies for Lambda function (psycopg2, boto3, requests)
       Content:
-        ZipFile: |
-          # This would contain psycopg2, boto3, and other dependencies
-          # In a real deployment, you would upload a proper layer zip file
+        S3Bucket: !Sub '${ProjectName}-${Environment}-lambda-layers'
+        S3Key: 'dependencies-layer.zip'
       CompatibleRuntimes:
         - python3.9
 
@@ -104,7 +99,7 @@ Resources:
         Variables:
           AURORA_SECRET_ARN: !Ref AuroraSecretArn
           API_URL: !Ref ApiUrl
-          AWS_REGION: !Ref AWS::Region
+          CURRENT_REGION: !Ref AWS::Region  # Changed from AWS_REGION to avoid reserved variable name
       Layers:
         - !Ref LambdaLayer
       Code:
