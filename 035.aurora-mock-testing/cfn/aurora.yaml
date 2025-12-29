@@ -167,7 +167,7 @@ Resources:
       DBClusterIdentifier: !Sub '${ProjectName}-${Environment}-aurora-cluster'
       Engine: aurora-postgresql
       EngineMode: provisioned
-      EngineVersion: '15.5'  # Updated from deprecated 15.4 to supported version
+      EngineVersion: '15.13'  # Updated from deprecated 15.4 to supported version
       DatabaseName: !Ref DatabaseName
       MasterUsername: !Ref MasterUsername
       ManageMasterUserPassword: true
