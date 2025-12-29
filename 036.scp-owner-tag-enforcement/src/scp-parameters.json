@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "PolicyName",
+    "ParameterValue": "EnforceOwnerTagPolicy"
+  },
+  {
+    "ParameterKey": "PolicyDescription",
+    "ParameterValue": "Deny resource creation without Owner tag"
+  },
+  {
+    "ParameterKey": "TargetIds",
+    "ParameterValue": ""
+  }
+]
