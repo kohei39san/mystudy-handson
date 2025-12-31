@@ -1,0 +1,46 @@
+apiVersion: ${CRD_GROUP}/${CRD_VERSION}
+kind: ${CRD_KIND}
+metadata:
+  name: ${RESOURCE_NAME}
+  namespace: ${RESOURCE_NAMESPACE}
+  labels:
+    app: ${RESOURCE_NAME}
+    environment: ${RESOURCE_ENVIRONMENT}
+spec:
+  url: "${RESOURCE_URL}"
+  replicas: ${RESOURCE_REPLICAS}
+  port: ${RESOURCE_PORT}
+  ssl: ${RESOURCE_SSL}
+  environment: "${RESOURCE_ENVIRONMENT}"
+status:
+  phase: "${RESOURCE_PHASE}"
+  conditions:
+  - type: "Ready"
+    status: "${RESOURCE_READY_STATUS}"
+    lastTransitionTime: "${RESOURCE_TIMESTAMP}"
+    reason: "${RESOURCE_REASON}"
+    message: "${RESOURCE_MESSAGE}"
+---
+# 複数リソース例
+apiVersion: ${CRD_GROUP}/${CRD_VERSION}
+kind: ${CRD_KIND}
+metadata:
+  name: ${RESOURCE_NAME2}
+  namespace: ${RESOURCE_NAMESPACE}
+  labels:
+    app: ${RESOURCE_NAME2}
+    environment: ${RESOURCE_ENVIRONMENT2}
+spec:
+  url: "${RESOURCE_URL2}"
+  replicas: ${RESOURCE_REPLICAS2}
+  port: ${RESOURCE_PORT2}
+  ssl: ${RESOURCE_SSL2}
+  environment: "${RESOURCE_ENVIRONMENT2}"
+status:
+  phase: "${RESOURCE_PHASE2}"
+  conditions:
+  - type: "Ready"
+    status: "${RESOURCE_READY_STATUS2}"
+    lastTransitionTime: "${RESOURCE_TIMESTAMP}"
+    reason: "${RESOURCE_REASON2}"
+    message: "${RESOURCE_MESSAGE2}"
