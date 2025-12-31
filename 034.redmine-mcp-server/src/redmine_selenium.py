@@ -136,13 +136,12 @@ class RedmineSeleniumScraper:
             
             logger.info("Successfully switched to headless mode")
     
-    def login(self, username: str, password: str) -> Dict[str, Any]:
+    def login(self) -> Dict[str, Any]:
         """
         Login to Redmine using Selenium
         
-        Args:
-            username: Redmine username
-            password: Redmine password
+        Reads credentials from environment variables REDMINE_USERNAME and REDMINE_PASSWORD.
+        If environment variables are not set, waits for user to manually input credentials.
             
         Returns:
             Dict with login status and message
@@ -158,10 +157,27 @@ class RedmineSeleniumScraper:
             self.headless_mode = False
             self.wait = WebDriverWait(self.driver, self.wait_time)
             
-            # Navigate to login page
-            self.driver.get(config.login_url)
+            # Navigate to login page with back_url parameter for redirect after login
+            from urllib.parse import urlencode, urlparse, parse_qs, urlunparse
+            parsed_url = urlparse(config.login_url)
+            query_params = parse_qs(parsed_url.query)
+            query_params['back_url'] = [config.projects_url]
+            
+            # Rebuild URL with back_url parameter
+            new_query = urlencode(query_params, doseq=True)
+            login_url_with_redirect = urlunparse((
+                parsed_url.scheme, parsed_url.netloc, parsed_url.path,
+                parsed_url.params, new_query, parsed_url.fragment
+            ))
+            
+            logger.info(f"Navigating to login page with redirect: {login_url_with_redirect}")
+            self.driver.get(login_url_with_redirect)
 
             try:
+                # Get credentials from environment variables
+                username = os.getenv('REDMINE_USERNAME')
+                password = os.getenv('REDMINE_PASSWORD')
+                
                 # Find username field
                 username_field = self.wait.until(
                     EC.presence_of_element_located((By.ID, "username"))
@@ -170,199 +186,93 @@ class RedmineSeleniumScraper:
                 # Find password field
                 password_field = self.driver.find_element(By.ID, "password")
                 
-                # Fill in credentials
-                username_field.clear()
-                username_field.send_keys(username)
-                password_field.clear()
-                password_field.send_keys(password)
-                
-                # Submit form
-                login_button = self.driver.find_element(By.ID, "login-submit")
-                login_button.click()
-                
-                logger.info("Credentials submitted, waiting for response...")
-                
-                # Wait for form submission to process
-
-                self.wait.until(
-                    lambda d: d.current_url != config.login_url
-                )
-                
-                # Wait for authentication to complete by monitoring URL changes
-                max_wait = int(os.getenv('TWOFA_WAIT', '300'))
-                start_time = time.time()
-                last_url = self.driver.current_url
-                
-                # Check if we're immediately redirected to 2FA
-
-                self.wait.until(
-                    lambda d: d.current_url != config.login_url or True
-                )
-                current_url = self.driver.current_url
-                
-                # Skip 2FA handling if configured for test environment
-                skip_2fa = config.skip_2fa
-                logger.info(f"Skip 2FA mode: {skip_2fa}")
-
-                # If SKIP_2FA is enabled for test envs, try immediate bypass by
-                # navigating to the projects page right after credentials submission.
-                # This avoids waiting the full TWOFA_WAIT when using mocked drivers
-                # that do not change URL.
-                if skip_2fa:
-                    try:
-                        logger.info("SKIP_2FA enabled: attempting immediate projects access")
-                        self.driver.get(config.projects_url)
-
-                        self.wait.until(
-                            EC.presence_of_element_located((By.TAG_NAME, "body"))
-                        )
-                        if 'login' not in self.driver.current_url.lower():
-                            self.is_authenticated = True
-                            logger.info("Bypassed 2FA via immediate projects access")
-                            # Switch to headless mode if enabled
-                            if self.auto_switch_headless:
-                                try:
-                                    self._switch_to_headless()
-                                except Exception:
-                                    logger.debug("_switch_to_headless failed during SKIP_2FA bypass")
-                            response = LoginResponse(
-                                success=True,
-                                message='Successfully logged in to Redmine (2FA bypassed)',
-                                redirect_url=self.driver.current_url
-                            )
-                            return response.model_dump()
-                    except Exception as e:
-                        logger.debug(f"SKIP_2FA immediate check failed: {e}")
-
-                if 'twofa' in current_url.lower() and not skip_2fa:
-                    logger.info("2FA page detected. Please complete authentication manually in the browser.")
+                # Fill in credentials if available from environment variables
+                if username and password:
+                    logger.info("Using credentials from environment variables")
+                    username_field.clear()
+                    username_field.send_keys(username)
+                    password_field.clear()
+                    password_field.send_keys(password)
+                    
+                    # Submit form
+                    login_button = self.driver.find_element(By.ID, "login-submit")
+                    login_button.click()
+                    
+                    logger.info("Credentials submitted, waiting for authentication to complete...")
+                else:
+                    logger.info("No credentials found in environment variables (REDMINE_USERNAME, REDMINE_PASSWORD)")
+                    logger.info("Please enter credentials manually in the browser window")
                     print("\n" + "="*60)
-                    print("TWO-FACTOR AUTHENTICATION REQUIRED")
-                    print("Please complete the 2FA process in the opened browser window.")
-                    print("The script will automatically continue once authentication is complete.")
-                    print("DO NOT CLOSE THE BROWSER WINDOW")
+                    print("MANUAL LOGIN REQUIRED")
+                    print("Environment variables REDMINE_USERNAME and REDMINE_PASSWORD not found.")
+                    print("Please enter your credentials manually in the browser window.")
                     print("="*60 + "\n")
                 
-                # Monitor URL changes without reloading the page
-                while time.time() - start_time < max_wait:
-                    try:
-                        current_url = self.driver.current_url
-                        
-                        # Check if URL changed (indicating navigation away from login/2FA)
-                        if current_url != last_url:
-                            logger.debug(f"URL changed from {last_url} to {current_url}")
-                            last_url = current_url
-                            
-                            # If we're no longer on login or 2FA page, check if we can access projects
-                            if ('login' not in current_url.lower() and 
-                                'twofa' not in current_url.lower()):
-                                
-                                # Try to navigate to projects page to verify authentication
-                                try:
-                                    self.driver.get(config.projects_url)
-
-                                    self.wait.until(
-                                        EC.presence_of_element_located((By.TAG_NAME, "body"))
-                                    )
-                                    
-                                    final_url = self.driver.current_url
-                                    
-                                    # Check if we successfully accessed projects page
-                                    if 'login' not in final_url.lower():
-                                        # Look for project content and authenticated user indicators
-                                        project_elements = self.driver.find_elements(By.CSS_SELECTOR, 
-                                            "table.projects, table.list, a[href*='/projects/'], .projects")
-                                        
-                                        # Also check for logout link or user menu (signs of authentication)
-                                        auth_elements = self.driver.find_elements(By.CSS_SELECTOR, 
-                                            "a[href*='logout'], #account, .user-menu")
-                                        
-                                        page_source = self.driver.page_source.lower()
-                                        has_project_content = (project_elements or 'projects' in page_source)
-                                        has_auth_indicators = (auth_elements or 'logout' in page_source)
-                                        
-                                        if has_project_content or has_auth_indicators:
-                                            self.is_authenticated = True
-                                            logger.info(f"Authentication successful - projects page accessible (project_elements: {len(project_elements)}, auth_elements: {len(auth_elements)})")
-                                            
-                                            # Notify user that authentication is complete
-                                            print("\n" + "="*60)
-                                            print("AUTHENTICATION SUCCESSFUL!")
-                                            print("The visible browser will now close and switch to headless mode.")
-                                            print("Processing will continue in the background...")
-                                            print("="*60 + "\n")
-                                            
-                                            # Give user a moment to see the message
-
-                                            self.wait.until(
-                                                lambda d: True
-                                            )
-                                            
-                                            # Switch to headless mode if enabled (this will close the visible browser)
-                                            if self.auto_switch_headless:
-                                                self._switch_to_headless()
-                                            
-                                            response = LoginResponse(
-                                                success=True,
-                                                message='Successfully logged in to Redmine',
-                                                redirect_url=final_url
-                                            )
-                                            return response.model_dump()
-                                except Exception as e:
-                                    logger.debug(f"Error checking projects access: {e}")
-                                    # Continue monitoring even if there's an error
-                        
-                        # Check if we're still on the same page (no navigation happened)
-                        # If 2FA is being skipped, try to proceed without waiting
-                        if skip_2fa and 'twofa' in current_url.lower():
-                            logger.info("2FA page detected but SKIP_2FA is enabled, attempting to bypass...")
-                            # Try to navigate directly to projects page
-                            try:
-                                self.driver.get(config.projects_url)
-
-                                self.wait.until(
-                                    EC.presence_of_element_located((By.TAG_NAME, "body"))
-                                )
-                                if 'login' not in self.driver.current_url.lower():
-                                    self.is_authenticated = True
-                                    logger.info("Bypassed 2FA - authenticated successfully")
-                                    if self.auto_switch_headless:
-                                        self._switch_to_headless()
-                                    response = LoginResponse(
-                                        success=True,
-                                        message='Successfully logged in to Redmine (2FA bypassed)',
-                                        redirect_url=self.driver.current_url
-                                    )
-                                    return response.model_dump()
-                            except Exception as e:
-                                logger.debug(f"Error bypassing 2FA: {e}")
-                        elif 'twofa' in current_url.lower():
-                            # Just wait, don't reload
-                            pass
-                        elif 'login' in current_url.lower():
-                            # Still on login page, might be an error or user needs to retry
-                            pass
-                    
-                    except Exception as e:
-                        logger.debug(f"Error during URL monitoring: {e}")
-                    
-                    poll_interval = int(os.getenv('POLL_INTERVAL', '2'))
-                    time.sleep(poll_interval)  # Check every N seconds
+                # Wait for authentication completion - user will handle 2FA manually
+                # Redmine will redirect to projects page or dashboard after successful auth
+                logger.info(f"Waiting for authentication completion (up to {self.wait_time} seconds)")
                 
-                # Timeout reached
-                current_url = self.driver.current_url
-                logger.warning(f"Authentication not completed within {max_wait} seconds. Final URL: {current_url}")
+                # Notify user about potential 2FA requirement
+                logger.info("If 2FA is required, please complete authentication manually in the browser.")
+                print("\n" + "="*60)
+                print("AUTHENTICATION IN PROGRESS")
+                print("If two-factor authentication is required, please complete it in the browser window.")
+                print("The script will automatically continue once authentication is complete.")
+                print("DO NOT CLOSE THE BROWSER WINDOW")
+                print("="*60 + "\n")
+                
+                # Wait until we reach the projects URL (indicating successful authentication)
+                self.wait.until(
+                    lambda d: d.current_url == config.projects_url
+                )
+                
+                # Authentication completed - verify by checking final URL
+                final_url = config.projects_url
+                logger.info(f"Authentication completed, using projects URL: {final_url}")
+                
+                self.is_authenticated = True
+                
+                # Get current user ID from page header
+                current_user_id = None
+                try:
+                    # Look for logged in user link in header
+                    user_elements = self.driver.find_elements(By.CSS_SELECTOR, "a.user.active")
+                    for elem in user_elements:
+                        href = elem.get_attribute("href")
+                        if href:
+                            user_id_match = re.search(r'/users/(\d+)', href)
+                            if user_id_match:
+                                current_user_id = user_id_match.group(1)
+                                logger.debug(f"Current user ID detected: {current_user_id}")
+                                break
+                except Exception as e:
+                    logger.debug(f"Could not detect current user ID: {e}")
+                
+                # Notify user that authentication is complete
+                print("\n" + "="*60)
+                print("AUTHENTICATION SUCCESSFUL!")
+                print("The visible browser will now close and switch to headless mode.")
+                print("Processing will continue in the background...")
+                print("="*60 + "\n")
+                
+                # Give user a moment to see the message
+                # Switch to headless mode if enabled
+                if self.auto_switch_headless:
+                    self._switch_to_headless()
+                
                 response = LoginResponse(
-                    success=False,
-                    message=f'Authentication not completed within {max_wait} seconds. Please try again.'
+                    success=True,
+                    message='Successfully logged in to Redmine',
+                    redirect_url=final_url,
+                    current_user_id=current_user_id
                 )
                 return response.model_dump()
                 
             except TimeoutException:
-                logger.error("Login form not found or page load timeout")
+                logger.error("Authentication timeout or login form not found")
                 response = LoginResponse(
                     success=False,
-                    message='Login form not found or page load timeout'
+                    message='Authentication timeout. Please check credentials and try again.'
                 )
                 return response.model_dump()
                 

@@ -33,7 +33,6 @@ from mcp.types import (
 
 # Import Pydantic schemas from separate module
 from schemas import (
-    LoginRequest,
     EmptyRequest,
     SearchIssuesRequest,
     CreateIssueRequest,
@@ -82,8 +81,8 @@ class RedmineMCPServer:
             return [
                 Tool(
                     name="redmine_login",
-                    description="Login to Redmine using username and password",
-                    inputSchema=LoginRequest.model_json_schema()
+                    description="Login to Redmine using environment variables (REDMINE_USERNAME, REDMINE_PASSWORD) or manual input",
+                    inputSchema=EmptyRequest.model_json_schema()
                 ),
                 Tool(
                     name="get_projects",
@@ -156,34 +155,67 @@ class RedmineMCPServer:
         async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             """Handle tool calls"""
             try:
+                # Define schema mapping for validation
+                schema_mapping = {
+                    "redmine_login": EmptyRequest,
+                    "get_projects": EmptyRequest,
+                    "logout": EmptyRequest,
+                    "get_server_info": EmptyRequest,
+                    "search_issues": SearchIssuesRequest,
+                    "get_issue_details": IssueIdRequest,
+                    "get_available_trackers": OptionalProjectIdRequest,
+                    "get_creation_statuses": CreationStatusesRequest,
+                    "get_available_statuses": AvailableStatusesRequest,
+                    "get_tracker_fields": TrackerFieldsRequest,
+                    "create_issue": CreateIssueRequest,
+                    "update_issue": UpdateIssueRequest,
+                    "get_project_members": ProjectIdRequest,
+                    "get_time_entries": TimeEntriesRequest,
+                }
+                
+                # Validate arguments using appropriate schema
+                if name in schema_mapping:
+                    try:
+                        validated_args = schema_mapping[name](**arguments)
+                        # Convert back to dict for handler methods
+                        validated_dict = validated_args.model_dump(exclude_none=True)
+                    except Exception as e:
+                        return [TextContent(
+                            type="text",
+                            text=f"[ERROR] Invalid arguments for {name}: {str(e)}"
+                        )]
+                else:
+                    validated_dict = arguments
+                
+                # Route to appropriate handler
                 if name == "redmine_login":
-                    return await self._handle_login(arguments)
+                    return await self._handle_login(validated_dict)
                 elif name == "get_projects":
-                    return await self._handle_get_projects(arguments)
+                    return await self._handle_get_projects(validated_dict)
                 elif name == "logout":
-                    return await self._handle_logout(arguments)
+                    return await self._handle_logout(validated_dict)
                 elif name == "get_server_info":
-                    return await self._handle_get_server_info(arguments)
+                    return await self._handle_get_server_info(validated_dict)
                 elif name == "search_issues":
-                    return await self._handle_search_issues(arguments)
+                    return await self._handle_search_issues(validated_dict)
                 elif name == "get_issue_details":
-                    return await self._handle_get_issue_details(arguments)
+                    return await self._handle_get_issue_details(validated_dict)
                 elif name == "get_available_trackers":
-                    return await self._handle_get_available_trackers(arguments)
+                    return await self._handle_get_available_trackers(validated_dict)
                 elif name == "get_creation_statuses":
-                    return await self._handle_get_creation_statuses(arguments)
+                    return await self._handle_get_creation_statuses(validated_dict)
                 elif name == "get_available_statuses":
-                    return await self._handle_get_available_statuses(arguments)
+                    return await self._handle_get_available_statuses(validated_dict)
                 elif name == "get_tracker_fields":
-                    return await self._handle_get_tracker_fields(arguments)
+                    return await self._handle_get_tracker_fields(validated_dict)
                 elif name == "create_issue":
-                    return await self._handle_create_issue(arguments)
+                    return await self._handle_create_issue(validated_dict)
                 elif name == "update_issue":
-                    return await self._handle_update_issue(arguments)
+                    return await self._handle_update_issue(validated_dict)
                 elif name == "get_project_members":
-                    return await self._handle_get_project_members(arguments)
+                    return await self._handle_get_project_members(validated_dict)
                 elif name == "get_time_entries":
-                    return await self._handle_get_time_entries(arguments)
+                    return await self._handle_get_time_entries(validated_dict)
                 else:
                     return [TextContent(
                         type="text",
@@ -198,17 +230,8 @@ class RedmineMCPServer:
     
     async def _handle_login(self, arguments: Dict[str, Any]) -> List[TextContent]:
         """Handle login tool call"""
-        username = arguments.get("username")
-        password = arguments.get("password")
-        
-        if not username or not password:
-            return [TextContent(
-                type="text",
-                text="Error: Both username and password are required"
-            )]
-        
-        logger.info(f"Login attempt for user: {username}")
-        result = self.scraper.login(username, password)
+        logger.info("Starting login process (using environment variables or manual input)")
+        result = self.scraper.login()
         
         return [TextContent(
             type="text",
@@ -281,10 +304,8 @@ class RedmineMCPServer:
                 text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
             )]
         
-        # Pass all arguments directly to scraper
-        search_params = {k: v for k, v in arguments.items() if v is not None}
-        
-        result = self.scraper.search_issues(**search_params)
+        # Arguments are already validated, pass directly to scraper
+        result = self.scraper.search_issues(**arguments)
         
         return [TextContent(
             type="text",
@@ -293,15 +314,7 @@ class RedmineMCPServer:
     
     async def _handle_get_issue_details(self, arguments: Dict[str, Any]) -> List[TextContent]:
         """Handle get issue details tool call"""
-        issue_id = arguments.get("issue_id")
-        
-        if not issue_id:
-            return [TextContent(
-                type="text",
-                text="[ERROR] Issue ID is required"
-            )]
-        
-        logger.info(f"Fetching details for issue #{issue_id}")
+        logger.info(f"Fetching details for issue #{arguments['issue_id']}")
         
         # Check if authenticated
         if not self.scraper.is_authenticated:
@@ -310,7 +323,7 @@ class RedmineMCPServer:
                 text="[ERROR] Not authenticated. Please login first using the redmine_login tool."
             )]
         
-        result = self.scraper.get_issue_details(issue_id)
+        result = self.scraper.get_issue_details(arguments['issue_id'])
         
         return [TextContent(
             type="text",
