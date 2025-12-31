@@ -8,12 +8,6 @@ from typing import Optional, List, Any, Dict
 
 
 # Request schemas (used for inputSchema)
-class LoginRequest(BaseModel):
-    """Login request schema"""
-    username: str = Field(description="Redmine username")
-    password: str = Field(description="Redmine password")
-
-
 class EmptyRequest(BaseModel):
     """Base model for tools that don't require parameters"""
     pass
@@ -94,6 +88,7 @@ class LoginResponse(BaseModel):
     success: bool
     message: str
     redirect_url: Optional[str] = None
+    current_user_id: Optional[str] = None
 
 
 class ProjectInfo(BaseModel):
