@@ -1,0 +1,92 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: ${CRD_PLURAL}.${CRD_GROUP}
+spec:
+  group: ${CRD_GROUP}
+  versions:
+  - name: ${CRD_VERSION}
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              url:
+                type: string
+                description: "${CRD_KIND}のURL"
+              replicas:
+                type: integer
+                minimum: 1
+                maximum: 10
+                default: 1
+                description: "レプリカ数"
+              port:
+                type: integer
+                minimum: 80
+                maximum: 65535
+                default: 80
+                description: "ポート番号"
+              ssl:
+                type: boolean
+                default: false
+                description: "SSL有効化"
+              environment:
+                type: string
+                enum: ["development", "staging", "production"]
+                default: "development"
+                description: "環境設定"
+          status:
+            type: object
+            properties:
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    reason:
+                      type: string
+                    message:
+                      type: string
+              phase:
+                type: string
+                enum: ["Pending", "Running", "Failed"]
+    additionalPrinterColumns:
+    - name: URL
+      type: string
+      jsonPath: .spec.url
+    - name: Replicas
+      type: integer
+      jsonPath: .spec.replicas
+    - name: Port
+      type: integer
+      jsonPath: .spec.port
+    - name: SSL
+      type: boolean
+      jsonPath: .spec.ssl
+    - name: Environment
+      type: string
+      jsonPath: .spec.environment
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+  scope: ${CRD_SCOPE}
+  names:
+    plural: ${CRD_PLURAL}
+    singular: ${CRD_SINGULAR}
+    kind: ${CRD_KIND}
+    shortNames:
+    - ${CRD_SHORT_NAME}

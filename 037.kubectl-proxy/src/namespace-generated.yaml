@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hoge
+  labels:
+    environment: production
+    managed-by: "kubectl-proxy-demo"
+  annotations:
+    description: "CRDテスト用の名前空間"
+    created-by: "kubectl-proxy"
+    creation-date: "2025-12-31T08:00:00Z"

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ${RESOURCE_NAMESPACE}
+  labels:
+    environment: ${RESOURCE_ENVIRONMENT}
+    managed-by: "kubectl-proxy-demo"
+  annotations:
+    description: "CRDテスト用の名前空間"
+    created-by: "kubectl-proxy"
+    creation-date: "${RESOURCE_TIMESTAMP}"

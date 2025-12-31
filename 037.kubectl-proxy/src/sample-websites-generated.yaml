@@ -1,0 +1,46 @@
+apiVersion: example.com/v1
+kind: Website
+metadata:
+  name: sample-website
+  namespace: hoge
+  labels:
+    app: sample-website
+    environment: production
+spec:
+  url: "https://example.com"
+  replicas: 3
+  port: 443
+  ssl: true
+  environment: "production"
+status:
+  phase: "Running"
+  conditions:
+  - type: "Ready"
+    status: "True"
+    lastTransitionTime: "2025-12-31T08:00:00Z"
+    reason: "WebsiteReady"
+    message: "Website"
+---
+# 複数リソース例
+apiVersion: example.com/v1
+kind: Website
+metadata:
+  name: test-website
+  namespace: hoge
+  labels:
+    app: test-website
+    environment: development
+spec:
+  url: "http://test.local"
+  replicas: 1
+  port: 80
+  ssl: false
+  environment: "development"
+status:
+  phase: "Pending"
+  conditions:
+  - type: "Ready"
+    status: "False"
+    lastTransitionTime: "2025-12-31T08:00:00Z"
+    reason: "WebsitePending"
+    message: "Website"

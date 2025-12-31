@@ -1,0 +1,45 @@
+version: '3.8'
+
+# Windows + Docker Desktop Kubernetes用kubectl proxy
+services:
+  kubectl-proxy:
+    image: bitnami/kubectl:latest
+    container_name: kubectl-proxy
+    entrypoint: ["/bin/sh"]
+    command: ["/scripts/start-proxy.sh"]
+    ports:
+      - "${PROXY_PORT:-8001}:${PROXY_PORT:-8001}"
+    volumes:
+      # Windows環境のkubeconfigをマウント
+      - "C:\\Users\\user\\.kube\\config:/original-kubeconfig:ro"
+      # スクリプトファイルをマウント
+      - "./scripts:/scripts:ro"
+      # YAMLファイル（CRD定義とサンプル）をマウント
+      - "./src:/src"
+      # .envファイルをマウント（存在する場合）
+      - "./.env:/.env:ro"
+    #tmpfs:
+      # kubeconfigディレクトリを一時ファイルシステムに作成（書き込み可能）
+    #  - ${KUBECONFIG_DIR:-/tmp/.kube}:size=10m,uid=0,gid=0
+    environment:
+      - KUBECONFIG_DIR=${KUBECONFIG_DIR:-/tmp/.kube}
+      - KUBECONFIG=${KUBECONFIG_DIR:-/tmp/.kube}/config
+      # kubectl proxy設定
+      - PROXY_ADDRESS=${PROXY_ADDRESS:-0.0.0.0}
+      - PROXY_PORT=${PROXY_PORT:-8001}
+      - ACCEPT_HOSTS=${ACCEPT_HOSTS:-.*}
+      - LOG_LEVEL=${LOG_LEVEL:-2}
+      # Kubernetes接続設定
+      - K8S_ORIGINAL_SERVER=${K8S_ORIGINAL_SERVER:-https://127.0.0.1:55420}
+      - K8S_TARGET_SERVER=${K8S_TARGET_SERVER:-https://host.docker.internal:55420}
+      - INSECURE_SKIP_TLS=${INSECURE_SKIP_TLS:-true}
+    restart: unless-stopped
+    # Docker Desktop環境でのホスト接続を可能にする
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "kubectl", "cluster-info", "--request-timeout=5s"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
