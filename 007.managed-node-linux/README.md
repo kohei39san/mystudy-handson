@@ -1,6 +1,8 @@
-# Linux Managed Node Setup
+# Linux マネージドノード設定
 
-This Terraform configuration creates a Linux EC2 instance managed by AWS Systems Manager with monitoring capabilities, with the following resources:
+このTerraform構成は、AWS Systems Managerで管理されるLinux EC2インスタンスを監視機能付きで作成します。以下のリソースが含まれています：
+
+![アーキテクチャ図](src/architecture.svg)
 
 ## Resource Configuration
 
@@ -30,9 +32,5 @@ This Terraform configuration creates a Linux EC2 instance managed by AWS Systems
 ## Usage
 
 Follow the instructions in the main README.md file to deploy this configuration.
-
+この構成をデプロイするには、メインのREADME.mdに記載されている手順に従ってください。
 After deployment, you can:
-1. Manage this Linux instance through AWS Systems Manager
-2. Monitor the instance using Amazon CloudWatch
-3. Monitor the instance using Zabbix (requires a Zabbix server configuration)
-4. Access the instance via SSH using the key pair if required
