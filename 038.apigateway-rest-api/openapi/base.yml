@@ -34,6 +34,8 @@ paths:
                 required:
                   - status
                   - timestamp
+  - name: Users
+    description: User management operations
                   - service
                 properties:
                   status:
