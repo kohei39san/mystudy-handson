@@ -1,0 +1,184 @@
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      x-amazon-apigateway-authtype: awsIam
+
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - created_at
+      properties:
+        id:
+          type: string
+          description: ユーザーの一意識別子
+          example: "12345"
+        name:
+          type: string
+          description: ユーザー名
+          minLength: 1
+          maxLength: 100
+          example: "田中太郎"
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+          example: "tanaka@example.com"
+        created_at:
+          type: string
+          format: date-time
+          description: 作成日時（ISO 8601形式）
+          example: "2024-01-01T00:00:00Z"
+
+    CreateUserRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          description: ユーザー名
+          minLength: 1
+          maxLength: 100
+          example: "田中太郎"
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+          example: "tanaka@example.com"
+
+    UserListResponse:
+      type: object
+      required:
+        - users
+        - pagination
+        - timestamp
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+          description: ユーザーリスト
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        timestamp:
+          type: string
+          format: date-time
+          description: レスポンス生成時刻
+          example: "2024-01-01T00:00:00Z"
+
+    UserResponse:
+      type: object
+      required:
+        - user
+        - timestamp
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        timestamp:
+          type: string
+          format: date-time
+          description: レスポンス生成時刻
+          example: "2024-01-01T00:00:00Z"
+
+    CreateUserResponse:
+      type: object
+      required:
+        - message
+        - user
+        - timestamp
+      properties:
+        message:
+          type: string
+          description: 処理結果メッセージ
+          example: "User created successfully"
+        user:
+          $ref: '#/components/schemas/User'
+        timestamp:
+          type: string
+          format: date-time
+          description: レスポンス生成時刻
+          example: "2024-01-01T00:00:00Z"
+
+    Pagination:
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: 1ページあたりの件数
+          example: 10
+        offset:
+          type: integer
+          minimum: 0
+          description: オフセット
+          example: 0
+        total:
+          type: integer
+          minimum: 0
+          description: 総件数
+          example: 100
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - service
+        - version
+        - environment
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: サービスの状態
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          description: ヘルスチェック実行時刻
+          example: "2024-01-01T00:00:00Z"
+        service:
+          type: string
+          description: サービス名
+          example: "apigateway-rest-api"
+        version:
+          type: string
+          description: APIバージョン
+          example: "1.0.0"
+        environment:
+          type: string
+          description: 実行環境
+          example: "dev"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: エラーメッセージ
+          example: "Bad Request"
+        details:
+          type: string
+          description: エラー詳細
+          example: "Invalid parameter value"
+        timestamp:
+          type: string
+          format: date-time
+          description: エラー発生時刻
+          example: "2024-01-01T00:00:00Z"

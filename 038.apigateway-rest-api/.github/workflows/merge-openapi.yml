@@ -1,0 +1,67 @@
+name: Merge OpenAPI Specification
+
+on:
+  push:
+    paths:
+      - '038.apigateway-rest-api/openapi/**/*.yml'
+      - '038.apigateway-rest-api/scripts/merge-openapi.py'
+  pull_request:
+    paths:
+      - '038.apigateway-rest-api/openapi/**/*.yml'
+      - '038.apigateway-rest-api/scripts/merge-openapi.py'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge-openapi:
+    name: Merge OpenAPI Files
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          cd 038.apigateway-rest-api
+          pip install -r scripts/requirements.txt
+
+      - name: Merge OpenAPI files
+        run: |
+          cd 038.apigateway-rest-api
+          python scripts/merge-openapi.py \
+            --openapi-dir openapi \
+            --output openapi.yml
+
+      - name: Validate merged OpenAPI
+        run: |
+          cd 038.apigateway-rest-api
+          python -c "
+          import yaml
+          import sys
+          try:
+              with open('openapi.yml', 'r') as f:
+                  yaml.safe_load(f)
+              print('✅ OpenAPI validation successful')
+          except Exception as e:
+              print(f'❌ OpenAPI validation failed: {e}')
+              sys.exit(1)
+          "
+
+      - name: Commit merged OpenAPI file
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'Auto-merge OpenAPI specification files'
+          file_pattern: '038.apigateway-rest-api/openapi.yml'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'

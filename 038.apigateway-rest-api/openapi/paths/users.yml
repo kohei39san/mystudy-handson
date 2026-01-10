@@ -1,0 +1,209 @@
+paths:
+  /users:
+    get:
+      summary: ユーザー一覧取得
+      description: |
+        登録されているユーザーの一覧を取得します。
+        ページネーション機能により、大量のデータも効率的に取得できます。
+      operationId: getUsers
+      tags:
+        - Users
+      parameters:
+        - name: limit
+          in: query
+          description: 1ページあたりの取得件数
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+        - name: offset
+          in: query
+          description: 取得開始位置のオフセット
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+      responses:
+        '200':
+          description: ユーザー一覧の取得に成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+              example:
+                users:
+                  - id: "1"
+                    name: "田中太郎"
+                    email: "tanaka@example.com"
+                    created_at: "2024-01-01T00:00:00Z"
+                  - id: "2"
+                    name: "佐藤花子"
+                    email: "sato@example.com"
+                    created_at: "2024-01-02T00:00:00Z"
+                pagination:
+                  limit: 10
+                  offset: 0
+                  total: 100
+                timestamp: "2024-01-01T00:00:00Z"
+        '400':
+          description: リクエストパラメータが不正
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 認証が必要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-request-validator: params-only
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "arn:aws:apigateway:{{AWS_REGION}}:lambda:path/2015-03-31/functions/{{BACKEND_LAMBDA_ARN}}/invocations"
+        credentials: "{{API_GATEWAY_ROLE_ARN}}"
+        passthroughBehavior: when_no_match
+        contentHandling: CONVERT_TO_TEXT
+        timeoutInMillis: 29000
+
+    post:
+      summary: ユーザー作成
+      description: |
+        新しいユーザーを作成します。
+        名前とメールアドレスは必須項目です。
+      operationId: createUser
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            example:
+              name: "田中太郎"
+              email: "tanaka@example.com"
+      responses:
+        '201':
+          description: ユーザーの作成に成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUserResponse'
+              example:
+                message: "User created successfully"
+                user:
+                  id: "12345"
+                  name: "田中太郎"
+                  email: "tanaka@example.com"
+                  created_at: "2024-01-01T00:00:00Z"
+                timestamp: "2024-01-01T00:00:00Z"
+        '400':
+          description: リクエストボディが不正
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 認証が必要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: ユーザーが既に存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-request-validator: all
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "arn:aws:apigateway:{{AWS_REGION}}:lambda:path/2015-03-31/functions/{{BACKEND_LAMBDA_ARN}}/invocations"
+        credentials: "{{API_GATEWAY_ROLE_ARN}}"
+        passthroughBehavior: when_no_match
+        contentHandling: CONVERT_TO_TEXT
+        timeoutInMillis: 29000
+
+  /users/{id}:
+    get:
+      summary: 特定ユーザー取得
+      description: |
+        指定されたIDのユーザー情報を取得します。
+      operationId: getUserById
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: path
+          description: ユーザーID
+          required: true
+          schema:
+            type: string
+          example: "12345"
+      responses:
+        '200':
+          description: ユーザー情報の取得に成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              example:
+                user:
+                  id: "12345"
+                  name: "田中太郎"
+                  email: "tanaka@example.com"
+                  created_at: "2024-01-01T00:00:00Z"
+                timestamp: "2024-01-01T00:00:00Z"
+        '400':
+          description: ユーザーIDが不正
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 認証が必要
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-request-validator: params-only
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "arn:aws:apigateway:{{AWS_REGION}}:lambda:path/2015-03-31/functions/{{BACKEND_LAMBDA_ARN}}/invocations"
+        credentials: "{{API_GATEWAY_ROLE_ARN}}"
+        passthroughBehavior: when_no_match
+        contentHandling: CONVERT_TO_TEXT
+        timeoutInMillis: 29000
