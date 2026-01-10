@@ -1,0 +1,275 @@
+openapi: 3.0.1
+info:
+  title: Simple REST API
+  description: A simple REST API with basic CRUD operations and health check
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.example.com/dev
+    description: Development server
+  - url: https://api.example.com/prod
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Returns the health status of the API
+      operationId: getHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - timestamp
+                  - service
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T00:00:00Z"
+                  service:
+                    type: string
+                    example: "api-gateway-rest-api"
+                  requestId:
+                    type: string
+                    example: "12345678-1234-1234-1234-123456789012"
+        '500':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /info:
+    get:
+      summary: Get API information
+      description: Returns basic information about the API
+      operationId: getInfo
+      tags:
+        - Information
+      responses:
+        '200':
+          description: API information retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                  - version
+                  - environment
+                properties:
+                  message:
+                    type: string
+                    example: "API Gateway REST API Demo"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  environment:
+                    type: string
+                    example: "dev"
+                  project:
+                    type: string
+                    example: "apigateway-rest-api"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  requestId:
+                    type: string
+
+  /data:
+    get:
+      summary: Get data items
+      description: Retrieve a list of data items
+      operationId: getData
+      tags:
+        - Data
+      parameters:
+        - name: limit
+          in: query
+          description: Number of items to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: offset
+          in: query
+          description: Number of items to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                  - data
+                  - count
+                properties:
+                  message:
+                    type: string
+                    example: "Data retrieved successfully"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DataItem'
+                  count:
+                    type: integer
+                    example: 2
+                  timestamp:
+                    type: string
+                    format: date-time
+                  requestId:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create data item
+      description: Create a new data item
+      operationId: createData
+      tags:
+        - Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - value
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  example: "sample"
+                value:
+                  type: string
+                  maxLength: 500
+                  example: "test"
+                description:
+                  type: string
+                  maxLength: 200
+                  example: "Sample data item"
+      responses:
+        '201':
+          description: Data created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                  - id
+                properties:
+                  message:
+                    type: string
+                    example: "Data created successfully"
+                  id:
+                    type: string
+                    example: "sample-12345678-1234-1234-1234-123456789012"
+                  data:
+                    $ref: '#/components/schemas/DataItem'
+                  timestamp:
+                    type: string
+                    format: date-time
+                  requestId:
+                    type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    DataItem:
+      type: object
+      required:
+        - id
+        - name
+        - value
+      properties:
+        id:
+          type: string
+          example: "sample-1"
+        name:
+          type: string
+          example: "Sample Item 1"
+        value:
+          type: string
+          example: "test-value-1"
+        description:
+          type: string
+          example: "Sample data item description"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          example: "Bad Request"
+        message:
+          type: string
+          example: "Invalid request parameters"
+        code:
+          type: string
+          example: "INVALID_PARAMETER"
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+
+tags:
+  - name: Health
+    description: Health check operations
+  - name: Information
+    description: API information operations
+  - name: Data
+    description: Data management operations
