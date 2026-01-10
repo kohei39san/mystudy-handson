@@ -2,6 +2,8 @@
 
 このプロジェクトは、Aurora PostgreSQL、Secrets Manager、ECS、Lambdaを使用したシステムのモックテストを実装します。
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 構成
 
 ### CloudFormation リソース

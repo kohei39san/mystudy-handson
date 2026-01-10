@@ -8,15 +8,31 @@
 # 概要
 
 勉強で使った基盤はEC2とTerraformで作りました。
-使い方を記載します。
+このリポジトリには、AWS、OCI、Kubernetesなどの様々なクラウドインフラストラクチャのサンプル構成が含まれています。
+各ディレクトリには、対応するインフラストラクチャのTerraformコード、CloudFormationテンプレート、またはその他の設定ファイルが含まれています。
 
 # フォルダ構成
 
-* xxx(数字).yyy: 検証に応じたTerraformファイルが入っています。
-* scripts: 検証で使用したスクリプトを格納しています。
-* docs: 検証のメモを格納しています。
-* src: terraform以外のマニフェストファイルを格納しています。
-* wsl-old: 過去WSL環境で使用したソースファイルを格納しています
+## インフラストラクチャディレクトリ
+
+各番号付きディレクトリには、特定のインフラストラクチャ構成が含まれています：
+
+* **001-037**: 各種インフラストラクチャのサンプル構成
+  * AWS EC2、RDS、Lambda、EKS等のTerraform構成
+  * OCI Object Storage、Budget等のTerraform構成  
+  * CloudFormationテンプレート
+  * Ansible Playbook
+  * Kubernetesマニフェスト
+
+## 共通ディレクトリ
+
+* **scripts**: 検証で使用したスクリプトを格納しています
+* **src**: テンプレートファイルやその他の共通リソースを格納しています
+  * `aws-template.drawio`: AWSアーキテクチャ図のテンプレート
+  * `oci-template.drawio`: OCIアーキテクチャ図のテンプレート
+* **wsl-old**: 過去WSL環境で使用したソースファイルを格納しています
+
+各インフラストラクチャディレクトリには、対応するアーキテクチャ図（`src/architecture.drawio`）とREADME.mdファイルが含まれています。
 
 # 使い方
 
