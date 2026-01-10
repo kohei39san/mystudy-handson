@@ -2,8 +2,6 @@
 
 このTerraformコードは、Oracle Cloud Infrastructure (OCI) で予算アラート機能を実装します。指定した予算額を超えた場合に、指定したメールアドレスに通知を送信します。
 
-![アーキテクチャ図](src/architecture.svg)
-
 ## 概要
 
 このモジュールは以下のリソースを作成します：
