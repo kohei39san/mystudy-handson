@@ -1,0 +1,25 @@
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Simple health check endpoint without authentication
+      tags:
+        - "Health"
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "{{BackendLambdaUri}}"
+        credentials: "{{ApiGatewayRole}}"

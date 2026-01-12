@@ -3,12 +3,12 @@ name: Merge OpenAPI Specification
 on:
   push:
     paths:
-      - '038.apigateway-rest-api/openapi/**/*.yml'
-      - '038.apigateway-rest-api/scripts/merge-openapi.py'
+      - '033.apigateway-openapi-cognito-auth/openapi/**/*.yml'
+      - '033.apigateway-openapi-cognito-auth/scripts/merge-openapi.py'
   pull_request:
     paths:
-      - '038.apigateway-rest-api/openapi/**/*.yml'
-      - '038.apigateway-rest-api/scripts/merge-openapi.py'
+      - '033.apigateway-openapi-cognito-auth/openapi/**/*.yml'
+      - '033.apigateway-openapi-cognito-auth/scripts/merge-openapi.py'
 
 permissions:
   contents: write
@@ -33,24 +33,24 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd 038.apigateway-rest-api
+          cd 033.apigateway-openapi-cognito-auth
           pip install -r scripts/requirements.txt
 
       - name: Merge OpenAPI files
         run: |
-          cd 038.apigateway-rest-api
+          cd 033.apigateway-openapi-cognito-auth
           python scripts/merge-openapi.py \
             --openapi-dir openapi \
-            --output openapi.yml
+            --output src/openapi-merged.yaml
 
       - name: Validate merged OpenAPI
         run: |
-          cd 038.apigateway-rest-api
+          cd 033.apigateway-openapi-cognito-auth
           python -c "
           import yaml
           import sys
           try:
-              with open('openapi.yml', 'r') as f:
+              with open('src/openapi-merged.yaml', 'r') as f:
                   yaml.safe_load(f)
               print('✅ OpenAPI validation successful')
           except Exception as e:
@@ -62,6 +62,6 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'Auto-merge OpenAPI specification files'
-          file_pattern: '038.apigateway-rest-api/openapi.yml'
+          file_pattern: '033.apigateway-openapi-cognito-auth/src/openapi-merged.yaml'
           commit_user_name: 'github-actions[bot]'
           commit_user_email: 'github-actions[bot]@users.noreply.github.com'

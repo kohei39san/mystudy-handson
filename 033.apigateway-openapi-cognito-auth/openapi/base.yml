@@ -1,0 +1,29 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI Cognito Auth API
+  description: API Gateway with OpenAPI specification, Cognito authentication, and Lambda authorizer
+  version: 1.0.0
+
+components:
+  securitySchemes:
+    CognitoUserPool:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: cognito_user_pools
+      x-amazon-apigateway-authorizer:
+        type: cognito_user_pools
+        providerARNs:
+          - "{{CognitoUserPoolArn}}"
+    
+    LambdaAuthorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: custom
+      x-amazon-apigateway-authorizer:
+        type: request
+        authorizerUri: "{{LambdaAuthorizerUri}}"
+        authorizerCredentials: "{{ApiGatewayRole}}"
+        authorizerResultTtlInSeconds: 300
+        identitySource: "method.request.header.Authorization"

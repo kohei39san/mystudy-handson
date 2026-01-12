@@ -19,7 +19,6 @@ import re
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-# ログ設定
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -28,19 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 def load_yaml_file(file_path: Path) -> Dict[str, Any]:
-    """
-    YAMLファイルを読み込む
-    
-    Args:
-        file_path: YAMLファイルのパス
-        
-    Returns:
-        読み込んだYAMLデータ
-        
-    Raises:
-        FileNotFoundError: ファイルが見つからない場合
-        yaml.YAMLError: YAML解析エラーの場合
-    """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
@@ -53,16 +39,6 @@ def load_yaml_file(file_path: Path) -> Dict[str, Any]:
 
 
 def merge_dict_recursive(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    辞書を再帰的にマージする
-    
-    Args:
-        base: ベースとなる辞書
-        update: マージする辞書
-        
-    Returns:
-        マージされた辞書
-    """
     result = base.copy()
     
     for key, value in update.items():
@@ -75,16 +51,6 @@ def merge_dict_recursive(base: Dict[str, Any], update: Dict[str, Any]) -> Dict[s
 
 
 def replace_placeholders(content: str, replacements: Dict[str, str]) -> str:
-    """
-    文字列内のプレースホルダーを置換する
-    
-    Args:
-        content: 置換対象の文字列
-        replacements: 置換マップ（プレースホルダー名 -> 置換値）
-        
-    Returns:
-        置換後の文字列
-    """
     for placeholder, value in replacements.items():
         pattern = r'\{\{' + re.escape(placeholder) + r'\}\}'
         content = re.sub(pattern, value, content)
@@ -97,17 +63,8 @@ def merge_openapi_files(
     output_file: Path, 
     replacements: Optional[Dict[str, str]] = None
 ) -> None:
-    """
-    OpenAPI仕様書ファイルをマージする
-    
-    Args:
-        openapi_dir: OpenAPIファイルが格納されているディレクトリ
-        output_file: 出力ファイルのパス
-        replacements: プレースホルダー置換マップ
-    """
     logger.info("OpenAPI仕様書のマージを開始します")
     
-    # ベースファイルを読み込み
     base_file = openapi_dir / "base.yml"
     if not base_file.exists():
         raise FileNotFoundError(f"ベースファイルが見つかりません: {base_file}")
@@ -115,7 +72,6 @@ def merge_openapi_files(
     logger.info(f"ベースファイルを読み込み: {base_file}")
     merged_spec = load_yaml_file(base_file)
     
-    # コンポーネントファイルをマージ
     components_dir = openapi_dir / "components"
     if components_dir.exists():
         logger.info("コンポーネントファイルをマージ中...")
@@ -124,7 +80,6 @@ def merge_openapi_files(
             component_data = load_yaml_file(component_file)
             merged_spec = merge_dict_recursive(merged_spec, component_data)
     
-    # パスファイルをマージ
     paths_dir = openapi_dir / "paths"
     if paths_dir.exists():
         logger.info("パスファイルをマージ中...")
@@ -133,7 +88,6 @@ def merge_openapi_files(
             path_data = load_yaml_file(path_file)
             merged_spec = merge_dict_recursive(merged_spec, path_data)
     
-    # マージされた仕様書をYAML文字列に変換
     yaml_content = yaml.dump(
         merged_spec,
         default_flow_style=False,
@@ -142,14 +96,12 @@ def merge_openapi_files(
         indent=2
     )
     
-    # プレースホルダーを置換
     if replacements:
         logger.info("プレースホルダーを置換中...")
         for placeholder, value in replacements.items():
             logger.info(f"  - {placeholder} -> {value}")
         yaml_content = replace_placeholders(yaml_content, replacements)
     
-    # 出力ファイルに書き込み
     logger.info(f"マージされた仕様書を出力: {output_file}")
     output_file.parent.mkdir(parents=True, exist_ok=True)
     
@@ -160,19 +112,13 @@ def merge_openapi_files(
 
 
 def load_replacements_from_env() -> Dict[str, str]:
-    """
-    環境変数からプレースホルダー置換マップを作成する
-    
-    Returns:
-        置換マップ
-    """
     replacements = {}
     
-    # 環境変数から値を取得
     env_mappings = {
-        'AWS_REGION': 'AWS_REGION',
-        'BACKEND_LAMBDA_ARN': 'BACKEND_LAMBDA_ARN',
-        'API_GATEWAY_ROLE_ARN': 'API_GATEWAY_ROLE_ARN'
+        'CognitoUserPoolArn': 'COGNITO_USER_POOL_ARN',
+        'LambdaAuthorizerUri': 'LAMBDA_AUTHORIZER_URI',
+        'BackendLambdaUri': 'BACKEND_LAMBDA_URI',
+        'ApiGatewayRole': 'API_GATEWAY_ROLE_ARN'
     }
     
     for placeholder, env_var in env_mappings.items():
@@ -185,7 +131,6 @@ def load_replacements_from_env() -> Dict[str, str]:
 
 
 def main():
-    """メイン関数"""
     parser = argparse.ArgumentParser(
         description="OpenAPI仕様書マージスクリプト",
         formatter_class=argparse.RawDescriptionHelpFormatter
@@ -201,8 +146,8 @@ def main():
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("openapi.yml"),
-        help="出力ファイルのパス (デフォルト: openapi.yml)"
+        default=Path("src/openapi-merged.yaml"),
+        help="出力ファイルのパス (デフォルト: src/openapi-merged.yaml)"
     )
     
     parser.add_argument(
@@ -214,7 +159,6 @@ def main():
     args = parser.parse_args()
     
     try:
-        # プレースホルダー置換マップを準備
         replacements = None
         if args.replace_placeholders:
             replacements = load_replacements_from_env()

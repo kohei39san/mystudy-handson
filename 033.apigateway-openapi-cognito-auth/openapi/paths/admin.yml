@@ -1,0 +1,73 @@
+paths:
+  /admin:
+    post:
+      summary: Admin-only endpoint
+      description: Endpoint accessible only by users with admin role
+      tags:
+        - "Admin Operations"
+      security:
+        - CognitoUserPool: []
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [create, update, delete]
+          description: Action to perform
+        - name: target
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "default"
+          description: Target resource
+        - name: priority
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 5
+          description: Priority level
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminResponse'
+        '403':
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "{{BackendLambdaUri}}"
+        credentials: "{{ApiGatewayRole}}"
+        requestParameters:
+          integration.request.querystring.action: "method.request.querystring.action"
+          integration.request.querystring.target: "method.request.querystring.target"
+          integration.request.querystring.priority: "method.request.querystring.priority"

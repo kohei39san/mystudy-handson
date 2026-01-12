@@ -4,6 +4,11 @@
 
 このプロジェクトは、OpenAPI定義書を使用してAPI Gatewayを構築し、Cognito認証とLambdaオーソライザーによる役割ベースのアクセス制御を実装します。
 
+**038.apigateway-rest-apiの機能を統合済み：**
+- OpenAPI仕様書の分割管理システム
+- Python マージスクリプト
+- GitHub Actions 自動マージワークフロー
+
 ## アーキテクチャ
 
 ### 主要コンポーネント
@@ -37,13 +42,28 @@
 ├── README.md
 ├── cfn/
 │   └── infrastructure.yaml      # CloudFormationテンプレート
+├── openapi/                     # OpenAPI分割管理（NEW）
+│   ├── base.yml                 # ベース定義
+│   ├── components/
+│   │   └── schemas.yml          # スキーマ定義
+│   └── paths/
+│       ├── admin.yml            # 管理者エンドポイント
+│       ├── user.yml             # ユーザーエンドポイント
+│       ├── public.yml           # 公開エンドポイント
+│       └── health.yml           # ヘルスチェック
 ├── src/
-│   ├── openapi-spec.yaml        # OpenAPI仕様
+│   ├── openapi-spec.yaml        # OpenAPI仕様（レガシー）
+│   ├── openapi-merged.yaml      # マージ済みOpenAPI仕様（自動生成）
 │   └── users.csv                # ユーザーインポート用CSV
-└── scripts/
-    ├── deploy.ps1               # デプロイスクリプト（PowerShell）
-    ├── test-api-simple.py       # 簡易APIテスト
-    └── test-cognito-auth.py     # Cognito認証テスト
+├── scripts/
+│   ├── deploy.ps1               # デプロイスクリプト（PowerShell）
+│   ├── merge-openapi.py         # OpenAPIマージスクリプト（NEW）
+│   ├── requirements.txt         # Python依存関係（NEW）
+│   ├── test-api-simple.py       # 簡易APIテスト
+│   └── test-cognito-auth.py     # Cognito認証テスト
+└── .github/
+    └── workflows/
+        └── merge-openapi.yml    # 自動マージワークフロー（NEW）
 ```
 
 ## デプロイ手順
@@ -55,17 +75,35 @@
 
 ### 2. デプロイ実行
 
+#### 方法1: OpenAPI分割管理を使用（推奨）
+
+```powershell
+cd 033.apigateway-openapi-cognito-auth
+
+# Python依存関係のインストール
+pip install -r scripts\requirements.txt
+
+# OpenAPI仕様書をマージ
+python scripts\merge-openapi.py --openapi-dir openapi --output src\openapi-merged.yaml
+
+# デプロイ（自動的にマージされたファイルを使用）
+powershell -ExecutionPolicy Bypass -File "scripts\deploy.ps1"
+```
+
+#### 方法2: レガシーOpenAPI仕様を使用
+
 ```powershell
 cd 033.apigateway-openapi-cognito-auth
 powershell -ExecutionPolicy Bypass -File "scripts\deploy.ps1"
 ```
 
-このスクリプトは以下を自動実行します：
-1. CloudFormationスタックのデプロイ
-2. CSVファイルからユーザーをインポート（ランダムパスワード生成）
-3. OpenAPI仕様ファイルのプレースホルダー置換
-4. API GatewayへのOpenAPI仕様インポート
-5. APIのデプロイ
+デプロイスクリプトは以下を自動実行します：
+1. OpenAPIファイルのマージ（openapi/ディレクトリが存在する場合）
+2. CloudFormationスタックのデプロイ
+3. CSVファイルからユーザーをインポート（ランダムパスワード生成）
+4. OpenAPI仕様ファイルのプレースホルダー置換
+5. API GatewayへのOpenAPI仕様インポート
+6. APIのデプロイ
 
 ### 3. APIテスト
 
@@ -117,6 +155,48 @@ OpenAPI定義書内でAPI Gatewayのパラメータマッピング機能を使�
 2. **デフォルト値の設定**: 未指定パラメータへのデフォルト値適用
 3. **型変換**: 文字列から数値への変換
 4. **Lambda統合**: マッピングされたパラメータをLambdaに渡す
+
+## OpenAPI仕様書の分割管理
+
+### ファイル構成
+
+- **base.yml**: OpenAPIの基本情報、セキュリティ定義
+- **components/schemas.yml**: データモデルとスキーマ定義
+- **paths/admin.yml**: 管理者エンドポイントの定義
+- **paths/user.yml**: ユーザーエンドポイントの定義
+- **paths/public.yml**: 公開エンドポイントの定義
+- **paths/health.yml**: ヘルスチェックエンドポイントの定義
+
+### プレースホルダーシステム
+
+OpenAPIファイル内では以下のプレースホルダーを使用：
+- `{{CognitoUserPoolArn}}`: Cognito User Pool ARN
+- `{{LambdaAuthorizerUri}}`: Lambda Authorizer URI
+- `{{BackendLambdaUri}}`: Backend Lambda URI
+- `{{ApiGatewayRole}}`: API Gateway実行ロールARN
+
+マージスクリプトまたはデプロイスクリプトが自動的に置換します。
+
+### 手動マージ
+
+```powershell
+# 基本的なマージ（プレースホルダーはそのまま）
+python scripts\merge-openapi.py
+
+# 環境変数からプレースホルダーを置換してマージ
+$env:COGNITO_USER_POOL_ARN = "arn:aws:cognito-idp:..."
+$env:LAMBDA_AUTHORIZER_URI = "arn:aws:apigateway:..."
+$env:BACKEND_LAMBDA_URI = "arn:aws:apigateway:..."
+$env:API_GATEWAY_ROLE_ARN = "arn:aws:iam::..."
+python scripts\merge-openapi.py --replace-placeholders
+```
+
+### 自動マージ（GitHub Actions）
+
+GitHub Actionsワークフローが以下の場合に自動実行されます：
+- `openapi/**/*.yml` ファイルの変更時
+- `scripts/merge-openapi.py` の変更時
+- マージされた `src/openapi-merged.yaml` ファイルを自動コミット
 
 ## セキュリティ考慮事項
 

@@ -1,0 +1,68 @@
+paths:
+  /user:
+    get:
+      summary: User endpoint
+      description: Endpoint accessible by users with user or admin role
+      tags:
+        - "User Operations"
+      security:
+        - CognitoUserPool: []
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          description: Filter criteria
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Number of items to return
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of items to skip
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDataResponse'
+        '403':
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "{{BackendLambdaUri}}"
+        credentials: "{{ApiGatewayRole}}"
+        requestParameters:
+          integration.request.querystring.filter: "method.request.querystring.filter"
+          integration.request.querystring.limit: "method.request.querystring.limit"
+          integration.request.querystring.offset: "method.request.querystring.offset"
