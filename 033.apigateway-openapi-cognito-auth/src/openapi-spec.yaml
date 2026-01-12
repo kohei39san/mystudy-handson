@@ -337,3 +337,163 @@ paths:
         httpMethod: POST
         uri: "${BackendLambdaUri}"
         credentials: "${ApiGatewayRole}"
+
+  /auth/revoke:
+    post:
+      summary: Revoke user tokens
+      description: Revoke all Cognito-issued tokens for a specified user (admin only)
+      tags:
+        - "Authentication"
+      security:
+        - CognitoUserPool: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+              properties:
+                username:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+                  pattern: '^[a-zA-Z0-9_.-]+$'
+                  description: Username of the user whose tokens should be revoked
+                  example: "john.doe"
+            examples:
+              revoke_user_tokens:
+                summary: Revoke tokens for a user
+                value:
+                  username: "john.doe"
+      responses:
+        '200':
+          description: Tokens revoked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                  - username
+                  - timestamp
+                  - operation
+                properties:
+                  message:
+                    type: string
+                    example: "Tokens revoked successfully"
+                  username:
+                    type: string
+                    example: "john.doe"
+                  timestamp:
+                    type: string
+                    description: Request ID for tracking
+                  operation:
+                    type: string
+                    example: "AdminUserGlobalSignOut"
+        '400':
+          description: Bad Request - Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                  - message
+                properties:
+                  error:
+                    type: string
+                    example: "Bad Request"
+                  message:
+                    type: string
+                    example: "Username is required"
+        '403':
+          description: Forbidden - Admin role required
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                  - message
+                properties:
+                  error:
+                    type: string
+                    example: "Forbidden"
+                  message:
+                    type: string
+                    example: "Admin role required for token revocation"
+        '404':
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                  - message
+                properties:
+                  error:
+                    type: string
+                    example: "User Not Found"
+                  message:
+                    type: string
+                    example: "User john.doe does not exist"
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                  - message
+                properties:
+                  error:
+                    type: string
+                    example: "Internal Server Error"
+                  message:
+                    type: string
+                    example: "Failed to revoke tokens"
+                  request_id:
+                    type: string
+                    description: Request ID for debugging
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "${RevokeTokenLambdaUri}"
+        credentials: "${ApiGatewayRole}"
+    get:
+      summary: Health check endpoint
+      description: Simple health check endpoint without authentication
+      tags:
+        - "Admin Operations"
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - timestamp
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  service:
+                    type: string
+                    example: "openapi-cognito-auth-api"
+        '500':
+          description: Service is unhealthy
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "${BackendLambdaUri}"
+        credentials: "${ApiGatewayRole}"
