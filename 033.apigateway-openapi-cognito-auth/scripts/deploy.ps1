@@ -275,6 +275,9 @@ Write-Host "2. Test Cognito authentication:"
 Write-Host "   python scripts\test-cognito-auth.py"
 Write-Host ""
 
+Write-Host "3. Test revoke API (admin only):"
+Write-Host "   python src\test-revoke-api.py --endpoint $ApiEndpoint --username <target_username>"
+Write-Host ""
 Write-Host "✓ Deployment completed successfully!" -ForegroundColor Green
 
 # Return outputs for use in other scripts

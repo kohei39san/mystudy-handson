@@ -1,0 +1,58 @@
+paths:
+  /auth/revoke:
+    post:
+      summary: Revoke user tokens
+      description: Admin-only endpoint to revoke all tokens for a specific user
+      tags:
+        - "Authentication"
+      security:
+        - LambdaAuthorizer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeRequest'
+            example:
+              username: "testuser"
+      responses:
+        '200':
+          description: Tokens revoked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeResponse'
+              example:
+                message: "Tokens revoked successfully"
+                username: "testuser"
+                timestamp: "12345678-1234-1234-1234-123456789012"
+                operation: "AdminUserGlobalSignOut"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "{{RevokeTokenLambdaUri}}"
+        credentials: "{{ApiGatewayRole}}"

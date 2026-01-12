@@ -118,7 +118,8 @@ def load_replacements_from_env() -> Dict[str, str]:
         'CognitoUserPoolArn': 'COGNITO_USER_POOL_ARN',
         'LambdaAuthorizerUri': 'LAMBDA_AUTHORIZER_URI',
         'BackendLambdaUri': 'BACKEND_LAMBDA_URI',
-        'ApiGatewayRole': 'API_GATEWAY_ROLE_ARN'
+        'ApiGatewayRole': 'API_GATEWAY_ROLE_ARN',
+        'RevokeTokenLambdaUri': 'REVOKE_TOKEN_LAMBDA_URI'
     }
     
     for placeholder, env_var in env_mappings.items():
