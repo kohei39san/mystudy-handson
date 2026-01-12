@@ -77,6 +77,37 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
+  # IAM Role for Revoke Token Lambda
+  RevokeTokenLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-revoke-token-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CognitoRevokeTokenPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminUserGlobalSignOut
+                  - cognito-idp:AdminGetUser
+                Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*"
+
   # IAM Role for API Gateway to invoke Lambda
   ApiGatewayRole:
     Type: AWS::IAM::Role
@@ -262,7 +293,8 @@ Resources:
                       '/admin': ['admin'],
                       '/user': ['admin', 'user'],
                       '/public': ['admin', 'user', 'anonymous'],
-                      '/health': []  # No role requirement
+                      '/health': [],  # No role requirement
+                      '/auth/revoke': ['admin']  # Admin only for token revocation
                   }
                   
                   # Check if user has required role
@@ -292,7 +324,6 @@ Resources:
                           'userRole': user_role,
                           'userId': token_data.get('sub', 'unknown') if 'token_data' in locals() else 'unknown',
                           'username': token_data.get('cognito:username', 'unknown') if 'token_data' in locals() else 'unknown'
-                      }
                   }
                   
                   logger.info(f"Generated policy: {json.dumps(policy, indent=2)}")
@@ -493,6 +524,244 @@ Resources:
         - Key: Project
           Value: !Ref ProjectName
 
+  # Revoke Token Lambda Function
+  RevokeTokenLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-revoke-token-${Environment}"
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt RevokeTokenLambdaRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+          import logging
+          import boto3
+          from botocore.exceptions import ClientError
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+          cognito_client = boto3.client('cognito-idp')
+
+          def lambda_handler(event, context):
+              """
+              Lambda function to revoke Cognito-issued tokens by performing AdminUserGlobalSignOut
+              """
+              try:
+                  logger.info("=== Revoke Token Lambda Triggered ===")
+                  logger.info(json.dumps(event, indent=2, default=str))
+                  
+                  # Extract request body
+                  body = event.get('body')
+                  if not body:
+                      return {
+                          'statusCode': 400,
+                          'headers': {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          'body': json.dumps({
+                              'error': 'Bad Request',
+                              'message': 'Request body is required'
+                          })
+                      }
+                  
+                  # Parse JSON body
+                  try:
+                      request_data = json.loads(body)
+                      username = request_data.get('username')
+                  except json.JSONDecodeError:
+                      return {
+                          'statusCode': 400,
+                          'headers': {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          'body': json.dumps({
+                              'error': 'Bad Request',
+                              'message': 'Invalid JSON in request body'
+                          })
+                      }
+                  
+                  if not username:
+                      return {
+                          'statusCode': 400,
+                          'headers': {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          'body': json.dumps({
+                              'error': 'Bad Request',
+                              'message': 'Username is required'
+                          })
+                      }
+                  
+                  # Get user pool ID from environment or extract from context
+                  # For this implementation, we'll extract from the Cognito authorizer context
+                  authorizer_context = event.get('requestContext', {}).get('authorizer', {})
+                  user_pool_id = None
+                  
+                  # Try to get user pool ID from token context or use a default approach
+                  # In a real implementation, you might pass this as an environment variable
+                  # For now, we'll need to get it from the Cognito User Pool ARN in the token
+                  
+                  # Extract user pool ID from the authorization token
+                  headers = event.get('headers', {})
+                  auth_header = headers.get('Authorization', '') or headers.get('authorization', '')
+                  
+                  if auth_header.startswith('Bearer '):
+                      token = auth_header[7:]
+                      try:
+                          import base64
+                          # Decode JWT payload to get iss (issuer) which contains user pool ID
+                          token_parts = token.split('.')
+                          if len(token_parts) >= 2:
+                              payload = token_parts[1]
+                              payload += '=' * (4 - len(payload) % 4)
+                              decoded_payload = base64.b64decode(payload)
+                              token_data = json.loads(decoded_payload)
+                              iss = token_data.get('iss', '')
+                              # Extract user pool ID from issuer URL
+                              # Format: https://cognito-idp.region.amazonaws.com/user_pool_id
+                              if '/us-' in iss or '/ap-' in iss or '/eu-' in iss or '/ca-' in iss or '/sa-' in iss:
+                                  user_pool_id = iss.split('/')[-1]
+                      except Exception as e:
+                          logger.error(f"Error extracting user pool ID from token: {str(e)}")
+                  
+                  if not user_pool_id:
+                      return {
+                          'statusCode': 500,
+                          'headers': {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          'body': json.dumps({
+                              'error': 'Internal Server Error',
+                              'message': 'Unable to determine user pool ID'
+                          })
+                      }
+                  
+                  logger.info(f"Attempting to revoke tokens for user: {username} in pool: {user_pool_id}")
+                  
+                  # First, check if user exists
+                  try:
+                      cognito_client.admin_get_user(
+                          UserPoolId=user_pool_id,
+                          Username=username
+                      )
+                  except ClientError as e:
+                      error_code = e.response['Error']['Code']
+                      if error_code == 'UserNotFoundException':
+                          return {
+                              'statusCode': 404,
+                              'headers': {
+                                  'Content-Type': 'application/json',
+                                  'Access-Control-Allow-Origin': '*'
+                              },
+                              'body': json.dumps({
+                                  'error': 'User Not Found',
+                                  'message': f'User {username} does not exist'
+                              })
+                          }
+                      else:
+                          logger.error(f"Error checking user existence: {str(e)}")
+                          return {
+                              'statusCode': 500,
+                              'headers': {
+                                  'Content-Type': 'application/json',
+                                  'Access-Control-Allow-Origin': '*'
+                              },
+                              'body': json.dumps({
+                                  'error': 'Internal Server Error',
+                                  'message': 'Error verifying user'
+                              })
+                          }
+                  
+                  # Perform global sign out to revoke all tokens
+                  try:
+                      cognito_client.admin_user_global_sign_out(
+                          UserPoolId=user_pool_id,
+                          Username=username
+                      )
+                      
+                      logger.info(f"Successfully revoked all tokens for user: {username}")
+                      
+                      return {
+                          'statusCode': 200,
+                          'headers': {
+                              'Content-Type': 'application/json',
+                              'Access-Control-Allow-Origin': '*'
+                          },
+                          'body': json.dumps({
+                              'message': 'Tokens revoked successfully',
+                              'username': username,
+                              'timestamp': context.aws_request_id,
+                              'operation': 'AdminUserGlobalSignOut'
+                          })
+                      }
+                      
+                  except ClientError as e:
+                      error_code = e.response['Error']['Code']
+                      logger.error(f"Error revoking tokens: {error_code} - {str(e)}")
+                      
+                      if error_code == 'UserNotFoundException':
+                          return {
+                              'statusCode': 404,
+                              'headers': {
+                                  'Content-Type': 'application/json',
+                                  'Access-Control-Allow-Origin': '*'
+                              },
+                              'body': json.dumps({
+                                  'error': 'User Not Found',
+                                  'message': f'User {username} does not exist'
+                              })
+                          }
+                      elif error_code == 'NotAuthorizedException':
+                          return {
+                              'statusCode': 403,
+                              'headers': {
+                                  'Content-Type': 'application/json',
+                                  'Access-Control-Allow-Origin': '*'
+                              },
+                              'body': json.dumps({
+                                  'error': 'Forbidden',
+                                  'message': 'Insufficient permissions to revoke tokens'
+                              })
+                          }
+                      else:
+                          return {
+                              'statusCode': 500,
+                              'headers': {
+                                  'Content-Type': 'application/json',
+                                  'Access-Control-Allow-Origin': '*'
+                              },
+                              'body': json.dumps({
+                                  'error': 'Internal Server Error',
+                                  'message': 'Failed to revoke tokens'
+                              })
+                          }
+              
+              except Exception as e:
+                  logger.error(f"Unexpected error in revoke token lambda: {str(e)}")
+                  return {
+                      'statusCode': 500,
+                      'headers': {
+                          'Content-Type': 'application/json',
+                          'Access-Control-Allow-Origin': '*'
+                      },
+                      'body': json.dumps({
+                          'error': 'Internal Server Error',
+                          'message': 'An unexpected error occurred',
+                          'request_id': context.aws_request_id
+                      })
+                  }
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
   # ===== Lambda Permissions =====
   
   # Permission for Cognito to invoke PreTokenGeneration Lambda
@@ -517,6 +786,15 @@ Resources:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref BackendLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
+
+  # Permission for API Gateway to invoke Revoke Token Lambda
+  RevokeTokenLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RevokeTokenLambda
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
@@ -661,6 +939,12 @@ Outputs:
       Name: !Sub "${AWS::StackName}-ApiGatewayRestApiId"
 
   ApiGatewayEndpoint:
+
+  RevokeTokenLambdaArn:
+    Description: Revoke Token Lambda Function ARN
+    Value: !GetAtt RevokeTokenLambda.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-RevokeTokenLambdaArn"
     Description: API Gateway Endpoint URL
     Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
     Export:
