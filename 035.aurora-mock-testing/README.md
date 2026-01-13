@@ -30,6 +30,8 @@
 ├── variables.tf              # Terraform 変数定義
 ├── outputs.tf                # Terraform 出力定義
 ├── provider.tf               # Terraform プロバイダー設定
+├── requirements.txt          # 開発用依存関係
+├── requirements-layer.txt    # Lambda レイヤー用依存関係
 ├── cfn/                      # CloudFormation テンプレート
 │   ├── aurora.yaml
 │   ├── secrets-manager.yaml
@@ -37,7 +39,11 @@
 │   └── lambda.yaml
 ├── scripts/                  # スクリプトファイル
 │   ├── deploy.sh
-│   └── lambda_function.py
+│   ├── lambda_function.py
+│   ├── lambda_function_original.py
+│   ├── custom_utils.py       # Lambda レイヤー用カスタムスクリプト
+│   ├── build_layer.ps1       # レイヤービルドスクリプト
+│   └── test_layer.ps1        # レイヤーテストスクリプト
 └── tests/                    # 単体テストファイル
     ├── test_lambda_function.py
     └── conftest.py
@@ -61,7 +67,55 @@
 
 ## テスト実行
 
+### 単体テスト
+
 ```bash
 cd tests/
 pytest test_lambda_function.py -v
+```
+
+### Lambda レイヤーテスト
+
+カスタムスクリプトをLambdaレイヤーに含めて動作確認するテストです。
+
+#### レイヤーのビルド
+
+```powershell
+# カスタムスクリプトのみ（依存関係なし）
+.\scripts\build_layer.ps1
+
+# 依存関係を含める場合
+.\scripts\build_layer.ps1 -IncludeDependencies
+```
+
+#### Lambda関数の作成とテスト
+
+```powershell
+# カスタムスクリプトのみでテスト
+.\scripts\test_layer.ps1
+
+# 依存関係を含めてテスト
+.\scripts\test_layer.ps1 -IncludeDependencies
+```
+
+このスクリプトは以下を実行します：
+1. Lambda レイヤーをビルド（custom_utils.pyを含む）
+2. Lambda 関数パッケージを作成
+3. IAMロールを作成
+4. レイヤーをAWSに公開
+5. Lambda関数を作成（レイヤーをアタッチ）
+6. 関数を実行してimportを確認
+
+#### カスタムスクリプト（custom_utils.py）
+
+レイヤーに含まれるユーティリティ関数：
+- `format_response(status, data)`: APIレスポンスのフォーマット
+- `validate_config(config)`: 設定の検証
+
+#### リソースの削除
+
+```powershell
+aws lambda delete-function --function-name test-layer-import --region ap-northeast-1
+aws lambda delete-layer-version --layer-name test-layer-import-layer --version-number <VERSION> --region ap-northeast-1
+aws iam delete-role --role-name test-layer-import-role
 ```
