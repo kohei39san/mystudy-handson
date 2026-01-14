@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Lambda Layer with pydantic and psycopg2-binary for Python 3.13 testing'
+
+Parameters:
+  LayerZipKey:
+    Type: String
+    Default: 'lambda-layers/pydantic-psycopg2-layer.zip'
+    Description: 'S3 key for the Lambda layer ZIP file'
+  
+  S3Bucket:
+    Type: String
+    Description: 'S3 bucket containing the Lambda layer ZIP file'
+    Default: 'your-lambda-layers-bucket'
+
+Resources:
+  # IAM Role for Lambda functions
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-lambda-execution-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+
+  # Lambda Layer
+  PydanticPsycopg2Layer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: !Sub '${AWS::StackName}-pydantic-psycopg2-layer'
+      Description: 'Pydantic and psycopg2-binary layer for Python 3.13'
+      Content:
+        S3Bucket: !Ref S3Bucket
+        S3Key: !Ref LayerZipKey
+      CompatibleRuntimes:
+        - python3.13
+      CompatibleArchitectures:
+        - x86_64
+
+  # Test Lambda Function
+  TestLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-layer-test-function'
+      Description: 'Test function for pydantic and psycopg2-binary layer'
+      Runtime: python3.13
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Layers:
+        - !Ref PydanticPsycopg2Layer
+      Code:
+        S3Bucket: !Ref S3Bucket
+        S3Key: lambda-function.zip
+
+  # CloudWatch Log Group
+  TestLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${TestLambdaFunction}'
+      RetentionInDays: 7
+
+Outputs:
+  LayerArn:
+    Description: 'ARN of the created Lambda layer'
+    Value: !Ref PydanticPsycopg2Layer
+    Export:
+      Name: !Sub '${AWS::StackName}-layer-arn'
+  
+  TestFunctionName:
+    Description: 'Name of the test Lambda function'
+    Value: !Ref TestLambdaFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-test-function-name'
+  
+  TestFunctionArn:
+    Description: 'ARN of the test Lambda function'
+    Value: !GetAtt TestLambdaFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-test-function-arn'
