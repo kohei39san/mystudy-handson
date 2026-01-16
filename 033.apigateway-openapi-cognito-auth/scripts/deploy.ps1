@@ -34,6 +34,7 @@ Write-Host "Project Directory: $ProjectDir" -ForegroundColor Yellow
 # Validate required files exist
 $CfnTemplate = Join-Path $ProjectDir "cfn\infrastructure.yaml"
 $OpenApiSpec = Join-Path $ProjectDir "src\openapi-spec.yaml"
+$OpenApiMerged = Join-Path $ProjectDir "src\openapi-merged.yaml"
 $UsersCSV = Join-Path $ProjectDir "src\users.csv"
 
 if (-not (Test-Path $CfnTemplate)) {
@@ -186,6 +187,28 @@ Write-Host "`n=== Generated User Credentials ===" -ForegroundColor Cyan
 $userCredentials | Format-Table -AutoSize
 Write-Host "IMPORTANT: Save these credentials securely. They will not be shown again." -ForegroundColor Yellow
 
+# Merge OpenAPI files if openapi directory exists
+if (Test-Path (Join-Path $ProjectDir "openapi")) {
+    Write-Host "`nMerging OpenAPI specification files..." -ForegroundColor Yellow
+    
+    # Check if Python is available
+    $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonCmd) {
+        Push-Location $ProjectDir
+        python scripts\merge-openapi.py --openapi-dir openapi --output src\openapi-merged.yaml
+        Pop-Location
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] OpenAPI files merged successfully" -ForegroundColor Green
+            $OpenApiSpec = $OpenApiMerged
+        } else {
+            Write-Host "[WARNING] Failed to merge OpenAPI files, using existing spec" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[WARNING] Python not found, using existing OpenAPI spec" -ForegroundColor Yellow
+    }
+}
+
 # Import OpenAPI specification
 Write-Host "`nImporting OpenAPI specification..." -ForegroundColor Yellow
 
@@ -193,6 +216,11 @@ $OpenApiSpecProcessed = Join-Path $env:TEMP "openapi-spec-processed.yaml"
 $OpenApiContent = Get-Content $OpenApiSpec -Raw
 
 # Replace placeholders in OpenAPI spec
+$OpenApiContent = $OpenApiContent -replace '\{\{CognitoUserPoolArn\}\}', $UserPoolArn
+$OpenApiContent = $OpenApiContent -replace '\{\{LambdaAuthorizerUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaArn}/invocations"
+$OpenApiContent = $OpenApiContent -replace '\{\{BackendLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${BackendLambdaArn}/invocations"
+$OpenApiContent = $OpenApiContent -replace '\{\{ApiGatewayRole\}\}', $ApiGatewayRoleArn
+# Legacy placeholder support
 $OpenApiContent = $OpenApiContent -replace '\$\{CognitoUserPoolArn\}', $UserPoolArn
 $OpenApiContent = $OpenApiContent -replace '\$\{LambdaAuthorizerUri\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\$\{BackendLambdaUri\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${BackendLambdaArn}/invocations"
@@ -247,6 +275,9 @@ Write-Host "2. Test Cognito authentication:"
 Write-Host "   python scripts\test-cognito-auth.py"
 Write-Host ""
 
+Write-Host "3. Test revoke API (admin only):"
+Write-Host "   python src\test-revoke-api.py --endpoint $ApiEndpoint --username <target_username>"
+Write-Host ""
 Write-Host "✓ Deployment completed successfully!" -ForegroundColor Green
 
 # Return outputs for use in other scripts

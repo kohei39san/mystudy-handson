@@ -1,0 +1,58 @@
+paths:
+  /public:
+    get:
+      summary: Public endpoint
+      description: Endpoint accessible by any authenticated user
+      tags:
+        - "Public Operations"
+      security:
+        - CognitoUserPool: []
+      parameters:
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [json, xml, csv]
+            default: json
+          description: Response format
+        - name: include_metadata
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Include metadata in response
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "{{BackendLambdaUri}}"
+        credentials: "{{ApiGatewayRole}}"
+        requestParameters:
+          integration.request.querystring.format: "method.request.querystring.format"
+          integration.request.querystring.include_metadata: "method.request.querystring.include_metadata"

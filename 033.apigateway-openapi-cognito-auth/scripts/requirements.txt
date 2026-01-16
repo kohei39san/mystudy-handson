@@ -1,0 +1,3 @@
+# Python dependencies for OpenAPI merge script
+PyYAML>=6.0
+pathlib2>=2.3.7; python_version < '3.4'

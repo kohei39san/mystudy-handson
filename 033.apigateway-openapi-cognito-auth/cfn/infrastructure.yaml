@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: 2010-09-09
 Description: 'API Gateway with OpenAPI specification, Cognito authentication, and Lambda authorizer'
 
 Parameters:
@@ -938,13 +938,13 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-ApiGatewayRestApiId"
 
-  ApiGatewayEndpoint:
-
   RevokeTokenLambdaArn:
     Description: Revoke Token Lambda Function ARN
     Value: !GetAtt RevokeTokenLambda.Arn
     Export:
       Name: !Sub "${AWS::StackName}-RevokeTokenLambdaArn"
+
+  ApiGatewayEndpoint:
     Description: API Gateway Endpoint URL
     Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
     Export:
