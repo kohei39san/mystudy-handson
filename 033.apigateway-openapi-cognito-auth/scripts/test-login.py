@@ -27,7 +27,10 @@ def test_login(api_endpoint, username, password):
         }
         
         print(f"\nPOST {url}")
-        print(f"Request Body: {json.dumps(payload, indent=2)}")
+        safe_payload = dict(payload)
+        if 'password' in safe_payload:
+            safe_payload['password'] = '***REDACTED***'
+        print(f"Request Body (redacted): {json.dumps(safe_payload, indent=2)}")
         
         response = requests.post(url, json=payload, timeout=10)
         
