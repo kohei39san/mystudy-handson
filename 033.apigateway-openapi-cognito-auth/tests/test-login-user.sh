@@ -11,8 +11,7 @@ ADMIN_USERNAME="${ADMIN_USERNAME:-adminuser}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
 # Options
-VERBOSE=false
-URLENCODE=false
+URLENCODE=true
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -72,7 +71,7 @@ test_endpoint() {
   echo -e "Description: ${description}"
   echo ""
   
-  local curl_cmd="curl -s -i -w '\n%{http_code}' -X $method '$API_ENDPOINT$endpoint'"
+  local curl_cmd="curl -s -v -w '\n%{http_code}' -X $method '$API_ENDPOINT$endpoint'"
   
   if [ -n "$token" ]; then
     curl_cmd="$curl_cmd -H 'Authorization: Bearer $token'"
@@ -93,14 +92,8 @@ test_endpoint() {
       -H "Authorization: Bearer $token" 2>&1)
   fi
   
-  # Extract HTTP status (last line)
-  local http_code=$(echo "$response" | tail -1)
-  # Get response without the last line (HTTP code)
-  local body=$(echo "$response" | head -n -1)
-  
-  echo "$body"
+  echo "$response"
   echo "---"
-  echo "HTTP Status: $http_code"
 }
 
 # Authenticate a user and return the bearer token
@@ -153,7 +146,6 @@ print_header "API Integration Test"
 echo "API Endpoint: $API_ENDPOINT"
 echo "Test User: $TEST_USERNAME"
 echo "Admin User: $ADMIN_USERNAME"
-echo "Verbose Mode: $VERBOSE"
 echo "URL Encode: $URLENCODE"
 
 # Test endpoints with test user
