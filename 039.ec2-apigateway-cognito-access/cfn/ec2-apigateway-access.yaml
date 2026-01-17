@@ -1,0 +1,303 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'EC2 instance (AL2023) with network access to API Gateway and Cognito authentication tools'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: 'ec2-apigateway-access'
+    Description: 'Environment name for resource naming'
+
+  InstanceType:
+    Type: String
+    Default: 't3.micro'
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: 'EC2 instance type'
+
+  KeyPairName:
+    Type: String
+    Default: ''
+    Description: 'Optional EC2 Key Pair name for SSH access (leave empty for SSM-only access)'
+
+  AllowedSSHCidr:
+    Type: String
+    Default: '0.0.0.0/0'
+    Description: 'CIDR block allowed for SSH access (only used if KeyPairName is provided)'
+
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+    Description: 'Latest Amazon Linux 2023 AMI ID'
+
+Conditions:
+  HasKeyPair: !Not [!Equals [!Ref KeyPairName, '']]
+
+Resources:
+  # VPC Configuration
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-vpc'
+
+  # Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-igw'
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  # Public Subnet for EC2
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-subnet'
+
+  # Route Table for Public Subnet
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-public-routes'
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+
+  # Security Group for EC2
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${EnvironmentName}-ec2-sg'
+      GroupDescription: 'Security group for EC2 instance with API Gateway access'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - !If
+          - HasKeyPair
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: !Ref AllowedSSHCidr
+            Description: 'SSH access'
+          - !Ref 'AWS::NoValue'
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: 'HTTPS outbound for API Gateway and AWS services'
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: 'HTTP outbound for package updates'
+        - IpProtocol: tcp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: 0.0.0.0/0
+          Description: 'DNS TCP'
+        - IpProtocol: udp
+          FromPort: 53
+          ToPort: 53
+          CidrIp: 0.0.0.0/0
+          Description: 'DNS UDP'
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-ec2-sg'
+
+  # IAM Role for EC2
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${EnvironmentName}-ec2-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: CognitoApiAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminInitiateAuth
+                  - cognito-idp:AdminRespondToAuthChallenge
+                  - cognito-idp:InitiateAuth
+                  - cognito-idp:RespondToAuthChallenge
+                  - cognito-idp:GetUser
+                  - cognito-idp:ListUsers
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogStreams
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub '${EnvironmentName}-ec2-profile'
+      Roles:
+        - !Ref EC2Role
+
+  # EC2 Instance
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !If [HasKeyPair, !Ref KeyPairName, !Ref 'AWS::NoValue']
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      SubnetId: !Ref PublicSubnet
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          
+          # Install required packages
+          yum install -y curl jq git
+          
+          # Install AWS CLI v2 (if not already installed)
+          if ! command -v aws &> /dev/null; then
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            ./aws/install
+            rm -rf aws awscliv2.zip
+          fi
+          
+          # Create directory for scripts
+          mkdir -p /home/ec2-user/cognito-api-tools
+          cd /home/ec2-user/cognito-api-tools
+          
+          # Create the Cognito API test script
+          cat > /home/ec2-user/cognito-api-tools/cognito-api-test.sh << 'SCRIPT_EOF'
+          #!/bin/bash
+          
+          # This script will be populated by the separate script file
+          echo "Cognito API test script placeholder"
+          echo "Please use the full script from the repository"
+          
+          SCRIPT_EOF
+          
+          # Create environment template
+          cat > /home/ec2-user/cognito-api-tools/config.env.template << 'ENV_EOF'
+          # Cognito Configuration
+          COGNITO_USER_POOL_ID="your-user-pool-id"
+          COGNITO_CLIENT_ID="your-client-id"
+          COGNITO_REGION="us-east-1"
+          
+          # API Gateway Configuration
+          API_GATEWAY_URL="https://your-api-id.execute-api.region.amazonaws.com/stage"
+          
+          # User Credentials
+          COGNITO_USERNAME="your-email@example.com"
+          COGNITO_PASSWORD="your-password"
+          
+          # Optional: Custom headers
+          CUSTOM_HEADERS=""
+          
+          ENV_EOF
+          
+          # Create README
+          cat > /home/ec2-user/cognito-api-tools/README.md << 'README_EOF'
+          # Cognito API Testing Tools
+          
+          This directory contains tools for testing API Gateway endpoints with Cognito authentication.
+          
+          ## Setup
+          1. Copy config.env.template to config.env
+          2. Update config.env with your actual values
+          3. Run: ./cognito-api-test.sh
+          
+          ## Files
+          - cognito-api-test.sh: Main testing script
+          - config.env.template: Configuration template
+          - config.env: Your actual configuration (create from template)
+          
+          README_EOF
+          
+          # Set permissions
+          chmod +x /home/ec2-user/cognito-api-tools/cognito-api-test.sh
+          chown -R ec2-user:ec2-user /home/ec2-user/cognito-api-tools
+          
+          # Install and start SSM agent (should be pre-installed on Amazon Linux 2023)
+          systemctl enable amazon-ssm-agent
+          systemctl start amazon-ssm-agent
+          
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-ec2'
+
+Outputs:
+  VPCId:
+    Description: 'VPC ID'
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${EnvironmentName}-vpc-id'
+
+  EC2InstanceId:
+    Description: 'EC2 Instance ID'
+    Value: !Ref EC2Instance
+    Export:
+      Name: !Sub '${EnvironmentName}-ec2-id'
+
+  EC2PublicIP:
+    Description: 'EC2 Instance Public IP'
+    Value: !GetAtt EC2Instance.PublicIp
+    Export:
+      Name: !Sub '${EnvironmentName}-ec2-public-ip'
+
+  SSMConnectCommand:
+    Description: 'Command to connect to EC2 via Systems Manager'
+    Value: !Sub 'aws ssm start-session --target ${EC2Instance} --region ${AWS::Region}'
+
+  SSHConnectCommand:
+    Condition: HasKeyPair
+    Description: 'Command to connect to EC2 via SSH'
+    Value: !Sub 'ssh -i ${KeyPairName}.pem ec2-user@${EC2Instance.PublicIp}'
+
+  ToolsDirectory:
+    Description: 'Directory containing Cognito API testing tools'
+    Value: '/home/ec2-user/cognito-api-tools'

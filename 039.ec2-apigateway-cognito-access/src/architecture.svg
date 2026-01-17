@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <defs>
+    <style>
+      .vpc { fill: #dae8fc; stroke: #6c8ebf; stroke-width: 2; }
+      .subnet { fill: #e1d5e7; stroke: #9673a6; stroke-width: 2; }
+      .ec2 { fill: #fff2cc; stroke: #d6b656; stroke-width: 2; }
+      .aws-service { fill: #d5e8d4; stroke: #82b366; stroke-width: 2; }
+      .security { fill: #ffe6cc; stroke: #d79b00; stroke-width: 2; }
+      .gateway { fill: #f8cecc; stroke: #b85450; stroke-width: 2; }
+      .text { font-family: Arial, sans-serif; font-size: 12px; text-anchor: middle; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; text-anchor: middle; }
+      .arrow { stroke: #666666; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#666666" />
+    </marker>
+  </defs>
+  
+  <!-- VPC -->
+  <rect x="50" y="80" width="700" height="350" rx="10" class="vpc"/>
+  <text x="400" y="100" class="title">VPC (10.0.0.0/16)</text>
+  
+  <!-- Public Subnet -->
+  <rect x="80" y="120" width="250" height="280" rx="5" class="subnet"/>
+  <text x="205" y="140" class="text">Public Subnet (10.0.1.0/24)</text>
+  
+  <!-- EC2 Instance -->
+  <rect x="100" y="160" width="180" height="100" rx="5" class="ec2"/>
+  <text x="190" y="180" class="text">EC2 Instance</text>
+  <text x="190" y="195" class="text">(Amazon Linux 2023)</text>
+  <text x="190" y="215" class="text">• AWS CLI</text>
+  <text x="190" y="230" class="text">• Cognito Auth Script</text>
+  <text x="190" y="245" class="text">• API Testing Tools</text>
+  
+  <!-- Internet Gateway -->
+  <rect x="400" y="100" width="120" height="40" rx="5" class="gateway"/>
+  <text x="460" y="125" class="text">Internet Gateway</text>
+  
+  <!-- AWS Cognito -->
+  <rect x="580" y="160" width="120" height="60" rx="5" class="aws-service"/>
+  <text x="640" y="185" class="text">AWS Cognito</text>
+  <text x="640" y="200" class="text">User Pool</text>
+  
+  <!-- API Gateway -->
+  <rect x="580" y="260" width="120" height="60" rx="5" class="aws-service"/>
+  <text x="640" y="285" class="text">API Gateway</text>
+  <text x="640" y="300" class="text">REST API</text>
+  
+  <!-- Security Group -->
+  <rect x="100" y="280" width="180" height="80" rx="5" class="security"/>
+  <text x="190" y="300" class="text">Security Group</text>
+  <text x="190" y="315" class="text">• Outbound HTTPS (443)</text>
+  <text x="190" y="330" class="text">• Optional SSH (22)</text>
+  
+  <!-- IAM Role -->
+  <rect x="400" y="280" width="120" height="80" rx="5" class="security"/>
+  <text x="460" y="300" class="text">IAM Role</text>
+  <text x="460" y="315" class="text">• Cognito Access</text>
+  <text x="460" y="330" class="text">• CloudWatch Logs</text>
+  <text x="460" y="345" class="text">• SSM Access</text>
+  
+  <!-- Arrows -->
+  <line x1="280" y1="190" x2="580" y2="190" class="arrow"/>
+  <text x="430" y="185" class="text" style="font-size: 10px;">1. Authenticate</text>
+  
+  <line x1="280" y1="220" x2="580" y2="290" class="arrow"/>
+  <text x="430" y="260" class="text" style="font-size: 10px;">2. API Calls</text>
+  
+  <line x1="190" y1="160" x2="460" y2="140" class="arrow"/>
+  <text x="325" y="145" class="text" style="font-size: 10px;">Internet Access</text>
+</svg>
