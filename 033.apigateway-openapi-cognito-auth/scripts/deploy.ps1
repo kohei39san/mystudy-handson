@@ -147,42 +147,79 @@ $userCredentials = @()
 
 foreach ($user in $users) {
     # Check if user exists
-    $existingUser = aws cognito-idp admin-get-user `
-        --user-pool-id $UserPoolId `
-        --username $user.username `
-        --region $Region 2>$null
+    $existingUser = $null
+    try {
+        $existingUser = aws cognito-idp admin-get-user `
+            --user-pool-id $UserPoolId `
+            --username $user.username `
+            --region $Region 2>&1
+    } catch {
+        # User does not exist, continue with creation
+    }
     
-    if ($existingUser) {
-        Write-Host "User $($user.username) already exists, skipping..." -ForegroundColor Yellow
+    if ($existingUser -and $existingUser -notmatch "UserNotFoundException") {
+        Write-Host "User $($user.username) already exists, updating password..." -ForegroundColor Yellow
+        
+        # Fixed password for testing (consider using a parameter or secure method in production)
+        $password = "TempPass123!@#"
+        
+        # Update password for existing user
+        $setPasswordResult = aws cognito-idp admin-set-user-password `
+            --user-pool-id $UserPoolId `
+            --username $user.username `
+            --password $password `
+            --permanent `
+            --region $Region 2>&1
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] Password updated for existing user $($user.username)" -ForegroundColor Green
+        } else {
+            Write-Host "[ERROR] Failed to update password for user $($user.username)" -ForegroundColor Red
+        }
         continue
     }
     
     Write-Host "Creating user: $($user.username)..."
     
-    # Generate random password
-    $password = -join ((65..90) + (97..122) + (48..57) + (33,35,36,37,38,42,43,45,61,63,64) | Get-Random -Count 16 | ForEach-Object {[char]$_})
+    # Fixed password for testing (consider using a parameter or secure method in production)
+    $password = "TempPass123!@#"
     
     # Create user
-    aws cognito-idp admin-create-user `
+    $createResult = aws cognito-idp admin-create-user `
         --user-pool-id $UserPoolId `
         --username $user.username `
         --message-action SUPPRESS `
-        --region $Region 2>$null
+        --region $Region 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] Failed to create user $($user.username)" -ForegroundColor Red
+        continue
+    }
     
     # Set password
-    aws cognito-idp admin-set-user-password `
+    $setPasswordResult = aws cognito-idp admin-set-user-password `
         --user-pool-id $UserPoolId `
         --username $user.username `
         --password $password `
         --permanent `
-        --region $Region 2>$null
+        --region $Region 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] Failed to set password for user $($user.username)" -ForegroundColor Red
+        continue
+    }
     
     # Add to group
-    aws cognito-idp admin-add-user-to-group `
+    $addGroupResult = aws cognito-idp admin-add-user-to-group `
         --user-pool-id $UserPoolId `
         --username $user.username `
         --group-name $user.group `
-        --region $Region 2>$null
+        --region $Region 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] Failed to add user $($user.username) to group $($user.group)" -ForegroundColor Red
+        continue
+    }
     
     Write-Host "[OK] User $($user.username) created and added to $($user.group)" -ForegroundColor Green
     
