@@ -119,7 +119,9 @@ def load_replacements_from_env() -> Dict[str, str]:
         'LambdaAuthorizerUri': 'LAMBDA_AUTHORIZER_URI',
         'BackendLambdaUri': 'BACKEND_LAMBDA_URI',
         'ApiGatewayRole': 'API_GATEWAY_ROLE_ARN',
-        'RevokeTokenLambdaUri': 'REVOKE_TOKEN_LAMBDA_URI'
+        'RevokeTokenLambdaUri': 'REVOKE_TOKEN_LAMBDA_URI',
+        'LoginLambdaUri': 'LOGIN_LAMBDA_URI',
+        'RefreshTokenLambdaUri': 'REFRESH_TOKEN_LAMBDA_URI'
     }
     
     for placeholder, env_var in env_mappings.items():

@@ -1,0 +1,51 @@
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    
+    LoginResponse:
+      type: object
+      properties:
+        IDToken:
+          type: string
+        AccessToken:
+          type: string
+        RefreshToken:
+          type: string
+        ExpiresIn:
+          type: integer
+    
+    RefreshRequest:
+      type: object
+      required:
+        - RefreshToken
+      properties:
+        RefreshToken:
+          type: string
+    
+    RefreshResponse:
+      type: object
+      properties:
+        IDToken:
+          type: string
+        AccessToken:
+          type: string
+        ExpiresIn:
+          type: integer
+    
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string

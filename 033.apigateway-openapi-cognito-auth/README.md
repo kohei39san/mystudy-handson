@@ -42,7 +42,7 @@
 ├── README.md
 ├── cfn/
 │   └── infrastructure.yaml      # CloudFormationテンプレート
-├── openapi/                     # OpenAPI分割管理（NEW）
+├── openapi/                     # OpenAPI分割管理
 │   ├── base.yml                 # ベース定義
 │   ├── components/
 │   │   └── schemas.yml          # スキーマ定義
@@ -50,20 +50,27 @@
 │       ├── admin.yml            # 管理者エンドポイント
 │       ├── user.yml             # ユーザーエンドポイント
 │       ├── public.yml           # 公開エンドポイント
-│       └── health.yml           # ヘルスチェック
+│       ├── health.yml           # ヘルスチェック
+│       ├── login.yml            # ログインエンドポイント
+│       ├── refresh.yml          # トークンリフレッシュエンドポイント
+│       └── revoke.yml           # トークン無効化エンドポイント
 ├── src/
 │   ├── openapi-spec.yaml        # OpenAPI仕様（レガシー）
 │   ├── openapi-merged.yaml      # マージ済みOpenAPI仕様（自動生成）
 │   └── users.csv                # ユーザーインポート用CSV
 ├── scripts/
+│   ├── lambda/
+│   │   ├── login.py             # ログインLambda関数
+│   │   └── refresh.py           # リフレッシュLambda関数
 │   ├── deploy.ps1               # デプロイスクリプト（PowerShell）
-│   ├── merge-openapi.py         # OpenAPIマージスクリプト（NEW）
-│   ├── requirements.txt         # Python依存関係（NEW）
+│   ├── update-lambda-code.ps1   # Lambda更新スクリプト
+│   ├── merge-openapi.py         # OpenAPIマージスクリプト
+│   ├── requirements.txt         # Python依存関係
 │   ├── test-api-simple.py       # 簡易APIテスト
 │   └── test-cognito-auth.py     # Cognito認証テスト
 └── .github/
     └── workflows/
-        └── merge-openapi.yml    # 自動マージワークフロー（NEW）
+        └── merge-openapi.yml    # 自動マージワークフロー
 ```
 
 ## デプロイ手順
@@ -103,7 +110,8 @@ powershell -ExecutionPolicy Bypass -File "scripts\deploy.ps1"
 3. CSVファイルからユーザーをインポート（ランダムパスワード生成）
 4. OpenAPI仕様ファイルのプレースホルダー置換
 5. API GatewayへのOpenAPI仕様インポート
-6. APIのデプロイ
+6. Lambda関数コードの更新（scripts/lambda/*.pyから）
+7. APIのデプロイ
 
 ### 3. APIテスト
 
@@ -124,14 +132,23 @@ python test-cognito-auth.py
 - **必要な役割**: なし（公開エンドポイント）
 - **説明**: ユーザー名とパスワードでCognito認証を実行
 - **リクエストボディ**: `username`, `password`
-- **レスポンス**: `IDToken`, `AccessToken`, `RefreshToken`, `ExpiresIn`
+- **レスポンスヘッダー**: 
+  - `Authorization`: AccessToken（API認証用）
+  - `X-ID-Token`: IDToken（ユーザー識別情報）
+  - `X-Refresh-Token`: RefreshToken（新しいトークン取得用）
+  - `X-Expires-In`: トークン有効期限（秒）
+- **レスポンスボディ**: `{"message": "Login successful"}`
 - **エラー**: 401 (認証失敗), 404 (ユーザー未存在), 500 (サーバーエラー)
 
 ### 0. `/auth/refresh` (POST)
 - **必要な役割**: なし（公開エンドポイント）
 - **説明**: リフレッシュトークンを使用して新しいアクセストークンとIDトークンを取得
 - **リクエストボディ**: `RefreshToken`
-- **レスポンス**: `IDToken`, `AccessToken`, `ExpiresIn`
+- **レスポンスヘッダー**: 
+  - `Authorization`: AccessToken（API認証用）
+  - `X-ID-Token`: IDToken（ユーザー識別情報）
+  - `X-Expires-In`: トークン有効期限（秒）
+- **レスポンスボディ**: `{"message": "Token refresh successful"}`
 - **エラー**: 401 (無効なリフレッシュトークン), 404 (ユーザー未存在), 500 (サーバーエラー)
 
 ### 0. `/auth/revoke` (POST)
@@ -159,14 +176,41 @@ python test-cognito-auth.py
 ```bash
 curl -X POST https://your-api-gateway-url/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "testuser", "password": "TempPassword123!"}'
+  -d '{"username": "testuser", "password": "TempPassword123!"}' \
+  -i
+```
+
+レスポンスヘッダー:
+```
+Authorization: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+X-ID-Token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+X-Refresh-Token: eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...
+X-Expires-In: 3600
+```
+
+レスポンスボディ:
+```json
+{"message": "Login successful"}
 ```
 
 ### 2. トークンリフレッシュ
 ```bash
 curl -X POST https://your-api-gateway-url/auth/refresh \
   -H "Content-Type: application/json" \
-  -d '{"RefreshToken": "your-refresh-token"}'
+  -d '{"RefreshToken": "your-refresh-token"}' \
+  -i
+```
+
+レスポンスヘッダー:
+```
+Authorization: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+X-ID-Token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+X-Expires-In: 3600
+```
+
+レスポンスボディ:
+```json
+{"message": "Token refresh successful"}
 ```
 
 ## カスタム属性とロール
@@ -195,7 +239,10 @@ OpenAPI定義書内でAPI Gatewayのパラメータマッピング機能を使�
 ### ファイル構成
 
 - **base.yml**: OpenAPIの基本情報、セキュリティ定義
-- **components/schemas.yml**: データモデルとスキーマ定義
+- **components/schemas.yml**: データモデルとスキーマ定義（LoginRequest、RefreshRequest、ErrorResponse等）
+- **paths/login.yml**: ログインエンドポイントの定義
+- **paths/refresh.yml**: トークンリフレッシュエンドポイントの定義
+- **paths/revoke.yml**: トークン無効化エンドポイントの定義
 - **paths/admin.yml**: 管理者エンドポイントの定義
 - **paths/user.yml**: ユーザーエンドポイントの定義
 - **paths/public.yml**: 公開エンドポイントの定義
@@ -207,6 +254,9 @@ OpenAPIファイル内では以下のプレースホルダーを使用：
 - `{{CognitoUserPoolArn}}`: Cognito User Pool ARN
 - `{{LambdaAuthorizerUri}}`: Lambda Authorizer URI
 - `{{BackendLambdaUri}}`: Backend Lambda URI
+- `{{LoginLambdaUri}}`: Login Lambda URI
+- `{{RefreshTokenLambdaUri}}`: Refresh Token Lambda URI
+- `{{RevokeTokenLambdaUri}}`: Revoke Token Lambda URI
 - `{{ApiGatewayRole}}`: API Gateway実行ロールARN
 
 マージスクリプトまたはデプロイスクリプトが自動的に置換します。
@@ -221,6 +271,9 @@ python scripts\merge-openapi.py
 $env:COGNITO_USER_POOL_ARN = "arn:aws:cognito-idp:..."
 $env:LAMBDA_AUTHORIZER_URI = "arn:aws:apigateway:..."
 $env:BACKEND_LAMBDA_URI = "arn:aws:apigateway:..."
+$env:LOGIN_LAMBDA_URI = "arn:aws:apigateway:..."
+$env:REFRESH_TOKEN_LAMBDA_URI = "arn:aws:apigateway:..."
+$env:REVOKE_TOKEN_LAMBDA_URI = "arn:aws:apigateway:..."
 $env:API_GATEWAY_ROLE_ARN = "arn:aws:iam::..."
 python scripts\merge-openapi.py --replace-placeholders
 ```
@@ -243,6 +296,25 @@ GitHub Actionsワークフローが以下の場合に自動実行されます：
 
 3. **ログ記録**
    - 全ての認証・認可イベントをCloudWatch Logsに記録
+
+## Lambda関数コードの管理
+
+### 外部Pythonスクリプト
+
+Login/RefreshのLambda関数コードは `scripts/lambda/` ディレクトリで管理：
+- `scripts/lambda/login.py`: ログイン処理（トークンをヘッダーで返却）
+- `scripts/lambda/refresh.py`: トークンリフレッシュ処理（トークンをヘッダーで返却）
+
+### デプロイ時の自動更新
+
+`scripts/deploy.ps1` 実行時に自動的にLambda関数コードが更新されます。
+
+### 個別更新
+
+Lambda関数コードのみを更新する場合：
+```powershell
+.\scripts\update-lambda-code.ps1 -StackName "openapi-cognito-auth-dev"
+```
 
 ## ユーザー管理
 

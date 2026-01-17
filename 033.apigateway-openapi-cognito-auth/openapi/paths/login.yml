@@ -1,0 +1,74 @@
+paths:
+  /auth/login:
+    post:
+      summary: User login
+      description: Authenticate user with username and password using Cognito
+      tags:
+        - "Authentication"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: "testuser"
+              password: "TempPassword123!"
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Authorization:
+              description: Access token for API authentication
+              schema:
+                type: string
+            X-ID-Token:
+              description: ID token containing user identity information
+              schema:
+                type: string
+            X-Refresh-Token:
+              description: Refresh token for obtaining new access tokens
+              schema:
+                type: string
+            X-Expires-In:
+              description: Token expiration time in seconds
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "Login successful"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "{{LoginLambdaUri}}"
+        credentials: "{{ApiGatewayRole}}"

@@ -1,0 +1,508 @@
+openapi: 3.0.1
+info:
+  title: OpenAPI Cognito Auth API
+  description: API Gateway with OpenAPI specification, Cognito authentication, and
+    Lambda authorizer
+  version: 1.0.0
+components:
+  securitySchemes:
+    CognitoUserPool:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: cognito_user_pools
+      x-amazon-apigateway-authorizer:
+        type: cognito_user_pools
+        providerARNs:
+        - '{{CognitoUserPoolArn}}'
+    LambdaAuthorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: custom
+      x-amazon-apigateway-authorizer:
+        type: request
+        authorizerUri: '{{LambdaAuthorizerUri}}'
+        authorizerCredentials: '{{ApiGatewayRole}}'
+        authorizerResultTtlInSeconds: 300
+        identitySource: method.request.header.Authorization
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+      - username
+      - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    LoginResponse:
+      type: object
+      properties:
+        IDToken:
+          type: string
+        AccessToken:
+          type: string
+        RefreshToken:
+          type: string
+        ExpiresIn:
+          type: integer
+    RefreshRequest:
+      type: object
+      required:
+      - RefreshToken
+      properties:
+        RefreshToken:
+          type: string
+    RefreshResponse:
+      type: object
+      properties:
+        IDToken:
+          type: string
+        AccessToken:
+          type: string
+        ExpiresIn:
+          type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+paths:
+  /admin:
+    post:
+      summary: Admin-only endpoint
+      description: Endpoint accessible only by users with admin role
+      tags:
+      - Admin Operations
+      security:
+      - CognitoUserPool: []
+      parameters:
+      - name: action
+        in: query
+        required: true
+        schema:
+          type: string
+          enum:
+          - create
+          - update
+          - delete
+        description: Action to perform
+      - name: target
+        in: query
+        required: false
+        schema:
+          type: string
+          default: default
+        description: Target resource
+      - name: priority
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+        description: Priority level
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminResponse'
+        '403':
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: '{{BackendLambdaUri}}'
+        credentials: '{{ApiGatewayRole}}'
+        requestParameters:
+          integration.request.querystring.action: method.request.querystring.action
+          integration.request.querystring.target: method.request.querystring.target
+          integration.request.querystring.priority: method.request.querystring.priority
+  /auth/login:
+    post:
+      summary: User login
+      description: Authenticate user with username and password using Cognito
+      tags:
+      - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: testuser
+              password: TempPassword123!
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                IDToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+                AccessToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+                RefreshToken: eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...
+                ExpiresIn: 3600
+                message: Login successful
+          headers:
+            Authorization:
+              description: Access token for API authentication
+              schema:
+                type: string
+            X-ID-Token:
+              description: ID token containing user identity information
+              schema:
+                type: string
+            X-Refresh-Token:
+              description: Refresh token for obtaining new access tokens
+              schema:
+                type: string
+            X-Expires-In:
+              description: Token expiration time in seconds
+              schema:
+                type: integer
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: '{{LoginLambdaUri}}'
+        credentials: '{{ApiGatewayRole}}'
+  /auth/refresh:
+    post:
+      summary: Refresh tokens
+      description: Refresh access and ID tokens using refresh token
+      tags:
+      - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              RefreshToken: eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ...
+      responses:
+        '200':
+          description: Token refresh successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                IDToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+                AccessToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+                ExpiresIn: 3600
+                message: Token refresh successful
+          headers:
+            Authorization:
+              description: New access token for API authentication
+              schema:
+                type: string
+            X-ID-Token:
+              description: New ID token containing user identity information
+              schema:
+                type: string
+            X-Expires-In:
+              description: Token expiration time in seconds
+              schema:
+                type: integer
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: '{{RefreshTokenLambdaUri}}'
+        credentials: '{{ApiGatewayRole}}'
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Simple health check endpoint without authentication
+      tags:
+      - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '500':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: '{{BackendLambdaUri}}'
+        credentials: '{{ApiGatewayRole}}'
+  /public:
+    get:
+      summary: Public endpoint
+      description: Endpoint accessible by any authenticated user
+      tags:
+      - Public Operations
+      security:
+      - CognitoUserPool: []
+      parameters:
+      - name: format
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - json
+          - xml
+          - csv
+          default: json
+        description: Response format
+      - name: include_metadata
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: Include metadata in response
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: '{{BackendLambdaUri}}'
+        credentials: '{{ApiGatewayRole}}'
+        requestParameters:
+          integration.request.querystring.format: method.request.querystring.format
+          integration.request.querystring.include_metadata: method.request.querystring.include_metadata
+  /auth/revoke:
+    post:
+      summary: Revoke user tokens
+      description: Admin-only endpoint to revoke all tokens for a specific user
+      tags:
+      - Authentication
+      security:
+      - LambdaAuthorizer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeRequest'
+            example:
+              username: testuser
+      responses:
+        '200':
+          description: Tokens revoked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevokeResponse'
+              example:
+                message: Tokens revoked successfully
+                username: testuser
+                timestamp: 12345678-1234-1234-1234-123456789012
+                operation: AdminUserGlobalSignOut
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: '{{RevokeTokenLambdaUri}}'
+        credentials: '{{ApiGatewayRole}}'
+  /user:
+    get:
+      summary: User endpoint
+      description: Endpoint accessible by users with user or admin role
+      tags:
+      - User Operations
+      security:
+      - CognitoUserPool: []
+      parameters:
+      - name: filter
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9_-]+$
+        description: Filter criteria
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+        description: Number of items to return
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        description: Number of items to skip
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDataResponse'
+        '403':
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: '{{BackendLambdaUri}}'
+        credentials: '{{ApiGatewayRole}}'
+        requestParameters:
+          integration.request.querystring.filter: method.request.querystring.filter
+          integration.request.querystring.limit: method.request.querystring.limit
+          integration.request.querystring.offset: method.request.querystring.offset
