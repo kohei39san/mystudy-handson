@@ -19,15 +19,19 @@ def lambda_handler(event, context):
     logger.info(f"Authorizer event: {json.dumps(event)}")
     
     try:
-        # Get the authorization token from the event
-        token = event.get('authorizationToken', '')
+        # For REQUEST type authorizer, get the token from headers
+        headers = event.get('headers', {})
+        auth_header = headers.get('authorization') or headers.get('Authorization', '')
         method_arn = event.get('methodArn', '')
         
         logger.info(f"Method ARN: {method_arn}")
+        logger.info(f"Authorization header: {auth_header[:50] if auth_header else 'None'}...")
         
-        if not token:
+        if not auth_header:
             logger.warning("No authorization token provided")
             raise Exception('Unauthorized')
+        
+        token = auth_header
         
         # Extract token (remove "Bearer " prefix if present)
         if token.startswith('Bearer '):
@@ -43,13 +47,30 @@ def lambda_handler(event, context):
             raise Exception('Unauthorized')
         
         # Extract user information
-        username = decoded.get('cognito:username', 'unknown')
-        user_role = decoded.get('custom:role', 'user')
+        username = decoded.get('cognito:username') or decoded.get('username', 'unknown')
         
-        logger.info(f"Authorized user: {username}, role: {user_role}")
+        # Get user role from Cognito groups
+        groups = decoded.get('cognito:groups', [])
+        user_role = 'user'  # default role
+        if 'api-admins' in groups:
+            user_role = 'admin'
+        elif 'api-users' in groups:
+            user_role = 'user'
+        
+        logger.info(f"Authorized user: {username}, groups: {groups}, role: {user_role}")
         
         # Generate the authorization response
         principal_id = decoded.get('sub', 'user')
+        
+        # Build resource ARN pattern - allow access to all methods in this API
+        # Extract API Gateway ARN components from method_arn
+        # Format: arn:aws:execute-api:region:account-id:api-id/stage/method/resource-path
+        arn_parts = method_arn.split(':')
+        api_gateway_arn_prefix = ':'.join(arn_parts[0:5])  # arn:aws:execute-api:region:account-id
+        api_id_stage = arn_parts[5].split('/')[0:2]  # api-id/stage
+        resource_arn = f"{api_gateway_arn_prefix}:{'/'.join(api_id_stage)}/*/*"
+        
+        logger.info(f"Resource ARN pattern: {resource_arn}")
         
         auth_response = {
             'principalId': principal_id,
@@ -59,7 +80,7 @@ def lambda_handler(event, context):
                     {
                         'Action': 'execute-api:Invoke',
                         'Effect': 'Allow',
-                        'Resource': method_arn
+                        'Resource': resource_arn
                     }
                 ]
             },
