@@ -72,6 +72,8 @@ def lambda_handler(event, context):
             return handle_user(event, context, username, user_role)
         elif path == '/admin':
             return handle_admin(event, context, username, user_role)
+        elif path == '/update':
+            return handle_update(event, context, username, user_role)
         else:
             return error_response(404, f"Path not found: {path}")
     
@@ -149,6 +151,47 @@ def handle_admin(event, context, username, user_role):
             "status": "success",
             "action_performed": action,
             "target_resource": target
+        }
+    })
+
+
+def handle_update(event, context, username, user_role):
+    """Handle PATCH /update endpoint"""
+    logger.info(f"Update endpoint called by user: {username}, role: {user_role}")
+    
+    # Extract query parameters
+    query_params = event.get('queryStringParameters', {}) or {}
+    resource_id = query_params.get('id', 'unknown')
+    category = query_params.get('category', 'N/A')
+    tags = query_params.get('tags', 'N/A')
+    
+    # Extract request body
+    body = {}
+    if event.get('body'):
+        try:
+            body = json.loads(event['body'])
+        except json.JSONDecodeError:
+            return error_response(400, "Invalid JSON in request body")
+    
+    resource_name = body.get('name', 'Unknown Resource')
+    description = body.get('description', '')
+    metadata = body.get('metadata', {})
+    
+    logger.info(f"Update request - ID: {resource_id}, Category: {category}, Tags: {tags}")
+    
+    # All authenticated users can update resources
+    return success_response({
+        "message": f"Resource '{resource_id}' updated by {username}",
+        "id": resource_id,
+        "updated": True,
+        "user": username,
+        "role": user_role,
+        "resource": {
+            "name": resource_name,
+            "description": description,
+            "category": category,
+            "tags": tags,
+            "metadata": metadata
         }
     })
 
