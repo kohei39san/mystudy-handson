@@ -1,188 +1,101 @@
 components:
   schemas:
-    AdminRequest:
+    LoginRequest:
       type: object
       required:
-        - data
+        - username
+        - password
       properties:
-        data:
-          type: object
-          description: Admin operation data
-          properties:
-            name:
-              type: string
-              minLength: 1
-              maxLength: 100
-            description:
-              type: string
-              minLength: 0
-              maxLength: 500
-            value:
-              type: string
-              maxLength: 1000
-        metadata:
-          type: object
-          description: Additional metadata
-          properties:
-            source:
-              type: string
-              maxLength: 50
-            timestamp:
-              type: string
-              format: date-time
-
-    AdminResponse:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+    
+    LoginResponse:
+      type: object
+      properties:
+        IDToken:
+          type: string
+        AccessToken:
+          type: string
+        RefreshToken:
+          type: string
+        ExpiresIn:
+          type: integer
+    
+    RefreshRequest:
       type: object
       required:
-        - message
-        - result
+        - RefreshToken
       properties:
-        message:
+        RefreshToken:
           type: string
-          example: "Admin action executed successfully"
-        result:
-          type: object
-          properties:
-            action:
-              type: string
-            target:
-              type: string
-            priority:
-              type: integer
-            executed_by:
-              type: string
-            timestamp:
-              type: string
-              format: date-time
-
-    UserDataResponse:
+    
+    RefreshResponse:
       type: object
-      required:
-        - data
-        - pagination
       properties:
-        data:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              name:
-                type: string
-              type:
-                type: string
-              created_at:
-                type: string
-                format: date-time
-        pagination:
-          type: object
-          required:
-            - limit
-            - offset
-            - total
-          properties:
-            limit:
-              type: integer
-              minimum: 1
-              maximum: 100
-            offset:
-              type: integer
-              minimum: 0
-            total:
-              type: integer
-              minimum: 0
-
-    PublicResponse:
-      type: object
-      required:
-        - message
-        - data
-      properties:
-        message:
+        IDToken:
           type: string
-          example: "Public endpoint accessed successfully"
-        data:
-          type: object
-          properties:
-            public_info:
-              type: string
-            format:
-              type: string
-            timestamp:
-              type: string
-              format: date-time
-        metadata:
-          type: object
-          properties:
-            api_version:
-              type: string
-            response_time_ms:
-              type: integer
-            server_region:
-              type: string
-
-    HealthResponse:
-      type: object
-      required:
-        - status
-        - timestamp
-      properties:
-        status:
+        AccessToken:
           type: string
-          enum: [healthy, degraded, unhealthy]
-          example: "healthy"
-        timestamp:
-          type: string
-          format: date-time
-        service:
-          type: string
-          example: "openapi-cognito-auth-api"
-
+        ExpiresIn:
+          type: integer
+    
     ErrorResponse:
       type: object
-      required:
-        - error
-        - message
       properties:
         error:
           type: string
         message:
           type: string
-        request_id:
-
+    
+    AdminRequest:
+      type: object
+      properties:
+        action:
+          type: string
+        target:
+          type: string
+    
+    AdminResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        result:
+          type: object
+    
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+    
+    PublicResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        data:
+          type: object
+    
+    UserDataResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+    
     RevokeRequest:
       type: object
       required:
         - username
       properties:
         username:
-          type: string
-          description: Username of the user whose tokens should be revoked
-          minLength: 1
-          maxLength: 128
-          pattern: '^[a-zA-Z0-9_.-]+$'
-          example: "testuser"
-
-    RevokeResponse:
-      type: object
-      required:
-        - message
-        - username
-        - timestamp
-        - operation
-      properties:
-        message:
-          type: string
-          example: "Tokens revoked successfully"
-        username:
-          type: string
-          example: "testuser"
-        timestamp:
-          type: string
-          description: AWS request ID used as timestamp
-          example: "12345678-1234-1234-1234-123456789012"
-        operation:
-          type: string
-          example: "AdminUserGlobalSignOut"
           type: string

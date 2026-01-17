@@ -1,0 +1,69 @@
+paths:
+  /auth/refresh:
+    post:
+      summary: Refresh tokens
+      description: Refresh access and ID tokens using refresh token
+      tags:
+        - "Authentication"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              RefreshToken: "eyJjdHkiOiJKV1QiLCJlbmMiOiJBMjU2R0NNIiwiYWxnIjoiUlNBLU9BRVAifQ..."
+      responses:
+        '200':
+          description: Token refresh successful
+          headers:
+            Authorization:
+              description: New access token for API authentication
+              schema:
+                type: string
+            X-ID-Token:
+              description: New ID token containing user identity information
+              schema:
+                type: string
+            X-Expires-In:
+              description: Token expiration time in seconds
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "Token refresh successful"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: "{{RefreshTokenLambdaUri}}"
+        credentials: "{{ApiGatewayRole}}"

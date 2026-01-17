@@ -121,10 +121,22 @@ $UserPoolArn = aws cloudformation describe-stacks `
     --query 'Stacks[0].Outputs[?OutputKey==`CognitoUserPoolArn`].OutputValue' `
     --output text 2>$null
 
-$ApiGatewayRoleArn = aws cloudformation describe-stacks `
+$LoginLambdaArn = aws cloudformation describe-stacks `
     --stack-name $StackName `
     --region $Region `
-    --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayRoleArn`].OutputValue' `
+    --query 'Stacks[0].Outputs[?OutputKey==`LoginLambdaArn`].OutputValue' `
+    --output text 2>$null
+
+$RefreshTokenLambdaArn = aws cloudformation describe-stacks `
+    --stack-name $StackName `
+    --region $Region `
+    --query 'Stacks[0].Outputs[?OutputKey==`RefreshTokenLambdaArn`].OutputValue' `
+    --output text 2>$null
+
+$RevokeTokenLambdaArn = aws cloudformation describe-stacks `
+    --stack-name $StackName `
+    --region $Region `
+    --query 'Stacks[0].Outputs[?OutputKey==`RevokeTokenLambdaArn`].OutputValue' `
     --output text 2>$null
 
 # Import users from CSV
@@ -219,11 +231,17 @@ $OpenApiContent = Get-Content $OpenApiSpec -Raw
 $OpenApiContent = $OpenApiContent -replace '\{\{CognitoUserPoolArn\}\}', $UserPoolArn
 $OpenApiContent = $OpenApiContent -replace '\{\{LambdaAuthorizerUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\{\{BackendLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${BackendLambdaArn}/invocations"
+$OpenApiContent = $OpenApiContent -replace '\{\{LoginLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${LoginLambdaArn}/invocations"
+$OpenApiContent = $OpenApiContent -replace '\{\{RefreshTokenLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${RefreshTokenLambdaArn}/invocations"
+$OpenApiContent = $OpenApiContent -replace '\{\{RevokeTokenLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${RevokeTokenLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\{\{ApiGatewayRole\}\}', $ApiGatewayRoleArn
 # Legacy placeholder support
 $OpenApiContent = $OpenApiContent -replace '\$\{CognitoUserPoolArn\}', $UserPoolArn
 $OpenApiContent = $OpenApiContent -replace '\$\{LambdaAuthorizerUri\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\$\{BackendLambdaUri\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${BackendLambdaArn}/invocations"
+$OpenApiContent = $OpenApiContent -replace '\$\{LoginLambdaUri\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${LoginLambdaArn}/invocations"
+$OpenApiContent = $OpenApiContent -replace '\$\{RefreshTokenLambdaUri\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${RefreshTokenLambdaArn}/invocations"
+$OpenApiContent = $OpenApiContent -replace '\$\{RevokeTokenLambdaUri\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${RevokeTokenLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\$\{ApiGatewayRole\}', $ApiGatewayRoleArn
 
 [System.IO.File]::WriteAllText($OpenApiSpecProcessed, $OpenApiContent, [System.Text.Encoding]::UTF8)
@@ -240,6 +258,59 @@ if ($LASTEXITCODE -eq 0) {
 } else {
     Write-Host "[ERROR] Failed to import OpenAPI specification" -ForegroundColor Red
 }
+
+# Update Lambda function code from separate Python files
+Write-Host "`nUpdating Lambda function code..." -ForegroundColor Yellow
+
+$LoginLambdaArn = aws cloudformation describe-stacks `
+    --stack-name $StackName `
+    --region $Region `
+    --query 'Stacks[0].Outputs[?OutputKey==`LoginLambdaArn`].OutputValue' `
+    --output text 2>$null
+
+$RefreshTokenLambdaArn = aws cloudformation describe-stacks `
+    --stack-name $StackName `
+    --region $Region `
+    --query 'Stacks[0].Outputs[?OutputKey==`RefreshTokenLambdaArn`].OutputValue' `
+    --output text 2>$null
+
+$LoginLambdaName = $LoginLambdaArn.Split(':')[-1]
+$RefreshLambdaName = $RefreshTokenLambdaArn.Split(':')[-1]
+
+# Create temporary directory for Lambda packages
+$TempDir = Join-Path $env:TEMP "lambda-packages-$(Get-Date -Format 'yyyyMMddHHmmss')"
+New-Item -ItemType Directory -Path $TempDir | Out-Null
+
+# Update Login Lambda
+$LoginTempDir = Join-Path $TempDir "login"
+New-Item -ItemType Directory -Path $LoginTempDir | Out-Null
+Copy-Item (Join-Path $ProjectDir "scripts\lambda\login.py") -Destination (Join-Path $LoginTempDir "index.py")
+$LoginZip = Join-Path $TempDir "login.zip"
+Compress-Archive -Path (Join-Path $LoginTempDir "index.py") -DestinationPath $LoginZip -Force
+
+aws lambda update-function-code `
+    --function-name $LoginLambdaName `
+    --zip-file "fileb://$LoginZip" `
+    --region $Region | Out-Null
+
+Write-Host "[OK] Login Lambda code updated" -ForegroundColor Green
+
+# Update Refresh Lambda
+$RefreshTempDir = Join-Path $TempDir "refresh"
+New-Item -ItemType Directory -Path $RefreshTempDir | Out-Null
+Copy-Item (Join-Path $ProjectDir "scripts\lambda\refresh.py") -Destination (Join-Path $RefreshTempDir "index.py")
+$RefreshZip = Join-Path $TempDir "refresh.zip"
+Compress-Archive -Path (Join-Path $RefreshTempDir "index.py") -DestinationPath $RefreshZip -Force
+
+aws lambda update-function-code `
+    --function-name $RefreshLambdaName `
+    --zip-file "fileb://$RefreshZip" `
+    --region $Region | Out-Null
+
+Write-Host "[OK] Refresh Token Lambda code updated" -ForegroundColor Green
+
+# Cleanup
+Remove-Item $TempDir -Recurse -Force
 
 # Create new deployment
 Write-Host "Creating new API deployment..." -ForegroundColor Yellow

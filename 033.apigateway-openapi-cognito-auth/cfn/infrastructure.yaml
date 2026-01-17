@@ -108,6 +108,66 @@ Resources:
                   - cognito-idp:AdminGetUser
                 Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*"
 
+  # IAM Role for Login Lambda
+  LoginLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-login-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CognitoLoginPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminInitiateAuth
+                Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*"
+
+  # IAM Role for Refresh Token Lambda
+  RefreshTokenLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-refresh-token-role-${Environment}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CognitoRefreshTokenPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              - Effect: Allow
+                Action:
+                  - cognito-idp:AdminInitiateAuth
+                Resource: !Sub "arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/*"
+
   # IAM Role for API Gateway to invoke Lambda
   ApiGatewayRole:
     Type: AWS::IAM::Role
@@ -761,6 +821,54 @@ Resources:
           Value: !Ref Environment
         - Key: Project
           Value: !Ref ProjectName
+  # Login Lambda Function
+  LoginLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-login-${Environment}"
+      Runtime: python3.12
+      Handler: index.lambda_handler
+      Role: !GetAtt LoginLambdaRole.Arn
+      Timeout: 30
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref CognitoUserPool
+          CLIENT_ID: !Ref CognitoUserPoolClient
+      Code:
+        ZipFile: |
+          # Placeholder code - will be replaced by scripts/lambda/login.py during deployment
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Placeholder'}
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Refresh Token Lambda Function
+  RefreshTokenLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-refresh-token-${Environment}"
+      Runtime: python3.12
+      Handler: index.lambda_handler
+      Role: !GetAtt RefreshTokenLambdaRole.Arn
+      Timeout: 30
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref CognitoUserPool
+          CLIENT_ID: !Ref CognitoUserPoolClient
+      Code:
+        ZipFile: |
+          # Placeholder code - will be replaced by scripts/lambda/refresh.py during deployment
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Placeholder'}
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
 
   # ===== Lambda Permissions =====
   
@@ -798,6 +906,24 @@ Resources:
       Action: lambda:InvokeFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
+  # Permission for API Gateway to invoke Login Lambda
+  LoginLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LoginLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
+
+  # Permission for API Gateway to invoke Refresh Token Lambda
+  RefreshTokenLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref RefreshTokenLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*"
+
 
   # ===== Cognito Resources =====
   
@@ -949,3 +1075,15 @@ Outputs:
     Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
     Export:
       Name: !Sub "${AWS::StackName}-ApiGatewayEndpoint"
+
+  LoginLambdaArn:
+    Description: Login Lambda Function ARN
+    Value: !GetAtt LoginLambda.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-LoginLambdaArn"
+
+  RefreshTokenLambdaArn:
+    Description: Refresh Token Lambda Function ARN
+    Value: !GetAtt RefreshTokenLambda.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-RefreshTokenLambdaArn"
