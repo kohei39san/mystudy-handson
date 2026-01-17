@@ -120,6 +120,24 @@ python test-cognito-auth.py
 
 ## API エンドポイント
 
+### 0. `/auth/login` (POST)
+- **必要な役割**: なし（公開エンドポイント）
+- **説明**: ユーザー名とパスワードでCognito認証を実行
+- **リクエストボディ**: `username`, `password`
+- **レスポンス**: `IDToken`, `AccessToken`, `RefreshToken`, `ExpiresIn`
+- **エラー**: 401 (認証失敗), 404 (ユーザー未存在), 500 (サーバーエラー)
+
+### 0. `/auth/refresh` (POST)
+- **必要な役割**: なし（公開エンドポイント）
+- **説明**: リフレッシュトークンを使用して新しいアクセストークンとIDトークンを取得
+- **リクエストボディ**: `RefreshToken`
+- **レスポンス**: `IDToken`, `AccessToken`, `ExpiresIn`
+- **エラー**: 401 (無効なリフレッシュトークン), 404 (ユーザー未存在), 500 (サーバーエラー)
+
+### 0. `/auth/revoke` (POST)
+- **必要な役割**: admin
+- **説明**: 管理者専用 - 指定ユーザーのトークンを無効化
+
 ### 1. `/admin` (POST)
 - **必要な役割**: admin
 - **説明**: 管理者専用エンドポイント
@@ -134,6 +152,22 @@ python test-cognito-auth.py
 - **必要な役割**: なし（認証のみ）
 - **説明**: 認証済みユーザー向け公開エンドポイント
 - **クエリパラメータ**: `format`
+
+## 認証フロー
+
+### 1. ログイン
+```bash
+curl -X POST https://your-api-gateway-url/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "TempPassword123!"}'
+```
+
+### 2. トークンリフレッシュ
+```bash
+curl -X POST https://your-api-gateway-url/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"RefreshToken": "your-refresh-token"}'
+```
 
 ## カスタム属性とロール
 
