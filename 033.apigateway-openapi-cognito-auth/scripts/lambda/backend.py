@@ -27,9 +27,39 @@ def lambda_handler(event, context):
         query_params = event.get('queryStringParameters', {}) or {}
         
         # Get authorizer context
-        authorizer = event.get('requestContext', {}).get('authorizer', {})
-        user_role = authorizer.get('custom:role', 'unknown')
-        username = authorizer.get('claims', {}).get('cognito:username', 'unknown') if isinstance(authorizer.get('claims'), dict) else 'unknown'
+        request_context = event.get('requestContext', {})
+        authorizer = request_context.get('authorizer', {})
+        
+        # Log full authorizer context for debugging
+        logger.info(f"Full authorizer context: {json.dumps(authorizer, default=str)}")
+        
+        # Extract user info from authorizer context
+        # From Lambda Authorizer (custom context)
+        username = authorizer.get('username', None)
+        user_role = authorizer.get('custom:role', None)
+        
+        # If not from Lambda Authorizer, try to get from Cognito claims (when using CognitoUserPool authorizer)
+        if not username or not user_role:
+            claims = authorizer.get('claims', {})
+            logger.info(f"Cognito claims: {json.dumps(claims, default=str)}")
+            if isinstance(claims, dict):
+                username = claims.get('cognito:username', 'unknown')
+                # Extract user groups from Cognito (which determine role)
+                cognito_groups = claims.get('cognito:groups', [])
+                logger.info(f"Cognito groups: {cognito_groups}")
+                if isinstance(cognito_groups, str):
+                    cognito_groups = cognito_groups.split(',')
+                
+                # Determine role based on group membership
+                if 'api-admins' in cognito_groups:
+                    user_role = 'admin'
+                elif 'api-users' in cognito_groups:
+                    user_role = 'user'
+                else:
+                    user_role = 'unknown'
+            else:
+                username = 'unknown'
+                user_role = 'unknown'
         
         logger.info(f"Path: {path}, Method: {method}, User: {username}, Role: {user_role}")
         

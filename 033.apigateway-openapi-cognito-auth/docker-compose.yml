@@ -13,7 +13,7 @@ services:
     command: >
       bash -c "
         apt-get update -qq && apt-get install -y -qq curl jq > /dev/null 2>&1 &&
-        bash /workspace/tests/test-login-user.sh --api-endpoint \"$$API_ENDPOINT\" --username \"$$USERNAME\" --password \"$$PASSWORD\"
+        bash /workspace/tests/test-login-user.sh
       "
     network_mode: bridge
 

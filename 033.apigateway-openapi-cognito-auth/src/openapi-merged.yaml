@@ -124,7 +124,7 @@ paths:
       tags:
       - Admin Operations
       security:
-      - CognitoUserPool: []
+      - LambdaAuthorizer: []
       parameters:
       - name: action
         in: query
@@ -373,8 +373,7 @@ paths:
       description: Endpoint accessible by any authenticated user
       tags:
       - Public Operations
-      security:
-      - CognitoUserPool: []
+      security: []
       parameters:
       - name: format
         in: query
@@ -491,7 +490,7 @@ paths:
       tags:
       - User Operations
       security:
-      - CognitoUserPool: []
+      - LambdaAuthorizer: []
       parameters:
       - name: filter
         in: query

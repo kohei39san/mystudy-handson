@@ -5,8 +5,7 @@ paths:
       description: Endpoint accessible by any authenticated user
       tags:
         - "Public Operations"
-      security:
-        - CognitoUserPool: []
+      security: []
       parameters:
         - name: format
           in: query

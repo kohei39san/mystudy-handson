@@ -6,7 +6,7 @@ paths:
       tags:
         - "User Operations"
       security:
-        - CognitoUserPool: []
+        - LambdaAuthorizer: []
       parameters:
         - name: filter
           in: query
