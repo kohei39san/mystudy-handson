@@ -139,6 +139,12 @@ $RevokeTokenLambdaArn = aws cloudformation describe-stacks `
     --query 'Stacks[0].Outputs[?OutputKey==`RevokeTokenLambdaArn`].OutputValue' `
     --output text 2>$null
 
+$ApiGatewayRoleArn = aws cloudformation describe-stacks `
+    --stack-name $StackName `
+    --region $Region `
+    --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayRoleArn`].OutputValue' `
+    --output text 2>$null
+
 # Import users from CSV
 Write-Host "`nImporting users from CSV..." -ForegroundColor Yellow
 
@@ -273,10 +279,24 @@ if (Test-Path (Join-Path $ProjectDir "openapi")) {
 # Import OpenAPI specification
 Write-Host "`nImporting OpenAPI specification..." -ForegroundColor Yellow
 
+# Validate required variables
+Write-Host "Debug: Checking variables..." -ForegroundColor Cyan
+Write-Host "  AuthorizerLambdaArn: $AuthorizerLambdaArn" -ForegroundColor Gray
+Write-Host "  ApiGatewayRoleArn: $ApiGatewayRoleArn" -ForegroundColor Gray
+Write-Host "  UserPoolArn: $UserPoolArn" -ForegroundColor Gray
+
+if ([string]::IsNullOrWhiteSpace($AuthorizerLambdaArn)) {
+    Write-Host "[WARNING] AuthorizerLambdaArn is empty" -ForegroundColor Yellow
+}
+if ([string]::IsNullOrWhiteSpace($ApiGatewayRoleArn)) {
+    Write-Host "[WARNING] ApiGatewayRoleArn is empty" -ForegroundColor Yellow
+}
+
 $OpenApiSpecProcessed = Join-Path $env:TEMP "openapi-spec-processed.yaml"
 $OpenApiContent = Get-Content $OpenApiSpec -Raw
 
 # Replace placeholders in OpenAPI spec
+Write-Host "Replacing placeholders..." -ForegroundColor Yellow
 $OpenApiContent = $OpenApiContent -replace '\{\{CognitoUserPoolArn\}\}', $UserPoolArn
 $OpenApiContent = $OpenApiContent -replace '\{\{LambdaAuthorizerUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\{\{BackendLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${BackendLambdaArn}/invocations"
@@ -284,6 +304,11 @@ $OpenApiContent = $OpenApiContent -replace '\{\{LoginLambdaUri\}\}', "arn:aws:ap
 $OpenApiContent = $OpenApiContent -replace '\{\{RefreshTokenLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${RefreshTokenLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\{\{RevokeTokenLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${RevokeTokenLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\{\{ApiGatewayRole\}\}', $ApiGatewayRoleArn
+
+# Count remaining placeholders
+$remainingCount = ($OpenApiContent | Select-String -Pattern '\{\{' -AllMatches | Measure-Object -Line).Lines
+Write-Host "Remaining unresolved placeholders: $remainingCount" -ForegroundColor Yellow
+
 # Legacy placeholder support
 $OpenApiContent = $OpenApiContent -replace '\$\{CognitoUserPoolArn\}', $UserPoolArn
 $OpenApiContent = $OpenApiContent -replace '\$\{LambdaAuthorizerUri\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaArn}/invocations"

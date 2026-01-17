@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   test-runner:
-    image: ubuntu:22.04
+    image: amazonlinux:2023
     container_name: api-test-runner
     working_dir: /workspace
     volumes:
@@ -12,14 +12,14 @@ services:
       - .env
     command: >
       bash -c "
-        apt-get update -qq && apt-get install -y -qq curl jq > /dev/null 2>&1 &&
+        yum update -y -q && yum install -y -q jq > /dev/null 2>&1 &&
         bash /workspace/tests/test-login-user.sh
       "
     network_mode: bridge
 
   # Python test runner (for Python-based tests)
   python-test-runner:
-    image: ubuntu:22.04
+    image: amazonlinux:2023
     container_name: api-python-test-runner
     working_dir: /workspace
     volumes:
@@ -35,7 +35,7 @@ services:
     command: >
       bash -c "
         echo '=== Installing Python and dependencies ===' &&
-        apt-get update && apt-get install -y python3 python3-pip &&
+        yum update -y && yum install -y python3 python3-pip &&
         pip3 install boto3 requests &&
         echo '=== Running Python tests ===' &&
         python3 /workspace/tests/test-login.py --api-endpoint $$API_ENDPOINT

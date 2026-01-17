@@ -22,9 +22,11 @@ components:
       x-amazon-apigateway-authtype: custom
       x-amazon-apigateway-authorizer:
         type: request
+        identitySource: method.request.header.Authorization
         authorizerUri: '{{LambdaAuthorizerUri}}'
         authorizerCredentials: '{{ApiGatewayRole}}'
         authorizerResultTtlInSeconds: 300
+        enableSimpleResponses: false
   schemas:
     LoginRequest:
       type: object
@@ -114,6 +116,18 @@ components:
       - username
       properties:
         username:
+          type: string
+    RevokeResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        username:
+          type: string
+        timestamp:
+          type: string
+          description: Unique operation timestamp
+        operation:
           type: string
 paths:
   /admin:
