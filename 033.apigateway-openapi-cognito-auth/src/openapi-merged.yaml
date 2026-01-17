@@ -25,7 +25,6 @@ components:
         authorizerUri: '{{LambdaAuthorizerUri}}'
         authorizerCredentials: '{{ApiGatewayRole}}'
         authorizerResultTtlInSeconds: 300
-        identitySource: method.request.header.Authorization
   schemas:
     LoginRequest:
       type: object
@@ -483,6 +482,97 @@ paths:
         httpMethod: POST
         uri: '{{RevokeTokenLambdaUri}}'
         credentials: '{{ApiGatewayRole}}'
+  /update:
+    patch:
+      summary: Update resource endpoint
+      description: Endpoint for updating resources with PATCH method (requires authentication)
+      tags:
+      - Update Operations
+      security:
+      - LambdaAuthorizer: []
+      parameters:
+      - name: id
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Resource ID to update
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Resource category (test with special characters like spaces,
+          Japanese, etc.)
+      - name: tags
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Comma-separated tags (test with URL encoding)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  description: Resource name
+                  minLength: 1
+                  maxLength: 100
+                description:
+                  type: string
+                  description: Resource description
+                  maxLength: 500
+                metadata:
+                  type: object
+                  description: Additional metadata
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: string
+                  updated:
+                    type: boolean
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: '{{BackendLambdaUri}}'
+        credentials: '{{ApiGatewayRole}}'
+        requestParameters:
+          integration.request.querystring.id: method.request.querystring.id
+          integration.request.querystring.category: method.request.querystring.category
+          integration.request.querystring.tags: method.request.querystring.tags
   /user:
     get:
       summary: User endpoint

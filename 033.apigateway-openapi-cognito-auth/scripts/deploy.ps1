@@ -158,7 +158,7 @@ foreach ($user in $users) {
     }
     
     if ($existingUser -and $existingUser -notmatch "UserNotFoundException") {
-        Write-Host "User $($user.username) already exists, updating password..." -ForegroundColor Yellow
+        Write-Host "User $($user.username) already exists, updating password and group..." -ForegroundColor Yellow
         
         # Fixed password for testing (consider using a parameter or secure method in production)
         $password = "TempPass123!@#"
@@ -171,10 +171,22 @@ foreach ($user in $users) {
             --permanent `
             --region $Region 2>&1
         
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "[OK] Password updated for existing user $($user.username)" -ForegroundColor Green
-        } else {
+        if ($LASTEXITCODE -ne 0) {
             Write-Host "[ERROR] Failed to update password for user $($user.username)" -ForegroundColor Red
+            continue
+        }
+        
+        # Ensure user is in the correct group
+        $addGroupResult = aws cognito-idp admin-add-user-to-group `
+            --user-pool-id $UserPoolId `
+            --username $user.username `
+            --group-name $user.group `
+            --region $Region 2>&1
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] Password updated and user added to $($user.group) for $($user.username)" -ForegroundColor Green
+        } else {
+            Write-Host "[WARNING] Password updated but failed to add user $($user.username) to group $($user.group)" -ForegroundColor Yellow
         }
         continue
     }
@@ -284,7 +296,7 @@ $OpenApiContent = $OpenApiContent -replace '\$\{ApiGatewayRole\}', $ApiGatewayRo
 [System.IO.File]::WriteAllText($OpenApiSpecProcessed, $OpenApiContent, [System.Text.Encoding]::UTF8)
 
 # Import OpenAPI spec to API Gateway
-aws apigateway put-rest-api `
+aws apigateway put-rest-api --no-paginate `
     --rest-api-id $ApiGatewayId `
     --mode overwrite `
     --body "fileb://$OpenApiSpecProcessed" `
@@ -345,6 +357,42 @@ aws lambda update-function-code `
     --region $Region | Out-Null
 
 Write-Host "[OK] Refresh Token Lambda code updated" -ForegroundColor Green
+
+# Update Authorizer Lambda
+$AuthorizerLambdaName = $AuthorizerLambdaArn.Split(':')[-1]
+$AuthorizerTempDir = Join-Path $TempDir "authorizer"
+New-Item -ItemType Directory -Path $AuthorizerTempDir | Out-Null
+Copy-Item (Join-Path $ProjectDir "scripts\lambda\authorizer.py") -Destination (Join-Path $AuthorizerTempDir "index.py")
+
+# Install dependencies for Authorizer directly to the temp directory
+if (Test-Path (Join-Path $ProjectDir "scripts\lambda\requirements.txt")) {
+    pip install -r (Join-Path $ProjectDir "scripts\lambda\requirements.txt") -t $AuthorizerTempDir | Out-Null
+}
+
+$AuthorizerZip = Join-Path $TempDir "authorizer.zip"
+Compress-Archive -Path (Join-Path $AuthorizerTempDir "*") -DestinationPath $AuthorizerZip -Force
+
+aws lambda update-function-code `
+    --function-name $AuthorizerLambdaName `
+    --zip-file "fileb://$AuthorizerZip" `
+    --region $Region | Out-Null
+
+Write-Host "[OK] Authorizer Lambda code updated" -ForegroundColor Green
+
+# Update Backend Lambda
+$BackendLambdaName = $BackendLambdaArn.Split(':')[-1]
+$BackendTempDir = Join-Path $TempDir "backend"
+New-Item -ItemType Directory -Path $BackendTempDir | Out-Null
+Copy-Item (Join-Path $ProjectDir "scripts\lambda\backend.py") -Destination (Join-Path $BackendTempDir "index.py")
+$BackendZip = Join-Path $TempDir "backend.zip"
+Compress-Archive -Path (Join-Path $BackendTempDir "index.py") -DestinationPath $BackendZip -Force
+
+aws lambda update-function-code `
+    --function-name $BackendLambdaName `
+    --zip-file "fileb://$BackendZip" `
+    --region $Region | Out-Null
+
+Write-Host "[OK] Backend Lambda code updated" -ForegroundColor Green
 
 # Cleanup
 Remove-Item $TempDir -Recurse -Force

@@ -26,4 +26,3 @@ components:
         authorizerUri: "{{LambdaAuthorizerUri}}"
         authorizerCredentials: "{{ApiGatewayRole}}"
         authorizerResultTtlInSeconds: 300
-        identitySource: "method.request.header.Authorization"
