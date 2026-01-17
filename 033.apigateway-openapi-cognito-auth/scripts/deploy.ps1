@@ -139,6 +139,12 @@ $RevokeTokenLambdaArn = aws cloudformation describe-stacks `
     --query 'Stacks[0].Outputs[?OutputKey==`RevokeTokenLambdaArn`].OutputValue' `
     --output text 2>$null
 
+$ApiGatewayRoleArn = aws cloudformation describe-stacks `
+    --stack-name $StackName `
+    --region $Region `
+    --query 'Stacks[0].Outputs[?OutputKey==`ApiGatewayRoleArn`].OutputValue' `
+    --output text 2>$null
+
 # Import users from CSV
 Write-Host "`nImporting users from CSV..." -ForegroundColor Yellow
 
@@ -147,42 +153,91 @@ $userCredentials = @()
 
 foreach ($user in $users) {
     # Check if user exists
-    $existingUser = aws cognito-idp admin-get-user `
-        --user-pool-id $UserPoolId `
-        --username $user.username `
-        --region $Region 2>$null
+    $existingUser = $null
+    try {
+        $existingUser = aws cognito-idp admin-get-user `
+            --user-pool-id $UserPoolId `
+            --username $user.username `
+            --region $Region 2>&1
+    } catch {
+        # User does not exist, continue with creation
+    }
     
-    if ($existingUser) {
-        Write-Host "User $($user.username) already exists, skipping..." -ForegroundColor Yellow
+    if ($existingUser -and $existingUser -notmatch "UserNotFoundException") {
+        Write-Host "User $($user.username) already exists, updating password and group..." -ForegroundColor Yellow
+        
+        # Fixed password for testing (consider using a parameter or secure method in production)
+        $password = "TempPass123!@#"
+        
+        # Update password for existing user
+        $setPasswordResult = aws cognito-idp admin-set-user-password `
+            --user-pool-id $UserPoolId `
+            --username $user.username `
+            --password $password `
+            --permanent `
+            --region $Region 2>&1
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] Failed to update password for user $($user.username)" -ForegroundColor Red
+            continue
+        }
+        
+        # Ensure user is in the correct group
+        $addGroupResult = aws cognito-idp admin-add-user-to-group `
+            --user-pool-id $UserPoolId `
+            --username $user.username `
+            --group-name $user.group `
+            --region $Region 2>&1
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] Password updated and user added to $($user.group) for $($user.username)" -ForegroundColor Green
+        } else {
+            Write-Host "[WARNING] Password updated but failed to add user $($user.username) to group $($user.group)" -ForegroundColor Yellow
+        }
         continue
     }
     
     Write-Host "Creating user: $($user.username)..."
     
-    # Generate random password
-    $password = -join ((65..90) + (97..122) + (48..57) + (33,35,36,37,38,42,43,45,61,63,64) | Get-Random -Count 16 | ForEach-Object {[char]$_})
+    # Fixed password for testing (consider using a parameter or secure method in production)
+    $password = "TempPass123!@#"
     
     # Create user
-    aws cognito-idp admin-create-user `
+    $createResult = aws cognito-idp admin-create-user `
         --user-pool-id $UserPoolId `
         --username $user.username `
         --message-action SUPPRESS `
-        --region $Region 2>$null
+        --region $Region 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] Failed to create user $($user.username)" -ForegroundColor Red
+        continue
+    }
     
     # Set password
-    aws cognito-idp admin-set-user-password `
+    $setPasswordResult = aws cognito-idp admin-set-user-password `
         --user-pool-id $UserPoolId `
         --username $user.username `
         --password $password `
         --permanent `
-        --region $Region 2>$null
+        --region $Region 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] Failed to set password for user $($user.username)" -ForegroundColor Red
+        continue
+    }
     
     # Add to group
-    aws cognito-idp admin-add-user-to-group `
+    $addGroupResult = aws cognito-idp admin-add-user-to-group `
         --user-pool-id $UserPoolId `
         --username $user.username `
         --group-name $user.group `
-        --region $Region 2>$null
+        --region $Region 2>&1
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] Failed to add user $($user.username) to group $($user.group)" -ForegroundColor Red
+        continue
+    }
     
     Write-Host "[OK] User $($user.username) created and added to $($user.group)" -ForegroundColor Green
     
@@ -224,10 +279,24 @@ if (Test-Path (Join-Path $ProjectDir "openapi")) {
 # Import OpenAPI specification
 Write-Host "`nImporting OpenAPI specification..." -ForegroundColor Yellow
 
+# Validate required variables
+Write-Host "Debug: Checking variables..." -ForegroundColor Cyan
+Write-Host "  AuthorizerLambdaArn: $AuthorizerLambdaArn" -ForegroundColor Gray
+Write-Host "  ApiGatewayRoleArn: $ApiGatewayRoleArn" -ForegroundColor Gray
+Write-Host "  UserPoolArn: $UserPoolArn" -ForegroundColor Gray
+
+if ([string]::IsNullOrWhiteSpace($AuthorizerLambdaArn)) {
+    Write-Host "[WARNING] AuthorizerLambdaArn is empty" -ForegroundColor Yellow
+}
+if ([string]::IsNullOrWhiteSpace($ApiGatewayRoleArn)) {
+    Write-Host "[WARNING] ApiGatewayRoleArn is empty" -ForegroundColor Yellow
+}
+
 $OpenApiSpecProcessed = Join-Path $env:TEMP "openapi-spec-processed.yaml"
 $OpenApiContent = Get-Content $OpenApiSpec -Raw
 
 # Replace placeholders in OpenAPI spec
+Write-Host "Replacing placeholders..." -ForegroundColor Yellow
 $OpenApiContent = $OpenApiContent -replace '\{\{CognitoUserPoolArn\}\}', $UserPoolArn
 $OpenApiContent = $OpenApiContent -replace '\{\{LambdaAuthorizerUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\{\{BackendLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${BackendLambdaArn}/invocations"
@@ -235,6 +304,11 @@ $OpenApiContent = $OpenApiContent -replace '\{\{LoginLambdaUri\}\}', "arn:aws:ap
 $OpenApiContent = $OpenApiContent -replace '\{\{RefreshTokenLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${RefreshTokenLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\{\{RevokeTokenLambdaUri\}\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${RevokeTokenLambdaArn}/invocations"
 $OpenApiContent = $OpenApiContent -replace '\{\{ApiGatewayRole\}\}', $ApiGatewayRoleArn
+
+# Count remaining placeholders
+$remainingCount = ($OpenApiContent | Select-String -Pattern '\{\{' -AllMatches | Measure-Object -Line).Lines
+Write-Host "Remaining unresolved placeholders: $remainingCount" -ForegroundColor Yellow
+
 # Legacy placeholder support
 $OpenApiContent = $OpenApiContent -replace '\$\{CognitoUserPoolArn\}', $UserPoolArn
 $OpenApiContent = $OpenApiContent -replace '\$\{LambdaAuthorizerUri\}', "arn:aws:apigateway:${Region}:lambda:path/2015-03-31/functions/${AuthorizerLambdaArn}/invocations"
@@ -247,7 +321,7 @@ $OpenApiContent = $OpenApiContent -replace '\$\{ApiGatewayRole\}', $ApiGatewayRo
 [System.IO.File]::WriteAllText($OpenApiSpecProcessed, $OpenApiContent, [System.Text.Encoding]::UTF8)
 
 # Import OpenAPI spec to API Gateway
-aws apigateway put-rest-api `
+aws apigateway put-rest-api --no-paginate `
     --rest-api-id $ApiGatewayId `
     --mode overwrite `
     --body "fileb://$OpenApiSpecProcessed" `
@@ -308,6 +382,42 @@ aws lambda update-function-code `
     --region $Region | Out-Null
 
 Write-Host "[OK] Refresh Token Lambda code updated" -ForegroundColor Green
+
+# Update Authorizer Lambda
+$AuthorizerLambdaName = $AuthorizerLambdaArn.Split(':')[-1]
+$AuthorizerTempDir = Join-Path $TempDir "authorizer"
+New-Item -ItemType Directory -Path $AuthorizerTempDir | Out-Null
+Copy-Item (Join-Path $ProjectDir "scripts\lambda\authorizer.py") -Destination (Join-Path $AuthorizerTempDir "index.py")
+
+# Install dependencies for Authorizer directly to the temp directory
+if (Test-Path (Join-Path $ProjectDir "scripts\lambda\requirements.txt")) {
+    pip install -r (Join-Path $ProjectDir "scripts\lambda\requirements.txt") -t $AuthorizerTempDir | Out-Null
+}
+
+$AuthorizerZip = Join-Path $TempDir "authorizer.zip"
+Compress-Archive -Path (Join-Path $AuthorizerTempDir "*") -DestinationPath $AuthorizerZip -Force
+
+aws lambda update-function-code `
+    --function-name $AuthorizerLambdaName `
+    --zip-file "fileb://$AuthorizerZip" `
+    --region $Region | Out-Null
+
+Write-Host "[OK] Authorizer Lambda code updated" -ForegroundColor Green
+
+# Update Backend Lambda
+$BackendLambdaName = $BackendLambdaArn.Split(':')[-1]
+$BackendTempDir = Join-Path $TempDir "backend"
+New-Item -ItemType Directory -Path $BackendTempDir | Out-Null
+Copy-Item (Join-Path $ProjectDir "scripts\lambda\backend.py") -Destination (Join-Path $BackendTempDir "index.py")
+$BackendZip = Join-Path $TempDir "backend.zip"
+Compress-Archive -Path (Join-Path $BackendTempDir "index.py") -DestinationPath $BackendZip -Force
+
+aws lambda update-function-code `
+    --function-name $BackendLambdaName `
+    --zip-file "fileb://$BackendZip" `
+    --region $Region | Out-Null
+
+Write-Host "[OK] Backend Lambda code updated" -ForegroundColor Green
 
 # Cleanup
 Remove-Item $TempDir -Recurse -Force

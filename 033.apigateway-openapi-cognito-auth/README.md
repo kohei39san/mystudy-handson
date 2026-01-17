@@ -299,21 +299,11 @@ GitHub Actionsワークフローが以下の場合に自動実行されます：
 
 ## Lambda関数コードの管理
 
-### 外部Pythonスクリプト
+Lambda関数コードは `scripts/lambda/` ディレクトリで管理されており、`scripts/deploy.ps1` 実行時に自動的に更新されます。
 
-Login/RefreshのLambda関数コードは `scripts/lambda/` ディレクトリで管理：
-- `scripts/lambda/login.py`: ログイン処理（トークンをヘッダーで返却）
-- `scripts/lambda/refresh.py`: トークンリフレッシュ処理（トークンをヘッダーで返却）
-
-### デプロイ時の自動更新
-
-`scripts/deploy.ps1` 実行時に自動的にLambda関数コードが更新されます。
-
-### 個別更新
-
-Lambda関数コードのみを更新する場合：
+Lambda関数コードのみを個別更新する場合：
 ```powershell
-.\scripts\update-lambda-code.ps1 -StackName "openapi-cognito-auth-dev"
+.\scripts\update-lambda-code.ps1 -StackName "<STACK_NAME>"
 ```
 
 ## ユーザー管理

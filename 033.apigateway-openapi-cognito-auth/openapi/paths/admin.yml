@@ -6,7 +6,7 @@ paths:
       tags:
         - "Admin Operations"
       security:
-        - CognitoUserPool: []
+        - LambdaAuthorizer: []
       parameters:
         - name: action
           in: query

@@ -27,9 +27,39 @@ def lambda_handler(event, context):
         query_params = event.get('queryStringParameters', {}) or {}
         
         # Get authorizer context
-        authorizer = event.get('requestContext', {}).get('authorizer', {})
-        user_role = authorizer.get('custom:role', 'unknown')
-        username = authorizer.get('claims', {}).get('cognito:username', 'unknown') if isinstance(authorizer.get('claims'), dict) else 'unknown'
+        request_context = event.get('requestContext', {})
+        authorizer = request_context.get('authorizer', {})
+        
+        # Log full authorizer context for debugging
+        logger.info(f"Full authorizer context: {json.dumps(authorizer, default=str)}")
+        
+        # Extract user info from authorizer context
+        # From Lambda Authorizer (custom context)
+        username = authorizer.get('username', None)
+        user_role = authorizer.get('custom:role', None)
+        
+        # If not from Lambda Authorizer, try to get from Cognito claims (when using CognitoUserPool authorizer)
+        if not username or not user_role:
+            claims = authorizer.get('claims', {})
+            logger.info(f"Cognito claims: {json.dumps(claims, default=str)}")
+            if isinstance(claims, dict):
+                username = claims.get('cognito:username', 'unknown')
+                # Extract user groups from Cognito (which determine role)
+                cognito_groups = claims.get('cognito:groups', [])
+                logger.info(f"Cognito groups: {cognito_groups}")
+                if isinstance(cognito_groups, str):
+                    cognito_groups = cognito_groups.split(',')
+                
+                # Determine role based on group membership
+                if 'api-admins' in cognito_groups:
+                    user_role = 'admin'
+                elif 'api-users' in cognito_groups:
+                    user_role = 'user'
+                else:
+                    user_role = 'unknown'
+            else:
+                username = 'unknown'
+                user_role = 'unknown'
         
         logger.info(f"Path: {path}, Method: {method}, User: {username}, Role: {user_role}")
         
@@ -42,6 +72,8 @@ def lambda_handler(event, context):
             return handle_user(event, context, username, user_role)
         elif path == '/admin':
             return handle_admin(event, context, username, user_role)
+        elif path == '/update':
+            return handle_update(event, context, username, user_role)
         else:
             return error_response(404, f"Path not found: {path}")
     
@@ -119,6 +151,47 @@ def handle_admin(event, context, username, user_role):
             "status": "success",
             "action_performed": action,
             "target_resource": target
+        }
+    })
+
+
+def handle_update(event, context, username, user_role):
+    """Handle PATCH /update endpoint"""
+    logger.info(f"Update endpoint called by user: {username}, role: {user_role}")
+    
+    # Extract query parameters
+    query_params = event.get('queryStringParameters', {}) or {}
+    resource_id = query_params.get('id', 'unknown')
+    category = query_params.get('category', 'N/A')
+    tags = query_params.get('tags', 'N/A')
+    
+    # Extract request body
+    body = {}
+    if event.get('body'):
+        try:
+            body = json.loads(event['body'])
+        except json.JSONDecodeError:
+            return error_response(400, "Invalid JSON in request body")
+    
+    resource_name = body.get('name', 'Unknown Resource')
+    description = body.get('description', '')
+    metadata = body.get('metadata', {})
+    
+    logger.info(f"Update request - ID: {resource_id}, Category: {category}, Tags: {tags}")
+    
+    # All authenticated users can update resources
+    return success_response({
+        "message": f"Resource '{resource_id}' updated by {username}",
+        "id": resource_id,
+        "updated": True,
+        "user": username,
+        "role": user_role,
+        "resource": {
+            "name": resource_name,
+            "description": description,
+            "category": category,
+            "tags": tags,
+            "metadata": metadata
         }
     })
 

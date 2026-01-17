@@ -99,3 +99,16 @@ components:
       properties:
         username:
           type: string
+
+    RevokeResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        username:
+          type: string
+        timestamp:
+          type: string
+          description: Unique operation timestamp
+        operation:
+          type: string

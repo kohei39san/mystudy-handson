@@ -114,7 +114,7 @@ paths:
   /public:
     get:
       summary: "Public endpoint"
-      description: "Endpoint accessible by any authenticated user"
+      description: "Endpoint accessible by anyone (no authentication)"
       parameters:
       - name: "include_metadata"
         in: "query"
@@ -142,8 +142,7 @@ paths:
         "500":
           description: "Internal Server Error"
           content: {}
-      security:
-      - CognitoUserPool: []
+      security: []
 components:
   schemas:
     MODEL109801:
