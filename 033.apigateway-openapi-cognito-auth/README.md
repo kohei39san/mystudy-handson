@@ -368,6 +368,127 @@ adminuser,api-admins
 aws cloudformation delete-stack --stack-name openapi-cognito-auth-dev
 ```
 
+## テスト手順
+
+### 環境情報
+
+CloudFormationデプロイ時に以下の情報が表示されます。以下のプレースホルダーを実際の値に置き換えてテストしてください：
+
+- **API エンドポイント**: `https://<API_ID>.execute-api.<REGION>.amazonaws.com/<STAGE>`
+- **User Pool ID**: `<REGION>_<POOL_ID>`
+- **Client ID**: `<CLIENT_ID>`
+- **リージョン**: `ap-northeast-1` （またはデプロイ時に指定したリージョン）
+- **スタック名**: `openapi-cognito-auth-dev` （またはデプロイ時に指定した名前）
+
+### テストユーザー
+
+#### 1. テストユーザー (一般ユーザー)
+- **ユーザー名**: testuser
+- **パスワード**: `<TEST_USER_PASSWORD>` （デプロイ時の出力を参照）
+- **グループ**: api-users
+- **ロール**: user
+
+#### 2. 管理者ユーザー
+- **ユーザー名**: adminuser
+- **パスワード**: `<ADMIN_USER_PASSWORD>` （デプロイ時の出力を参照）
+- **グループ**: api-admins
+- **ロール**: admin
+
+### テストスクリプト
+
+#### ログインテスト
+
+`scripts/test-login.py` を使用してログインエンドポイントをテスト：
+
+```powershell
+cd 033.apigateway-openapi-cognito-auth
+python scripts/test-login.py --api-endpoint "https://<API_ID>.execute-api.<REGION>.amazonaws.com/<STAGE>"
+```
+
+### curlによるテスト
+
+#### 1. /health エンドポイント（認証不要）
+
+```bash
+curl -X GET https://<API_ID>.execute-api.<REGION>.amazonaws.com/<STAGE>/health
+```
+
+#### 2. ログイン
+
+```bash
+curl -X POST https://<API_ID>.execute-api.<REGION>.amazonaws.com/<STAGE>/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "<TEST_USER_PASSWORD>"}' \
+  -i
+```
+
+レスポンスヘッダーからトークンを取得：
+- `x-amzn-Remapped-Authorization`: アクセストークン
+- `X-ID-Token`: IDトークン
+- `X-Refresh-Token`: リフレッシュトークン
+
+#### 3. 公開エンドポイント（認証必須）
+
+```bash
+curl -X GET https://<API_ID>.execute-api.<REGION>.amazonaws.com/<STAGE>/public \
+  -H "Authorization: <ACCESS_TOKEN>" \
+  -i
+```
+
+#### 4. ユーザーエンドポイント（user/admin ロール必須）
+
+```bash
+curl -X GET https://<API_ID>.execute-api.<REGION>.amazonaws.com/<STAGE>/user \
+  -H "Authorization: <ACCESS_TOKEN>" \
+  -i
+```
+
+#### 5. 管理者エンドポイント（admin ロール必須）
+
+```bash
+curl -X POST https://<API_ID>.execute-api.<REGION>.amazonaws.com/<STAGE>/admin \
+  -H "Authorization: <ACCESS_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "list", "target": "users"}' \
+  -i
+```
+
+### デバッグ情報
+
+#### CloudFormation スタック情報
+
+```powershell
+aws cloudformation describe-stacks --stack-name <STACK_NAME> --region <REGION>
+```
+
+#### API Gateway API ID
+
+```powershell
+aws apigateway get-rest-apis --region <REGION>
+```
+
+#### Cognito User Pool 情報
+
+```powershell
+aws cognito-idp describe-user-pool --user-pool-id <USER_POOL_ID> --region <REGION>
+```
+
+#### ユーザーグループの確認
+
+```powershell
+aws cognito-idp list-users-in-group --user-pool-id <USER_POOL_ID> --group-name api-users --region <REGION>
+```
+
+#### Lambda 関数ログ
+
+```powershell
+# Backend Lambda ログ
+aws logs tail /aws/lambda/<STACK_NAME>-BackendLambda --follow --region <REGION>
+
+# Authorizer Lambda ログ
+aws logs tail /aws/lambda/<STACK_NAME>-LambdaAuthorizer --follow --region <REGION>
+```
+
 ## 参考資料
 
 - [API Gateway OpenAPI Extensions](https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-swagger-extensions.html)

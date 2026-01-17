@@ -5,6 +5,7 @@ paths:
       description: Simple health check endpoint without authentication
       tags:
         - "Health"
+      security: []
       responses:
         '200':
           description: Service is healthy

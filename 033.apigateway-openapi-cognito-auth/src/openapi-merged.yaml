@@ -72,6 +72,50 @@ components:
           type: string
         message:
           type: string
+    AdminRequest:
+      type: object
+      properties:
+        action:
+          type: string
+        target:
+          type: string
+    AdminResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        result:
+          type: object
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+    PublicResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        data:
+          type: object
+    UserDataResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+    RevokeRequest:
+      type: object
+      required:
+      - username
+      properties:
+        username:
+          type: string
 paths:
   /admin:
     post:
@@ -304,6 +348,7 @@ paths:
       description: Simple health check endpoint without authentication
       tags:
       - Health
+      security: []
       responses:
         '200':
           description: Service is healthy

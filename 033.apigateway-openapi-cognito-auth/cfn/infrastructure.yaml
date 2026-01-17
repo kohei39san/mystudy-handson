@@ -1074,6 +1074,7 @@ Outputs:
     Description: API Gateway Endpoint URL
     Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}"
     Export:
+      Name: !Sub "${AWS::StackName}-ApiGatewayEndpoint"
 
   LoginLambdaArn:
     Description: Login Lambda Function ARN
@@ -1086,4 +1087,3 @@ Outputs:
     Value: !GetAtt RefreshTokenLambda.Arn
     Export:
       Name: !Sub "${AWS::StackName}-RefreshTokenLambdaArn"
-      Name: !Sub "${AWS::StackName}-ApiGatewayEndpoint"
