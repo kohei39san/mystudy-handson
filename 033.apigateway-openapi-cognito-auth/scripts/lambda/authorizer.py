@@ -24,7 +24,7 @@ vp = boto3.client("verifiedpermissions")
 def map_action(path: str, method: str) -> str:
     """Map HTTP path to Cedar action ID (path itself)."""
     normalized_path = path.rstrip('/') or '/'
-    return f"App::{normalized_path}"
+    return f"{method.upper()} {normalized_path}"
 
 
 def lambda_handler(event, context):
@@ -63,33 +63,63 @@ def lambda_handler(event, context):
         # Extract user information
         username = decoded.get('cognito:username') or decoded.get('username', 'unknown')
         
-        # Get user role from Cognito groups for downstream context
-        groups = decoded.get('cognito:groups', [])
-        user_role = 'user'
-        if 'api-admins' in groups:
-            user_role = 'admin'
-        elif 'api-users' in groups:
-            user_role = 'user'
-        else:
-            user_role = 'unknown'
-
-        logger.info(f"Authorized user (pre-AVP): {username}, groups: {groups}, role: {user_role}")
+        # Get user role from Cognito groups or custom:role
+        # Check if custom:role already exists in token
+        user_role = decoded.get('custom:role')
+        if not user_role:
+            # Fall back to cognito:groups
+            groups = decoded.get('cognito:groups', [])
+            if 'api-admins' in groups:
+                user_role = 'admin'
+            elif 'api-users' in groups:
+                user_role = 'user'
+            else:
+                user_role = 'unknown'
+        
+        logger.info(f"User: {username}, role: {user_role}")
 
         if not POLICY_STORE_ID:
             logger.error("POLICY_STORE_ID not configured")
             raise Exception('Unauthorized')
 
         action_id = map_action(path, http_method)
-        resource_id = f"{http_method.upper()}:{path or '/'}"
+        resource_id = f"{http_method.upper()} {path or '/'}"
 
         logger.info(f"Calling AVP: action={action_id}, resource={resource_id}, policyStore={POLICY_STORE_ID}")
 
         try:
-            decision = vp.is_authorized_with_token(
+            # Use is_authorized with explicit principal and attributes
+            principal_id = decoded.get('sub', 'user')
+            decision = vp.is_authorized(
                 policyStoreId=POLICY_STORE_ID,
-                identityToken=token,
-                action={'actionType': 'Action', 'actionId': action_id},
-                resource={'entityType': 'App::Endpoint', 'entityId': resource_id}
+                principal={
+                    'entityType': f'App::{PRINCIPAL_ENTITY_TYPE}',
+                    'entityId': principal_id
+                },
+                action={'actionType': 'App::Action', 'actionId': action_id},
+                resource={'entityType': 'App::Endpoint', 'entityId': resource_id},
+                entities={
+                    'entityList': [
+                        {
+                            'identifier': {
+                                'entityType': f'App::{PRINCIPAL_ENTITY_TYPE}',
+                                'entityId': principal_id
+                            },
+                            'attributes': {
+                                'custom': {
+                                    'record': {
+                                        'role': {
+                                            'string': user_role
+                                        }
+                                    }
+                                },
+                                'username': {
+                                    'string': username
+                                }
+                            }
+                        }
+                    ]
+                }
             )
         except (BotoCoreError, ClientError) as e:
             logger.error(f"AVP call failed: {e}")

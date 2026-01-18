@@ -1,6 +1,6 @@
 permit (
     principal,
-    action == App::Action::"/admin",
+    action == App::Action::"POST /admin",
     resource
 )
-when { principal.role == "admin" };
+when { principal.custom.role == "admin" };

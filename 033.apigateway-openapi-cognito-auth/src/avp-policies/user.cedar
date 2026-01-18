@@ -1,7 +1,7 @@
 permit (
     principal,
-    action == App::Action::"/user",
+    action == App::Action::"GET /user",
     resource
 )
-when { principal.role == "user" };
+when { principal.custom.role == "user" };
 

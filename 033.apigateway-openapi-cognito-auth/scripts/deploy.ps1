@@ -75,7 +75,7 @@ if (Test-Path $CedarSchemaPath) {
     $avpSchemaJson = ($schemaContent | ConvertFrom-Json | ConvertTo-Json -Compress -Depth 10)
     
     $paramOverrides += "EnableVerifiedPermissions=true"
-    $paramOverrides += "PrincipalEntityType=User"
+    $paramOverrides += "PrincipalEntityType=App::User"
     
     # Collect all Cedar policy files from avp-policies directory
     if (Test-Path $AvpPoliciesDir) {

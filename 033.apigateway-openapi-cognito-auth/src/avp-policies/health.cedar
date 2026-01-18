@@ -1,6 +1,6 @@
 permit(
   principal,
-  action == App::Action::"/health",
+  action == App::Action::"GET /health",
   resource
 )
 when {
