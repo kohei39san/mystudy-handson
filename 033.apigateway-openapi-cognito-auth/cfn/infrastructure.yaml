@@ -12,6 +12,22 @@ Parameters:
     Default: openapi-cognito-auth
     Description: Project name for resource naming
 
+  EnableVerifiedPermissions:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable AWS Verified Permissions resources (PolicyStore/IdentitySource)
+
+  PrincipalEntityType:
+    Type: String
+    Default: User
+    Description: Cedar principal entity type name used for Cognito identities (matches schema)
+
+Conditions:
+  UseAvp: !Equals [ !Ref EnableVerifiedPermissions, "true" ]
+
 Resources:
   # ===== IAM Roles =====
   
@@ -61,6 +77,16 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: VerifiedPermissionsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - verifiedpermissions:IsAuthorized
+                  - verifiedpermissions:IsAuthorizedWithToken
+                Resource: "*"
 
   # IAM Role for Backend Lambda
   BackendLambdaRole:
@@ -236,6 +262,10 @@ Resources:
                       }]
                   }
               }
+      Environment:
+        Variables:
+          POLICY_STORE_ID: !If [ UseAvp, !Ref AvpPolicyStore, "" ]
+          PRINCIPAL_ENTITY_TYPE: !Ref PrincipalEntityType
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -494,6 +524,34 @@ Resources:
         - Key: Project
           Value: !Ref ProjectName
 
+  # ===== Amazon Verified Permissions (optional) =====
+  AvpPolicyStore:
+    Condition: UseAvp
+    Type: AWS::VerifiedPermissions::PolicyStore
+    Properties:
+      Description: !Sub "Policy store for ${ProjectName} (${Environment})"
+      ValidationSettings:
+        Mode: STRICT
+      # Note: Schema will be set after deployment via AWS CLI
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  AvpIdentitySource:
+    Condition: UseAvp
+    Type: AWS::VerifiedPermissions::IdentitySource
+    Properties:
+      PolicyStoreId: !Ref AvpPolicyStore
+      PrincipalEntityType: !Ref PrincipalEntityType
+      Configuration:
+        CognitoUserPoolConfiguration:
+          UserPoolArn: !GetAtt CognitoUserPool.Arn
+          ClientIds:
+            - !Ref CognitoUserPoolClient
+      # Note: Policies will be created after deployment via AWS CLI
+
 Outputs:
   CognitoUserPoolId:
     Description: Cognito User Pool ID
@@ -560,3 +618,17 @@ Outputs:
     Value: !GetAtt RefreshTokenLambda.Arn
     Export:
       Name: !Sub "${AWS::StackName}-RefreshTokenLambdaArn"
+
+  AvpPolicyStoreId:
+    Condition: UseAvp
+    Description: Verified Permissions Policy Store ID
+    Value: !Ref AvpPolicyStore
+    Export:
+      Name: !Sub "${AWS::StackName}-AvpPolicyStoreId"
+
+  AvpIdentitySourceId:
+    Condition: UseAvp
+    Description: Verified Permissions Identity Source ID
+    Value: !Ref AvpIdentitySource
+    Export:
+      Name: !Sub "${AWS::StackName}-AvpIdentitySourceId"

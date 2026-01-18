@@ -383,7 +383,7 @@ paths:
   /public:
     get:
       summary: Public endpoint
-      description: Endpoint accessible by any authenticated user
+      description: Endpoint accessible by anyone (no authentication required)
       tags:
       - Public Operations
       security: []

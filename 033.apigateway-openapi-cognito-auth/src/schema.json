@@ -1,0 +1,66 @@
+{
+  "App": {
+    "actions": {
+      "GET /health": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes": ["Endpoint"]
+        }
+      },
+      "GET /public": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes": ["Endpoint"]
+        }
+      },
+      "GET /user": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes": ["Endpoint"]
+        }
+      },
+      "POST /admin": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes": ["Endpoint"]
+        }
+      },
+      "PATCH /update": {
+        "appliesTo": {
+          "principalTypes": ["User"],
+          "resourceTypes": ["Endpoint"]
+        }
+      }
+    },
+    "entityTypes": {
+      "User": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "custom": {
+              "required": true,
+              "type": "Record",
+              "attributes": {
+                "role": {
+                  "type": "String",
+                  "required": true
+                }
+              }
+            },
+            "email": { "type": "String" },
+            "username": { "type": "String" }
+          }
+        }
+      },
+      "Endpoint": {
+        "shape": {
+          "type": "Record",
+          "attributes": {
+            "path": { "type": "String" },
+            "method": { "type": "String" }
+          }
+        }
+      }
+    }
+  }
+}
