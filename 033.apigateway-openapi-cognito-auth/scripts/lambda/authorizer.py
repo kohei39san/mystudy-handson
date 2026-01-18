@@ -136,7 +136,8 @@ def lambda_handler(event, context):
         
         # Build resource ARN pattern - restrict to this method/path
         # methodArn format: arn:aws:execute-api:region:account-id:api-id/stage/VERB/resource-path
-        resource_arn = method_arn or '*'
+        # resource_arn = method_arn or '*'
+        resource_arn = '*'
         
         auth_response = {
             'principalId': principal_id,
