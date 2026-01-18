@@ -7,11 +7,24 @@ It extracts the user role from the Cognito ID token and enforces role-based acce
 
 import json
 import logging
+import os
 import base64
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 from jose import jwt
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+POLICY_STORE_ID = os.environ.get("POLICY_STORE_ID", "")
+PRINCIPAL_ENTITY_TYPE = os.environ.get("PRINCIPAL_ENTITY_TYPE", "User")
+vp = boto3.client("verifiedpermissions")
+
+
+def map_action(path: str, method: str) -> str:
+    """Map HTTP path to Cedar action ID (path itself)."""
+    normalized_path = path.rstrip('/') or '/'
+    return f"App::{normalized_path}"
 
 
 def lambda_handler(event, context):
@@ -23,6 +36,8 @@ def lambda_handler(event, context):
         headers = event.get('headers', {})
         auth_header = headers.get('authorization') or headers.get('Authorization', '')
         method_arn = event.get('methodArn', '')
+        http_method = event.get('httpMethod') or event.get('requestContext', {}).get('httpMethod', '')
+        path = event.get('path') or event.get('requestContext', {}).get('resourcePath', '')
         
         logger.info(f"Method ARN: {method_arn}")
         logger.info(f"Authorization header: {auth_header[:50] if auth_header else 'None'}...")
@@ -39,7 +54,6 @@ def lambda_handler(event, context):
         
         # Decode the token (without verification, as it's already verified by Cognito)
         try:
-            # Decode without verification since the token is issued by Cognito
             decoded = jwt.get_unverified_claims(token)
             logger.info(f"Decoded token: {json.dumps(decoded)}")
         except Exception as e:
@@ -49,28 +63,50 @@ def lambda_handler(event, context):
         # Extract user information
         username = decoded.get('cognito:username') or decoded.get('username', 'unknown')
         
-        # Get user role from Cognito groups
+        # Get user role from Cognito groups for downstream context
         groups = decoded.get('cognito:groups', [])
-        user_role = 'user'  # default role
+        user_role = 'user'
         if 'api-admins' in groups:
             user_role = 'admin'
         elif 'api-users' in groups:
             user_role = 'user'
-        
-        logger.info(f"Authorized user: {username}, groups: {groups}, role: {user_role}")
+        else:
+            user_role = 'unknown'
+
+        logger.info(f"Authorized user (pre-AVP): {username}, groups: {groups}, role: {user_role}")
+
+        if not POLICY_STORE_ID:
+            logger.error("POLICY_STORE_ID not configured")
+            raise Exception('Unauthorized')
+
+        action_id = map_action(path, http_method)
+        resource_id = f"{http_method.upper()}:{path or '/'}"
+
+        logger.info(f"Calling AVP: action={action_id}, resource={resource_id}, policyStore={POLICY_STORE_ID}")
+
+        try:
+            decision = vp.is_authorized_with_token(
+                policyStoreId=POLICY_STORE_ID,
+                identityToken=token,
+                action={'actionType': 'Action', 'actionId': action_id},
+                resource={'entityType': 'App::Endpoint', 'entityId': resource_id}
+            )
+        except (BotoCoreError, ClientError) as e:
+            logger.error(f"AVP call failed: {e}")
+            raise Exception('Unauthorized')
+
+        if decision.get('decision', '').upper() != 'ALLOW':
+            logger.warning(f"AVP denied access for {username} on {resource_id}")
+            raise Exception('Unauthorized')
+
+        logger.info(f"AVP decision: {decision.get('decision')}")
         
         # Generate the authorization response
         principal_id = decoded.get('sub', 'user')
         
-        # Build resource ARN pattern - allow access to all methods in this API
-        # Extract API Gateway ARN components from method_arn
-        # Format: arn:aws:execute-api:region:account-id:api-id/stage/method/resource-path
-        arn_parts = method_arn.split(':')
-        api_gateway_arn_prefix = ':'.join(arn_parts[0:5])  # arn:aws:execute-api:region:account-id
-        api_id_stage = arn_parts[5].split('/')[0:2]  # api-id/stage
-        resource_arn = f"{api_gateway_arn_prefix}:{'/'.join(api_id_stage)}/*/*"
-        
-        logger.info(f"Resource ARN pattern: {resource_arn}")
+        # Build resource ARN pattern - restrict to this method/path
+        # methodArn format: arn:aws:execute-api:region:account-id:api-id/stage/VERB/resource-path
+        resource_arn = method_arn or '*'
         
         auth_response = {
             'principalId': principal_id,

@@ -33,6 +33,8 @@ Write-Host "Project Directory: $ProjectDir" -ForegroundColor Yellow
 
 # Validate required files exist
 $CfnTemplate = Join-Path $ProjectDir "cfn\infrastructure.yaml"
+$CedarSchemaPath = Join-Path $ProjectDir "src\schema.json"
+$AvpPoliciesDir = Join-Path $ProjectDir "src\avp-policies"
 $OpenApiSpec = Join-Path $ProjectDir "src\openapi-spec.yaml"
 $OpenApiMerged = Join-Path $ProjectDir "src\openapi-merged.yaml"
 $UsersCSV = Join-Path $ProjectDir "src\users.csv"
@@ -57,14 +59,43 @@ Write-Host "✓ All required files found" -ForegroundColor Green
 # Deploy CloudFormation stack
 Write-Host "Deploying CloudFormation stack: $StackName" -ForegroundColor Yellow
 
+# Build parameter overrides (optionally include Verified Permissions schema)
+$paramOverrides = @(
+    "Environment=$Environment",
+    "ProjectName=$ProjectName"
+)
+
+$avpSchemaJson = $null
+$avpPolicies = @()
+
+if (Test-Path $CedarSchemaPath) {
+    Write-Host "Found AVP schema at $CedarSchemaPath; enabling Verified Permissions" -ForegroundColor Yellow
+    # Read and compact JSON for later use
+    $schemaContent = Get-Content $CedarSchemaPath -Raw
+    $avpSchemaJson = ($schemaContent | ConvertFrom-Json | ConvertTo-Json -Compress -Depth 10)
+    
+    $paramOverrides += "EnableVerifiedPermissions=true"
+    $paramOverrides += "PrincipalEntityType=User"
+    
+    # Collect all Cedar policy files from avp-policies directory
+    if (Test-Path $AvpPoliciesDir) {
+        $cedarFiles = Get-ChildItem -Path $AvpPoliciesDir -Filter "*.cedar" -ErrorAction SilentlyContinue
+        foreach ($cedarFile in $cedarFiles) {
+            $avpPolicies += @{
+                Path = $cedarFile.FullName
+                Description = "Policy from $($cedarFile.Name)"
+            }
+        }
+    }
+} else {
+    $paramOverrides += "EnableVerifiedPermissions=false"
+}
+
+# Deploy CloudFormation stack
 aws cloudformation deploy `
     --template-file $CfnTemplate `
     --stack-name $StackName `
-    --parameter-overrides `
-        Environment=$Environment `
-        ProjectName=$ProjectName `
-        UserEmail=$UserEmail `
-        AdminEmail=$AdminEmail `
+    --parameter-overrides $paramOverrides `
     --capabilities CAPABILITY_NAMED_IAM `
     --region $Region `
     --no-fail-on-empty-changeset
@@ -74,6 +105,121 @@ if ($LASTEXITCODE -eq 0) {
 } else {
     Write-Host "✗ CloudFormation deployment failed" -ForegroundColor Red
     exit 1
+}
+
+# Update AVP schema and policies if schema file exists
+# (This runs regardless of whether CloudFormation had changes, so existing stacks get updated)
+if ($avpSchemaJson) {
+    Write-Host "[Post-Deploy] Updating AVP PolicyStore schema and policies..." -ForegroundColor Cyan
+    $policyStoreId = aws cloudformation describe-stacks `
+        --stack-name $StackName `
+        --region $Region `
+        --query "Stacks[0].Outputs[?OutputKey=='AvpPolicyStoreId'].OutputValue" `
+        --output text
+    
+    if ($policyStoreId -and $policyStoreId -ne "None") {
+        # Write schema definition to temp file for put-schema
+        $schemaDefFile = Join-Path $env:TEMP "avp-schema-def-$(Get-Date -Format 'yyyyMMddHHmmssffff').json"
+        # Compact the schema JSON and wrap it as cedarJson string value
+        $schemaCompact = $schemaContent | ConvertFrom-Json | ConvertTo-Json -Compress -Depth 10
+        # Escape the compacted schema for JSON string
+        $schemaEscaped = $schemaCompact -replace '\\', '\\' -replace '"', '\"'
+        $schemaInput = "{`"cedarJson`": `"$schemaEscaped`"}"
+        [System.IO.File]::WriteAllText($schemaDefFile, $schemaInput, [System.Text.UTF8Encoding]::new($false))
+        
+        aws verifiedpermissions put-schema `
+            --policy-store-id $policyStoreId `
+            --region $Region `
+            --definition "file://$schemaDefFile"
+        
+        $schemaResult = $LASTEXITCODE
+        Remove-Item $schemaDefFile -ErrorAction SilentlyContinue
+        
+        if ($schemaResult -eq 0) {
+            Write-Host "✓ AVP schema updated successfully" -ForegroundColor Green
+        } else {
+            Write-Host "⚠ Failed to update AVP schema (may already exist)" -ForegroundColor Yellow
+        }
+        
+        # Delete all existing policies before creating new ones
+        Write-Host "[Post-Deploy] Deleting existing AVP policies..." -ForegroundColor Cyan
+        $existingPolicies = aws verifiedpermissions list-policies `
+            --policy-store-id $policyStoreId `
+            --region $Region `
+            --query 'policies[].policyId' `
+            --output text 2>$null
+        
+        if ($existingPolicies) {
+            $policyIds = $existingPolicies -split '\s+'
+            foreach ($policyId in $policyIds) {
+                if ($policyId.Trim()) {
+                    Write-Host "  Deleting policy: $policyId" -ForegroundColor Gray
+                    aws verifiedpermissions delete-policy `
+                        --policy-store-id $policyStoreId `
+                        --policy-id $policyId `
+                        --region $Region 2>&1 | Out-Null
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "  ✓ Policy deleted: $policyId" -ForegroundColor Green
+                    } else {
+                        Write-Host "  ⚠ Failed to delete policy: $policyId" -ForegroundColor Yellow
+                    }
+                }
+            }
+        } else {
+            Write-Host "  No existing policies to delete" -ForegroundColor Gray
+        }
+        
+        # Create policies regardless of schema update result (policies may not exist yet)
+        Write-Host "Debug: avpPolicies count = $($avpPolicies.Count)" -ForegroundColor Gray
+        foreach ($p in $avpPolicies) {
+            Write-Host "Debug: Policy file = $($p.Path)" -ForegroundColor Gray
+            Write-Host "Debug: Policy exists = $(Test-Path $p.Path)" -ForegroundColor Gray
+        }
+        
+        if ($avpPolicies.Count -gt 0) {
+            Write-Host "[Post-Deploy] Creating AVP policies..." -ForegroundColor Cyan
+            foreach ($policy in $avpPolicies) {
+                $policyStatement = Get-Content $policy.Path -Raw
+                # Remove any markdown code block markers that might exist in the file
+                $policyStatement = $policyStatement -replace '(?s)^```.*?[\r\n]+', '' -replace '(?s)[\r\n]+```\s*$', ''
+                # Trim leading/trailing whitespace
+                $policyStatement = $policyStatement.Trim()
+                
+                $policyName = Split-Path $policy.Path -Leaf
+                
+                Write-Host "  Creating policy from $policyName..." -ForegroundColor Gray
+                
+                # Create policy definition JSON
+                $policyDef = @{
+                    static = @{
+                        description = $policy.Description
+                        statement = $policyStatement
+                    }
+                } | ConvertTo-Json -Compress -Depth 10
+                
+                $policyDefFile = Join-Path $env:TEMP "avp-policy-$(Get-Date -Format 'yyyyMMddHHmmssffff').json"
+                [System.IO.File]::WriteAllText($policyDefFile, $policyDef, [System.Text.UTF8Encoding]::new($false))
+                
+                aws verifiedpermissions create-policy `
+                    --policy-store-id $policyStoreId `
+                    --region $Region `
+                    --definition "file://$policyDefFile"
+                
+                Remove-Item $policyDefFile -ErrorAction SilentlyContinue
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "  ✓ Policy created from $policyName" -ForegroundColor Green
+                } else {
+                    Write-Host "  ✗ Failed to create policy from $policyName" -ForegroundColor Red
+                }
+            }
+        } else {
+            Write-Host "⚠ No policies to create (avpPolicies is empty)" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "⚠ Could not retrieve PolicyStore ID - skipping AVP schema/policy updates" -ForegroundColor Yellow
+    }
 }
 
 # Get stack outputs
@@ -131,6 +277,12 @@ $RefreshTokenLambdaArn = aws cloudformation describe-stacks `
     --stack-name $StackName `
     --region $Region `
     --query 'Stacks[0].Outputs[?OutputKey==`RefreshTokenLambdaArn`].OutputValue' `
+    --output text 2>$null
+
+$AvpPolicyStoreId = aws cloudformation describe-stacks `
+    --stack-name $StackName `
+    --region $Region `
+    --query 'Stacks[0].Outputs[?OutputKey==`AvpPolicyStoreId`].OutputValue' `
     --output text 2>$null
 
 $RevokeTokenLambdaArn = aws cloudformation describe-stacks `
@@ -447,6 +599,9 @@ Write-Host "API Gateway ID: $ApiGatewayId" -ForegroundColor Yellow
 Write-Host "API Endpoint: $ApiEndpoint" -ForegroundColor Yellow
 Write-Host "Backend Lambda ARN: $BackendLambdaArn" -ForegroundColor Yellow
 Write-Host "Authorizer Lambda ARN: $AuthorizerLambdaArn" -ForegroundColor Yellow
+if ($AvpPolicyStoreId -and $AvpPolicyStoreId -ne "None") {
+    Write-Host "AVP Policy Store ID: $AvpPolicyStoreId" -ForegroundColor Yellow
+}
 
 Write-Host "`n=== Next Steps ===" -ForegroundColor Green
 Write-Host "1. Test the API:"
