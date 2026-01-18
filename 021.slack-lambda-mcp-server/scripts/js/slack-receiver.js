@@ -1,7 +1,10 @@
 const { App } = require('@slack/bolt');
-const AWS = require('aws-sdk');
-const ssm = new AWS.SSM();
-const sns = new AWS.SNS();
+
+const { SNS } = require('@aws-sdk/client-sns');
+const { SSM } = require('@aws-sdk/client-ssm');
+
+const ssm = new SSM();
+const sns = new SNS();
 
 // 環境変数
 const SLACK_BOT_TOKEN_PARAM = process.env.SLACK_BOT_TOKEN_PARAM || '/slack-bot/token';
@@ -17,7 +20,7 @@ async function getParameter(paramName) {
   };
   
   try {
-    const response = await ssm.getParameter(params).promise();
+    const response = await ssm.getParameter(params);
     return response.Parameter.Value;
   } catch (error) {
     console.error(`Error retrieving parameter ${paramName}:`, error);
@@ -78,7 +81,7 @@ async function initializeApp() {
               StringValue: 'slack_message'
             }
           }
-        }).promise();
+        });
         
         console.log('Message sent to SNS:', message);
         
@@ -122,7 +125,7 @@ async function initializeApp() {
               StringValue: 'slack_message'
             }
           }
-        }).promise();
+        });
         
         console.log('Message sent to SNS:', messageData);
         
