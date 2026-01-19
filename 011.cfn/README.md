@@ -21,6 +21,7 @@
 ```
 011.cfn/
 ├── cfn/
+│   ├── ec2-latest-image.yaml    # 最新AMI IDを動的取得するCloudFormationテンプレート
 │   ├── sample.yaml              # 基本的なEC2構成のCloudFormationテンプレート
 │   └── sample2/
 │       └── sample2.yaml         # SSH接続設定を含む拡張版CloudFormationテンプレート
@@ -30,6 +31,14 @@
 ```
 
 ## リソース詳細
+
+### ec2-latest-image.yaml
+- EC2インスタンス（t2.micro）
+- VPC（10.0.0.0/16）
+- セキュリティグループ
+- キーペア
+- SSMパラメータストアから最新のAmazon Linux 2 AMI IDを動的取得
+- インスタンスタグ（Name、Owner）
 
 ### sample.yaml
 - EC2インスタンス（t2.micro）
@@ -49,6 +58,9 @@
 CloudFormationテンプレートを使用する場合：
 
 ```bash
+# ec2-latest-image.yamlをデプロイ（推奨）
+aws cloudformation create-stack --stack-name cfn-latest-ami --template-body file://cfn/ec2-latest-image.yaml
+
 # sample.yamlをデプロイ
 aws cloudformation create-stack --stack-name cfn-sample --template-body file://cfn/sample.yaml
 
