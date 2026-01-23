@@ -18,10 +18,34 @@
 各番号付きディレクトリには、特定のインフラストラクチャ構成が含まれています：
 
 * **001-037**: 各種インフラストラクチャのサンプル構成
-  * AWS EC2、RDS、Lambda、EKS等のTerraform構成
-  * OCI Object Storage、Budget等のTerraform構成  
-  * CloudFormationテンプレート
-  * Ansible Playbook
+  * **AWS Terraform構成**:
+    - EC2インスタンス（Linux/Windows、踏み台サーバー構成）
+    - RDS（インスタンス/クラスター構成）
+    - Lambda関数（RSS要約、Discord通知、Slack連携等）
+    - EKS（Kubernetes）クラスター
+    - API Gateway + Cognito認証
+    - Bedrock（RAGエージェント、Webクローラー）
+    - Systems Manager（Session Manager、パラメータストア）
+    - CloudWatch（監視、アラート）
+    - OIDC認証（GitHub Actions連携）
+  * **OCI Terraform構成**:
+    - Object Storage（Terraformステート管理用）
+    - Budget（コストアラート）
+  * **CloudFormationテンプレート**:
+    - EC2基本構成
+    - RDS PostgreSQL
+    - SCP（Service Control Policy）
+    - API Gateway + OpenAPI仕様
+    - Aurora + Lambda統合テスト
+  * **Ansible Playbook**:
+    - VPC作成
+    - EC2インスタンス管理
+  * **CDK（TypeScript）**:
+    - BLEA（Baseline Environment on AWS）ガバナンスベース
+  * **その他**:
+    - MCPサーバー（Redmine連携、Slack連携）
+    - kubectl proxy設定
+    - Lambda Layer テスト
   * Kubernetesマニフェスト
 
 ## 共通ディレクトリ
