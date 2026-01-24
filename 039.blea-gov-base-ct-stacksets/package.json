@@ -1,0 +1,33 @@
+{
+  "private": true,
+  "type": "module",
+  "name": "blea-gov-base-ct-stacksets",
+  "version": "1.0.0",
+  "description": "CloudFormation StackSets manager for BLEA Governance Base",
+  "license": "MIT-0",
+  "bin": {
+    "blea-gov-base-ct-stacksets": "bin/blea-gov-base-ct-stacksets.js"
+  },
+  "scripts": {
+    "synth": "cdk synth -q",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean && rm -f parameter.js parameter.d.ts && rm -rf cdk.out",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "18.19.86",
+    "aws-cdk": "^2.1012.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.3.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
+    "typescript": "~5.8.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.173.4",
+    "constructs": "^10.4.2"
+  }
+}
