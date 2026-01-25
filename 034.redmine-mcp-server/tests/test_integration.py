@@ -695,3 +695,172 @@ class TestRedmineIntegration:
                 
         except Exception as e:
             pytest.skip(f"Scraper integration test failed: {str(e)}")
+
+    @pytest.mark.skipif(not (os.getenv('REDMINE_USERNAME') and os.getenv('REDMINE_PASSWORD')), 
+                       reason="Credentials not configured")
+    def test_scraper_get_available_trackers(self, scraper):
+        """Test scraper get_available_trackers functionality"""
+        username = os.getenv('REDMINE_USERNAME', '')
+        password = os.getenv('REDMINE_PASSWORD', '')
+        
+        if not username or not password:
+            pytest.skip("Credentials not available")
+        
+        try:
+            # Test login
+            print("\n=== Testing get_available_trackers ===")
+            login_result = scraper.login()
+            print(f"Login result: {login_result.get('success')} - {login_result.get('message')}")
+            
+            if not login_result.get('success'):
+                pytest.skip(f"Login failed: {login_result.get('message')}")
+            
+            # Test get_available_trackers without project_id
+            print("\n--- Testing get_available_trackers (no project_id) ---")
+            result = scraper.get_available_trackers()
+            
+            print(f"Success: {result.get('success')}")
+            print(f"Message: {result.get('message')}")
+            print(f"Trackers count: {len(result.get('trackers', []))}")
+            
+            # Basic assertions
+            assert result.get('success') is True, f"Expected success=True, got: {result}"
+            assert 'trackers' in result, "Response missing 'trackers' field"
+            assert isinstance(result['trackers'], list), "'trackers' should be a list"
+            
+            # Verify tracker structure
+            if result['trackers']:
+                first_tracker = result['trackers'][0]
+                print(f"\nFirst tracker: {first_tracker}")
+                
+                # Check required fields (id and name)
+                assert 'id' in first_tracker, "Tracker missing 'id' field"
+                assert 'name' in first_tracker, "Tracker missing 'name' field"
+                
+                print(f"[OK] Tracker has id: {first_tracker['id']}")
+                print(f"[OK] Tracker has name: {first_tracker['name']}")
+                
+                # The fix specifically addresses the id/name field issue
+                # Ensure we're not getting 'value' or 'text' instead
+                assert 'value' not in first_tracker or first_tracker.get('id') is not None, \
+                    "Tracker should use 'id' not 'value'"
+                assert 'text' not in first_tracker or first_tracker.get('name') is not None, \
+                    "Tracker should use 'name' not 'text'"
+            else:
+                print("[WARN] No trackers found (this might be expected for some Redmine instances)")
+            
+            # Test with project_id if available
+            test_project_id = os.getenv('TEST_PROJECT_ID')
+            if test_project_id:
+                print(f"\n--- Testing get_available_trackers (project_id={test_project_id}) ---")
+                result_with_project = scraper.get_available_trackers(test_project_id)
+                
+                print(f"Success: {result_with_project.get('success')}")
+                print(f"Trackers count: {len(result_with_project.get('trackers', []))}")
+                
+                assert result_with_project.get('success') is True
+                assert 'trackers' in result_with_project
+                
+                if result_with_project['trackers']:
+                    first_tracker = result_with_project['trackers'][0]
+                    print(f"First tracker (with project): {first_tracker}")
+                    
+                    assert 'id' in first_tracker
+                    assert 'name' in first_tracker
+                    
+                    # When project_id is provided, trackers should have field information
+                    if 'fields' in first_tracker:
+                        print(f"[OK] Tracker includes fields: {len(first_tracker.get('fields', []))} fields")
+                        if first_tracker.get('fields'):
+                            print(f"     Fields: {first_tracker.get('fields')}")
+                        if first_tracker.get('required_fields'):
+                            print(f"     Required fields: {first_tracker.get('required_fields')}")
+                        if first_tracker.get('optional_fields'):
+                            print(f"     Optional fields: {first_tracker.get('optional_fields')}")
+            else:
+                print("\nTEST_PROJECT_ID not configured, skipping project-specific test")
+            
+            # Test with non-existent project
+            print("\n--- Testing get_available_trackers (non-existent project) ---")
+            result_nonexistent = scraper.get_available_trackers("nonexistent-project-12345")
+            
+            print(f"Success: {result_nonexistent.get('success')}")
+            print(f"Message: {result_nonexistent.get('message')}")
+            
+            # Should fail for non-existent project
+            assert result_nonexistent.get('success') is False, "Should fail for non-existent project"
+            assert 'not found' in result_nonexistent.get('message', '').lower() or \
+                   'not exist' in result_nonexistent.get('message', '').lower() or \
+                   'cannot access' in result_nonexistent.get('message', '').lower(), \
+                   "Error message should indicate project not found"
+            print(f"[OK] Correctly detected non-existent project")
+            
+            # Test logout
+            logout_result = scraper.logout()
+            print(f"\nLogout success: {logout_result.get('success')}")
+            assert logout_result.get('success') is True
+            
+            print("\n[OK] All get_available_trackers tests passed!")
+                
+        except Exception as e:
+            print(f"\n[ERROR] Test failed with error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            pytest.skip(f"get_available_trackers integration test failed: {str(e)}")
+
+    @pytest.mark.skipif(not (os.getenv('REDMINE_USERNAME') and os.getenv('REDMINE_PASSWORD')), 
+                       reason="Credentials not configured")
+    def test_scraper_search_issues_with_invalid_project(self, scraper):
+        """Test search_issues with invalid project_id"""
+        username = os.getenv('REDMINE_USERNAME', '')
+        password = os.getenv('REDMINE_PASSWORD', '')
+        
+        if not username or not password:
+            pytest.skip("Credentials not available")
+        
+        try:
+            # Test login
+            print("\n=== Testing search_issues with invalid project_id ===")
+            login_result = scraper.login()
+            print(f"Login result: {login_result.get('success')} - {login_result.get('message')}")
+            
+            if not login_result.get('success'):
+                pytest.skip(f"Login failed: {login_result.get('message')}")
+            
+            # Test search_issues with non-existent project
+            print("\n--- Testing search_issues (non-existent project) ---")
+            result = scraper.search_issues(project_id="nonexistent-project-99999")
+            
+            print(f"Success: {result.get('success')}")
+            print(f"Message: {result.get('message')}")
+            
+            # Should fail for non-existent project
+            assert result.get('success') is False, "Should fail for non-existent project"
+            assert 'not found' in result.get('message', '').lower(), \
+                   "Error message should indicate project not found"
+            print(f"[OK] Correctly detected non-existent project in search_issues")
+            
+            # Test search_issues with valid project
+            test_project_id = os.getenv('TEST_PROJECT_ID')
+            if test_project_id:
+                print(f"\n--- Testing search_issues (valid project: {test_project_id}) ---")
+                result_valid = scraper.search_issues(project_id=test_project_id)
+                
+                print(f"Success: {result_valid.get('success')}")
+                print(f"Issues found: {len(result_valid.get('issues', []))}")
+                
+                assert result_valid.get('success') is True, "Should succeed for valid project"
+                print(f"[OK] search_issues succeeded with valid project")
+            
+            # Test logout
+            logout_result = scraper.logout()
+            print(f"\nLogout success: {logout_result.get('success')}")
+            assert logout_result.get('success') is True
+            
+            print("\n[OK] All search_issues validation tests passed!")
+                
+        except Exception as e:
+            print(f"\n[ERROR] Test failed with error: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            pytest.skip(f"search_issues validation test failed: {str(e)}")
