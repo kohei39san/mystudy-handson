@@ -46,6 +46,7 @@ __pycache__/
 node_modules
 .DS_Store
 !.versionrc.js
+*.tsbuildinfo
 
 # CDK asset staging directory
 .cdk.staging
@@ -76,4 +77,5 @@ htmlcov/
 .coverage.*
 coverage.*
 
+# Amazon Q local files
 .amazonq/
