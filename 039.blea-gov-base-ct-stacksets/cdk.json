@@ -1,0 +1,6 @@
+{
+  "app": "npx tsx bin/blea-gov-base-ct-stacksets.ts",
+  "context": {
+    "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true
+  }
+}
