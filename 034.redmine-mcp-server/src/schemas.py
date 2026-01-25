@@ -17,7 +17,7 @@ class SearchIssuesRequest(BaseModel):
     """Search issues request schema"""
     status_id: Optional[str] = Field(None, description="Status ID or name")
     project_id: Optional[str] = Field(None, description="Project ID or identifier")
-    tracker_id: Optional[str] = Field(None, description="Tracker ID or name")
+    tracker_id: Optional[int] = Field(None, description="Tracker ID (numeric only)")
     assigned_to_id: Optional[str] = Field(None, description="Assigned user ID or name")
     q: Optional[str] = Field(None, description="General text search (searches across multiple fields)")
     subject: Optional[str] = Field(None, description="Subject text search")
@@ -169,6 +169,9 @@ class TrackerInfo(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
+    fields: Optional[List[Dict[str, Any]]] = None
+    required_fields: Optional[List[Dict[str, Any]]] = None
+    optional_fields: Optional[List[Dict[str, Any]]] = None
 
 
 class TrackersResponse(BaseModel):

@@ -136,6 +136,34 @@ class RedmineSeleniumScraper:
             
             logger.info("Successfully switched to headless mode")
     
+    def _validate_project_id(self, project_id: str) -> tuple[bool, str, list]:
+        """
+        Validate if a project exists
+        
+        Args:
+            project_id: Project ID to validate
+            
+        Returns:
+            Tuple of (is_valid, error_message, available_project_ids)
+        """
+        logger.debug(f"Verifying project '{project_id}' exists")
+        projects_result = self.get_projects()
+        
+        if projects_result.get('success'):
+            project_ids = [p['id'] for p in projects_result.get('projects', [])]
+            if project_id not in project_ids:
+                error_msg = f"Project '{project_id}' not found. Available projects: {', '.join(project_ids[:5])}" + \
+                          (f" (and {len(project_ids) - 5} more)" if len(project_ids) > 5 else "")
+                logger.warning(error_msg)
+                return False, error_msg, project_ids
+            else:
+                logger.debug(f"Project '{project_id}' verified to exist")
+                return True, "", project_ids
+        else:
+            error_msg = f"Could not verify project existence: {projects_result.get('message')}"
+            logger.warning(error_msg)
+            return True, "", []  # Allow to proceed if verification fails
+    
     def login(self) -> Dict[str, Any]:
         """
         Login to Redmine using Selenium
@@ -694,6 +722,20 @@ class RedmineSeleniumScraper:
         try:
             logger.info("Searching for issues")
             
+            # Validate project_id if provided
+            project_id = kwargs.get('project_id')
+            if project_id:
+                is_valid, error_msg, _ = self._validate_project_id(project_id)
+                if not is_valid:
+                    response = IssuesResponse(
+                        success=False,
+                        message=error_msg,
+                        issues=[],
+                        total_count=0,
+                        current_page=1
+                    )
+                    return response.model_dump()
+            
             # Note: Field validation is handled by _validate_fields in calling code
             
             from urllib.parse import urlencode, quote
@@ -807,7 +849,7 @@ class RedmineSeleniumScraper:
             # Extract total count from page
             total_count = 0
             try:
-                # Method 1: Look for pagination info with pattern (1-25/101)
+                # Look for pagination info with pattern (1-25/101)
                 pagination_elements = self.driver.find_elements(By.CSS_SELECTOR, 
                     ".pagination, .paginator, .page-info, .items-info")
                 
@@ -820,29 +862,6 @@ class RedmineSeleniumScraper:
                         total_count = int(match.group(1))
                         logger.debug(f"Found total count from pagination: {total_count}")
                         break
-                
-                # Method 2: Look for "X issues" text
-                if total_count == 0:
-                    count_elements = self.driver.find_elements(By.CSS_SELECTOR, 
-                        ".count, .total-count, .issue-count, .results-info")
-                    
-                    for element in count_elements:
-                        text = element.text.strip()
-                        # Extract number from text like "101 issues" or "101 items"
-                        count_match = re.search(r'(\d+)\s*(?:issues?|items?|results?)', text, re.IGNORECASE)
-                        if count_match:
-                            total_count = int(count_match.group(1))
-                            logger.debug(f"Found total count from text: {total_count}")
-                            break
-                
-                # Method 3: Look in page source for pagination info
-                if total_count == 0:
-                    page_source = self.driver.page_source
-                    # Look for pagination patterns in HTML
-                    match = re.search(r'\((\d+)-(\d+)/(\d+)\)', page_source)
-                    if match:
-                        total_count = int(match.group(3))
-                        logger.debug(f"Found total count from page source: {total_count}")
                             
             except Exception as e:
                 logger.debug(f"Could not extract total count: {e}")
@@ -909,24 +928,10 @@ class RedmineSeleniumScraper:
                                     if subject and not subject.startswith('#') and subject != issue_id:
                                         issue_data['subject'] = subject
                                     else:
-                                        # Link text is just the ID, look for subject elsewhere
+                                        # Link text is just the ID, look for subject in adjacent cells
                                         subject_found = False
                                         
-                                        # Method 1: Look for other links in the same cell
-                                        try:
-                                            parent_cell = issue_link.find_element(By.XPATH, "..")
-                                            other_links = parent_cell.find_elements(By.TAG_NAME, "a")
-                                            for other_link in other_links:
-                                                if other_link != issue_link:
-                                                    other_text = other_link.text.strip()
-                                                    if other_text and not other_text.startswith('#') and other_text != issue_id:
-                                                        issue_data['subject'] = other_text
-                                                        subject_found = True
-                                                        break
-                                        except Exception:
-                                            pass
-                                        
-                                        # Method 2: Look for subject in adjacent cells (skip project column)
+                                        # Look for subject in adjacent cells (skip project column)
                                         if not subject_found:
                                             try:
                                                 # Find the cell containing the issue link
@@ -968,56 +973,21 @@ class RedmineSeleniumScraper:
                                                             break
                                             except Exception:
                                                 pass
-                                        
-                                        # Method 3: Look for the actual issue title link in the row
-                                        if not subject_found:
-                                            try:
-                                                row = issue_link.find_element(By.XPATH, "ancestor::tr[1]")
-                                                # Look specifically for links that go to the same issue (title links)
-                                                all_links = row.find_elements(By.TAG_NAME, "a")
-                                                for link in all_links:
-                                                    if link != issue_link:
-                                                        link_href = link.get_attribute("href")
-                                                        link_text = link.text.strip()
-                                                        
-                                                        # Check if this link also points to the same issue (title link)
-                                                        if (link_href and f'/issues/{issue_id}' in link_href and 
-                                                            link_text and len(link_text) > 3 and 
-                                                            not link_text.startswith('#') and 
-                                                            not link_text.isdigit() and
-                                                            not link_text.endswith('-project') and
-                                                            link_text not in ['Edit', 'Delete', 'View', 'Copy', 'hoge-project', 'fuga-project']):
-                                                            issue_data['subject'] = link_text
-                                                            subject_found = True
-                                                            logger.debug(f"Found subject from issue title link: {link_text}")
-                                                            break
-                                                        
-                                                        # Also check for any meaningful text that's not project/system related
-                                                        elif (link_text and len(link_text) > 5 and 
-                                                              not link_text.startswith('#') and 
-                                                              not link_text.isdigit() and
-                                                              not link_text.endswith('-project') and
-                                                              'project' not in link_text.lower() and
-                                                              link_text not in ['Edit', 'Delete', 'View', 'Copy', 'New', 'Open', 'Closed']):
-                                                            issue_data['subject'] = link_text
-                                                            subject_found = True
-                                                            logger.debug(f"Found subject from meaningful link: {link_text}")
-                                                            break
-                                            except Exception:
-                                                pass
                                     
-                                    # Extract other information from cells
+                                    # Extract other information from cells using class attributes
                                     for cell_idx, cell in enumerate(cells):
                                         cell_text = cell.text.strip()
+                                        cell_class = cell.get_attribute('class') or ''
+                                        logger.debug(f"Cell {cell_idx}: '{cell_text}' (class: {cell_class})")
+                                        
                                         if cell_text:
-                                            # Try to identify cell content by position or content
-                                            if cell_idx == 0 and not issue_data.get('tracker'):
-                                                # First cell might be tracker or checkbox
-                                                if not cell_text.startswith('#') and cell_text not in ['']:
-                                                    issue_data['tracker'] = cell_text
-                                            elif 'status' not in issue_data and cell_text in ['New', 'Open', 'Closed', 'Resolved', 'In Progress']:
+                                            # Use class attribute to identify cell type
+                                            if 'tracker' in cell_class and not issue_data.get('tracker'):
+                                                issue_data['tracker'] = cell_text
+                                                logger.debug(f"Found tracker from class in cell {cell_idx}: {cell_text}")
+                                            elif 'status' in cell_class and not issue_data.get('status'):
                                                 issue_data['status'] = cell_text
-                                            elif 'priority' not in issue_data and cell_text in ['Low', 'Normal', 'High', 'Urgent', 'Immediate']:
+                                            elif 'priority' in cell_class and not issue_data.get('priority'):
                                                 issue_data['priority'] = cell_text
                                     
                                     # If we still don't have a subject, use a default
@@ -1036,41 +1006,7 @@ class RedmineSeleniumScraper:
             except Exception as e:
                 logger.debug(f"Error processing issues table: {e}")
             
-            # Alternative method: look for any issue links on the page
-            if not issues:
-                logger.debug("No issues found in table, trying alternative methods")
-                try:
-                    # Look for any issue links on the page
-                    issue_links = self.driver.find_elements(By.CSS_SELECTOR, "a[href*='/issues/']")
-                    logger.debug(f"Found {len(issue_links)} issue links on page")
-                    
-                    seen_ids = set()
-                    for link in issue_links:
-                        try:
-                            href = link.get_attribute("href")
-                            issue_id_match = re.search(r'/issues/(\d+)', href)
-                            if issue_id_match:
-                                issue_id = issue_id_match.group(1)
-                                if issue_id not in seen_ids:
-                                    seen_ids.add(issue_id)
-                                    
-                                    link_text = link.text.strip()
-                                    subject = link_text if link_text and not link_text.startswith('#') else f"Issue #{issue_id}"
-                                    
-                                    issues.append({
-                                        'id': issue_id,
-                                        'subject': subject,
-                                        'url': href
-                                    })
-                                    logger.debug(f"Added issue from link: #{issue_id} - {subject}")
-                        except Exception as e:
-                            logger.debug(f"Error processing issue link: {e}")
-                            continue
-                            
-                except Exception as e:
-                    logger.debug(f"Error finding issue links: {e}")
-            
-            # If still no issues but we have a total count, there might be a parsing issue
+            # If no issues but we have a total count, there might be a parsing issue
             if not issues and total_count > 0:
                 logger.warning(f"Found {total_count} issues according to count, but could not parse any issue data")
                 # Add debug information
@@ -1352,6 +1288,17 @@ class RedmineSeleniumScraper:
         try:
             logger.info(f"Getting available trackers for project: {project_id or 'all'}")
             
+            # If project_id is provided, verify it exists first
+            if project_id:
+                is_valid, error_msg, _ = self._validate_project_id(project_id)
+                if not is_valid:
+                    response = TrackersResponse(
+                        success=False,
+                        message=error_msg,
+                        trackers=[]
+                    )
+                    return response.model_dump()
+            
             # Navigate to new issue page
             if project_id:
                 new_issue_url = f"{config.base_url}/projects/{project_id}/issues/new"
@@ -1361,7 +1308,6 @@ class RedmineSeleniumScraper:
             self.driver.get(new_issue_url)
             
             # Wait for page to load
-
             self.wait.until(
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
@@ -1398,8 +1344,8 @@ class RedmineSeleniumScraper:
                 available_trackers = []
                 for tracker_option in tracker_options:
                     tracker_info = {
-                        'value': tracker_option['value'],
-                        'text': tracker_option['text']
+                        'id': tracker_option['value'],
+                        'name': tracker_option['text']
                     }
                     
                     # Get fields for this tracker if project_id is provided
@@ -1422,7 +1368,7 @@ class RedmineSeleniumScraper:
                 tracker_infos = [TrackerInfo(**tracker) for tracker in available_trackers]
                 response = TrackersResponse(
                     success=True,
-                    message=f'Found {len(available_trackers)} available trackers',
+                    message=f'Found {len(available_trackers)} available trackers' + (f' for project: {project_id}' if project_id else ''),
                     trackers=tracker_infos
                 )
                 return response.model_dump()
