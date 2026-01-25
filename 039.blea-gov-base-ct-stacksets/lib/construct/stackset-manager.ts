@@ -1,10 +1,7 @@
 import { Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import {
-  CfnStackSet,
-  CfnStackInstances,
-  CfnStackSetProps,
-} from 'aws-cdk-lib/aws-cloudformation';
+import { CfnStackSet, CfnStackSetProps } from 'aws-cdk-lib/aws-cloudformation';
+import * as cfn from 'aws-cdk-lib/aws-cloudformation';
 
 export interface StackSetManagerProps {
   stackSetName: string;
@@ -14,10 +11,14 @@ export interface StackSetManagerProps {
   parameters?: {
     [key: string]: string;
   };
-  targetAccounts: string[];
+  targetAccounts?: string[];          // アカウントベースのデプロイ用
+  targetOus?: string[];               // OUベースのデプロイ用
   targetRegions: string[];
   autoDeploymentEnabled?: boolean;  // Control Tower OUベースの自動デプロイ
   permissionModel?: 'SELF_MANAGED' | 'SERVICE_MANAGED';
+  callAs?: 'SELF' | 'DELEGATED_ADMIN';  // SERVICE_MANAGEDでの呼び出し元
+  administrationRoleArn?: string;  // SELF_MANAGED用の管理ロールARN
+  executionRoleName?: string;  // ターゲットアカウントの実行ロール名
 }
 
 export class StackSetManager extends Construct {
@@ -29,6 +30,18 @@ export class StackSetManager extends Construct {
     // CloudFormation テンプレートは既に文字列として渡される
     const templateBody = props.templateBody;
 
+    // deploymentTargets を構築: OUベースまたはアカウントベース
+    const deploymentTargets: any = {};
+    if (props.targetOus && props.targetOus.length > 0) {
+      // OUベースのデプロイメント
+      deploymentTargets.organizationalUnitIds = props.targetOus;
+    } else if (props.targetAccounts && props.targetAccounts.length > 0) {
+      // アカウントベースのデプロイメント
+      deploymentTargets.accounts = props.targetAccounts;
+    } else {
+      throw new Error('targetOus または targetAccounts のいずれかを指定してください。');
+    }
+
     // StackSet を作成
     this.stackSet = new CfnStackSet(this, 'StackSet', {
       stackSetName: props.stackSetName,
@@ -37,23 +50,28 @@ export class StackSetManager extends Construct {
       capabilities: props.capabilities || ['CAPABILITY_NAMED_IAM'],
       parameters: this.convertParameters(props.parameters),
       permissionModel: props.permissionModel || 'SELF_MANAGED',
-      autoDeployment: props.autoDeploymentEnabled
+      callAs: props.callAs,
+      // SELF_MANAGEDの場合のみIAMロールを指定
+      administrationRoleArn: props.permissionModel === 'SELF_MANAGED' ? props.administrationRoleArn : undefined,
+      executionRoleName: props.permissionModel === 'SELF_MANAGED' ? (props.executionRoleName || 'AWSCloudFormationStackSetExecutionRole') : undefined,
+      // SERVICE_MANAGEDの場合はautoDeploymentが必須
+      autoDeployment: props.permissionModel === 'SERVICE_MANAGED' 
         ? {
             enabled: true,
-            retain: true,
+            retainStacksOnAccountRemoval: false,
           }
-        : undefined,
-    });
-
-    // StackSet インスタンスをデプロイ
-    new CfnStackInstances(this, 'StackInstances', {
-      stackSetName: this.stackSet.stackSetName,
-      accounts: props.targetAccounts,
-      regions: props.targetRegions,
-      deploymentPreferences: {
-        maxConcurrentPercentage: 100,
-        failureTolerancePercentage: 0,
-      },
+        : (props.autoDeploymentEnabled
+          ? {
+              enabled: true,
+              retainStacksOnAccountRemoval: true,
+            }
+          : undefined),
+      stackInstancesGroup: [
+        {
+          deploymentTargets: deploymentTargets,
+          regions: props.targetRegions,
+        },
+      ],
     });
 
     new CfnOutput(this, 'StackSetId', {

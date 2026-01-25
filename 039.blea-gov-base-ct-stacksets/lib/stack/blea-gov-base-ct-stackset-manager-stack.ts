@@ -41,23 +41,22 @@ export class BLEAGovBaseCtStackSetStack extends Stack {
       stackSetName: 'BLEA-Governance-Base-ControlTower',
       description: 'BLEA Governance Base for AWS Control Tower multi-accounts and multi-regions',
       
-      // Stage から取得したテンプレートを直接渡す
+      // Stage から取得したテンプレートを直接渡す（値は既に埋め込み済み）
       templateBody: JSON.stringify(template),
       
       capabilities: ['CAPABILITY_NAMED_IAM'],
       
-      // StackSet に渡すパラメータ
-      parameters: {
-        ...notificationParams,
-        S3ExpirationDays: params.s3ExpirationDays?.toString() || '366',
-        S3ExpiredObjectDeleteDays: params.s3ExpiredObjectDeleteDays?.toString() || '30',
-      },
+      // パラメータは不要（テンプレート生成時に既に値が埋め込まれている）
       
       targetAccounts: params.targetAccounts,
+      targetOus: params.targetOus,
       targetRegions: params.targetRegions,
       
-      // Service Managed でない場合は SELF_MANAGED を使用
-      permissionModel: 'SELF_MANAGED',
+      // StackSet permission model
+      permissionModel: params.permissionModel || 'SELF_MANAGED',
+      callAs: params.callAs,
+      administrationRoleArn: params.administrationRoleArn,
+      executionRoleName: params.executionRoleName,
     });
   }
 

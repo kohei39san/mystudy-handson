@@ -43,7 +43,7 @@
 
 ## セットアップ
 
-### パッケージのインストール
+### 1. パッケージのインストール
 
 ```bash
 cd 039.blea-gov-base-ct-stacksets
@@ -51,31 +51,67 @@ npm i --package-lock-only
 npm ci
 ```
 
-### パラメータ設定
+### 2. 環境変数の設定（セキュリティ推奨）
 
-[parameter.ts](parameter.ts) を編集して、デプロイ設定を定義します：
+センシティブな情報（アカウントID、リージョンなど）を parameter.ts に直接書かずに、環境変数で管理できます。
+
+#### 2-1. .env ファイルを作成
+
+```bash
+# .env.example をコピー
+cp .env.example .env
+
+# .env を編集して実際の値を設定
+```
+
+#### 2-2. .env ファイルの編集
+
+```bash
+# StackSet 管理アカウント設定
+STACK_SET_ACCOUNT=123456789012              # 管理アカウントID（必須）
+STACK_SET_REGION=ap-northeast-1             # 管理アカウントのリージョン
+STACK_SET_ENV_NAME=Production               # 環境名
+
+# 通知設定
+STACK_SET_NOTIFICATION_MODE=centralized     # centralized | regional | none
+STACK_SET_NOTIFY_EMAIL=security-ops@example.com
+STACK_SET_SLACK_WORKSPACE_ID=TXXXXXXXXXX    # オプション
+STACK_SET_SLACK_CHANNEL_ID=CXXXXXXXXXX      # オプション
+
+# S3 ライフサイクル
+STACK_SET_S3_EXPIRATION_DAYS=366
+STACK_SET_S3_EXPIRED_DELETE_DAYS=30
+
+# デプロイ対象（必須）
+STACK_SET_TARGET_ACCOUNTS=210987654321,321098765432    # カンマ区切り
+STACK_SET_TARGET_REGIONS=ap-northeast-1,us-east-1,eu-west-1
+
+# Organization ID
+STACK_SET_ORG_ID=o-xxxxxxxxxx
+```
+
+> **重要**: `.env` ファイルは `.gitignore` に含まれており、Git にコミットされません。
+
+#### 2-3. 環境変数の読み込み確認
+
+parameter.ts は自動的に環境変数から値を読み込みます：
 
 ```typescript
+// parameter.ts の内部実装
 export const stackSetParameter: StackSetParameter = {
-  env: { account: '123456789012', region: 'ap-northeast-1' }, // 管理アカウント
-  envName: 'Production',
-  notificationMode: 'centralized',  // ★ 通知モードを選択
-  
-  // メール・Slack設定
-  securityNotifyEmail: 'security-ops@example.com',
-  securitySlackWorkspaceId: 'TXXXXXXXXXX',
-  securitySlackChannelId: 'CXXXXXXXXXX',
-  
-  // S3ライフサイクル
-  s3ExpirationDays: 366,
-  s3ExpiredObjectDeleteDays: 30,
-  
-  // デプロイ対象
-  targetAccounts: ['210987654321', '321098765432'],  // ★ ゲストアカウントID
-  targetRegions: ['ap-northeast-1', 'us-east-1', 'eu-west-1'],  // ★ デプロイリージョン
-  managementAccountId: '123456789012',
+  env: { 
+    account: getEnvOrThrow('STACK_SET_ACCOUNT'),  // 環境変数から取得
+    region: getEnvOrDefault('STACK_SET_REGION', 'ap-northeast-1'),
+  },
+  targetAccounts: getEnvArray('STACK_SET_TARGET_ACCOUNTS'),
+  targetRegions: getEnvArray('STACK_SET_TARGET_REGIONS'),
+  // ...
 };
 ```
+
+### 3. パラメータ設定（代替方法）
+
+環境変数を使わない場合は、[parameter.ts](parameter.ts) を直接編集することもできます。ただし、**アカウントIDなどのセンシティブな情報を含めないように注意**してください。
 
 ## 通知モード
 
@@ -282,6 +318,54 @@ StackSet は以下のパラメータを CloudFormation テンプレートに渡�
 3. **タグ付け**: CloudWatch Alarms に `Region`, `Account` タグを付与して識別を容易に
 4. **監視ダッシュボード**: 管理アカウント側で集約ダッシュボードを作成
 5. **段階的ロールアウト**: 本番環境への展開前に、少数のアカウント/リージョンでテスト
+
+## テスト
+
+### 統合テスト
+
+実際にデプロイして動作を確認する統合テストを提供しています。
+
+#### 自動テスト（推奨）
+
+デプロイから検証までを自動化したスクリプト：
+
+```bash
+# Linux/Mac
+npm run test:deploy
+
+# Windows (PowerShell)
+npm run test:deploy:win
+```
+
+このスクリプトは以下を実行します：
+1. 依存関係のインストール
+2. parameter.ts の確認プロンプト
+3. StackSet マネージャーのデプロイ
+4. StackInstances 作成の待機（3分）
+5. StackSet と StackInstances の状態確認
+6. オプションでリソースのクリーンアップ
+
+#### 手動テスト
+
+1. **デプロイ**:
+```bash
+npx cdk deploy Dev-BLEAGovBaseCtStackSetManager
+```
+
+2. **検証**（デプロイ後3-5分待機）:
+```bash
+npm run test:integration
+```
+
+検証内容：
+- ✅ StackSet の存在確認
+- ✅ StackSet のステータス確認（ACTIVE）
+- ✅ StackInstances の状態確認（全て CURRENT）
+
+3. **クリーンアップ**:
+```bash
+npx cdk destroy Dev-BLEAGovBaseCtStackSetManager
+```
   --query 'Summaries[?Status==`FAILED`]'
 ```
 

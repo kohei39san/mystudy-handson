@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+import 'dotenv/config';
 import * as cdk from 'aws-cdk-lib';
 import { BLEAGovBaseCtStackSetStack } from '../lib/stack/blea-gov-base-ct-stackset-manager-stack';
 import { stackSetParameter } from '../parameter';

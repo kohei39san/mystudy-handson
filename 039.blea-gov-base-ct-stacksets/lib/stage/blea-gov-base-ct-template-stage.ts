@@ -1,6 +1,6 @@
-import { Stage, StageProps } from 'aws-cdk-lib';
+import { Stage, StageProps, DefaultStackSynthesizer } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BLEAGovBaseCtStack } from '../../../../024.test-custom-blea-gov-base-ct/lib/stack/blea-gov-base-ct-stack';
+import { BLEAGovBaseCtStack } from '../../../024.test-custom-blea-gov-base-ct/lib/stack/blea-gov-base-ct-stack';
 
 export interface BLEAGovBaseCtTemplateStageProps extends StageProps {
   securityNotifyEmail: string;
@@ -26,6 +26,7 @@ export class BLEAGovBaseCtTemplateStage extends Stage {
       securitySlackChannelId: props.securitySlackChannelId,
       s3ExpirationDays: props.s3ExpirationDays,
       s3ExpiredObjectDeleteDays: props.s3ExpiredObjectDeleteDays,
+      synthesizer: new DefaultStackSynthesizer({ generateBootstrapVersionRule: false }),
     });
   }
 }
