@@ -81,7 +81,7 @@ export class StackSetManager extends Construct {
   }
 
   /**
-   * CloudFormation テンプレート JSON を読み込む
+   * パラメータを CloudFormation StackSet の形式 [{parameterKey, parameterValue}] に変換する
    */
   private convertParameters(
     parameters?: Record<string, string>

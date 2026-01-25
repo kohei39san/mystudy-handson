@@ -258,8 +258,6 @@ StackSets は自動的に全インスタンスに変更を適用します。
 `parameter.ts` の `targetAccounts` または `targetRegions` に追加して再デプロイ：
 
 ```typescript
-### ステップ 2: デプロイ確認
-
 targetAccounts: ['210987654321', '321098765432', '432109876543'],  // ← 追加
 targetRegions: ['ap-northeast-1', 'us-east-1', 'eu-west-1', 'ap-southeast-1'],  // ← 追加
 ```
@@ -369,13 +367,14 @@ npx cdk destroy Dev-BLEAGovBaseCtStackSetManager
   --query 'Summaries[?Status==`FAILED`]'
 ```
 
-失敗したイン 024 の Stack 定義を更新する場合：
+## 024 の Stack 定義を更新する場合
 
 1. 024ディレクトリで Stack 定義を変更（必要に応じて）
 2. 039ディレクトリの `parameter.ts` を更新（必要に応じて）
 3. `npx cdk deploy` を再実行
 
-テンプレートは自動的に再生成され、StackSets が
+テンプレートは自動的に再生成され、StackSets が更新されます。
+
 ## ファイル詳細
 
 | ファイル | 説明 |
@@ -384,6 +383,7 @@ npx cdk destroy Dev-BLEAGovBaseCtStackSetManager
 | [bin/blea-gov-base-ct-stacksets.ts](bin/blea-gov-base-ct-stacksets.ts) | CDK アプリケーションのエントリーポイント |
 | [lib/stack/blea-gov-base-ct-stackset-manager-stack.ts](lib/stack/blea-gov-base-ct-stackset-manager-stack.ts) | StackSet マネージャースタックの実装 |
 | [lib/construct/stackset-manager.ts](lib/construct/stackset-manager.ts) | StackSet 作成・管理の Construct |
+| [lib/stage/blea-gov-base-ct-template-stage.ts](lib/stage/blea-gov-base-ct-template-stage.ts) | テンプレート生成用 Stage |
 
 ## 関連リンク
 
@@ -394,5 +394,3 @@ npx cdk destroy Dev-BLEAGovBaseCtStackSetManager
 ## ライセンス
 
 MIT-0
-stage/blea-gov-base-ct-template-stage.ts](lib/stage/blea-gov-base-ct-template-stage.ts) | テンプレート生成用 Stage |
-| [lib/
