@@ -364,8 +364,6 @@ npm run test:integration
 ```bash
 npx cdk destroy Dev-BLEAGovBaseCtStackSetManager
 ```
-  --query 'Summaries[?Status==`FAILED`]'
-```
 
 ## 024 の Stack 定義を更新する場合
 
@@ -387,10 +385,6 @@ npx cdk destroy Dev-BLEAGovBaseCtStackSetManager
 
 ## 関連リンク
 
-- [024.test-custom-blea-gov-base-ct](../024.test-custom-blea-gov-base-ct): 元となる BLEA Governance Base プロジェクト
+- [024.test-custom-blea-gov-base-ct](../024.test-custom-blea-gov-base-ct)
 - [AWS CloudFormation StackSets ドキュメント](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/what-is-cfnstacksets.html)
 - [AWS Control Tower](https://aws.amazon.com/controltower/)
-
-## ライセンス
-
-MIT-0
