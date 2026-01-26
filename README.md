@@ -17,36 +17,91 @@
 
 各番号付きディレクトリには、特定のインフラストラクチャ構成が含まれています：
 
-* **001-037**: 各種インフラストラクチャのサンプル構成
+* **001-038**: 各種インフラストラクチャのサンプル構成
   * **AWS Terraform構成**:
-    - EC2インスタンス（Linux/Windows、踏み台サーバー構成）
-    - RDS（インスタンス/クラスター構成）
-    - Lambda関数（RSS要約、Discord通知、Slack連携等）
-    - EKS（Kubernetes）クラスター
-    - API Gateway + Cognito認証
-    - Bedrock（RAGエージェント、Webクローラー）
-    - Systems Manager（Session Manager、パラメータストア）
-    - CloudWatch（監視、アラート）
-    - OIDC認証（GitHub Actions連携）
+    - **001.ec2-ec2,ec2**: EC2踏み台サーバーとプライベートサーバー構成
+    - **002.ec2windows**: Windows EC2インスタンス構成
+    - **003.minikube-opensearch,prometheus**: Minikube + OpenSearch + Prometheus構成
+    - **004.RDS_instance**: RDSインスタンス構成
+    - **005.RDS_cluster**: RDSクラスター構成
+    - **006.windows_managed_instance**: Windows Systems Manager管理インスタンス
+    - **007.managed-node-linux**: Linux Systems Manager管理インスタンス
+    - **008.ami,ec2**: AMI作成とEC2インスタンス構成
+    - **009.ami,windows_managed_instance**: Windows AMI作成と管理インスタンス
+    - **010.ec2-linux-latest-eice**: EC2 Instance Connect Endpoint構成
+    - **012.openhands-test**: OpenHands テスト用EC2構成
+    - **014.bedrock-webcrawler**: Bedrock Webクローラー構成
+    - **015.eks**: EKS（Kubernetes）クラスター構成
+    - **017.redmine-test**: Redmine テスト環境構成
+    - **018.send-game-info-to-discord**: ゲーム情報Discord通知Lambda
+    - **019.lambda-rss-summary**: RSS要約Lambda関数
+    - **020.aws-readonly-oidc**: AWS読み取り専用OIDC認証
+    - **021.slack-lambda-mcp-server**: Slack Lambda MCP サーバー
+    - **022.amazon_q_developer_in_chat_applications_by_slack**: Amazon Q Developer Slack連携
+    - **023.bedrock-rag-agent-in-slack**: Bedrock RAGエージェント Slack連携
+    - **030.apigateway-cognito-lambda-payload**: API Gateway + Cognito + Lambda構成
+    - **035.aurora-mock-testing**: Aurora モックテスト環境
   * **OCI Terraform構成**:
-    - Object Storage（Terraformステート管理用）
-    - Budget（コストアラート）
+    - **028.oci-bucket-tfstate**: Object Storage（Terraformステート管理用）
+    - **029.oci-cost-alert**: Budget（コストアラート）
   * **CloudFormationテンプレート**:
-    - EC2基本構成
-    - RDS PostgreSQL
-    - SCP（Service Control Policy）
-    - API Gateway + OpenAPI仕様
-    - Aurora + Lambda統合テスト
+    - **011.cfn**: EC2基本構成
+    - **013.aws-github-oidc**: GitHub Actions OIDC認証
+    - **031.rds-postgresql-ec2**: RDS PostgreSQL + EC2構成
+    - **032.scp-ec2-tagging**: SCP（Service Control Policy）EC2タグ強制
+    - **033.apigateway-openapi-cognito-auth**: API Gateway + OpenAPI + Cognito認証
+    - **036.scp-owner-tag-enforcement**: SCP所有者タグ強制
+    - **038.lambda-layer-test**: Lambda Layer テスト
   * **Ansible Playbook**:
-    - VPC作成
-    - EC2インスタンス管理
+    - **025.ansible-vpc-test**: VPC作成
+    - **026.ansible-aws-ec2**: EC2インスタンス管理
   * **CDK（TypeScript）**:
-    - BLEA（Baseline Environment on AWS）ガバナンスベース
+    - **024.test-custom-blea-gov-base-ct**: BLEA（Baseline Environment on AWS）ガバナンスベース
   * **その他**:
-    - MCPサーバー（Redmine連携、Slack連携）
-    - kubectl proxy設定
-    - Lambda Layer テスト
-  * Kubernetesマニフェスト
+    - **016.setup-mcp-with-vscode**: MCP（Model Context Protocol）VSCode設定
+    - **027.test-drawio**: Draw.io テスト用ディレクトリ
+    - **034.redmine-mcp-server**: Redmine MCP サーバー
+    - **037.kubectl-proxy**: kubectl proxy設定
+
+## アーキテクチャ図について
+
+各インフラストラクチャディレクトリには、対応するアーキテクチャ図が含まれています：
+
+* **図の場所**: `src/architecture.drawio`（Draw.io形式）
+* **SVG出力**: `src/architecture.svg`（自動生成）
+* **README参照**: `![Architecture Diagram](src/architecture.svg)`
+
+### 図の作成について
+
+新しいアーキテクチャ図を作成する際は、以下のテンプレートを参考にしてください：
+
+* **AWS構成**: `src/aws-template.drawio`
+* **OCI構成**: `src/oci-template.drawio`
+
+これらのテンプレートには、各クラウドプロバイダーの標準的なアイコンとレイアウトが含まれています。
+
+## ディレクトリ構成の詳細
+
+### 番号付きディレクトリの命名規則
+
+* **001-010**: 基本的なEC2、RDS構成
+* **011-020**: CloudFormation、特殊構成
+* **021-030**: Lambda、API Gateway、高度な構成
+* **031-038**: 特殊用途、テスト構成
+
+### 各ディレクトリの共通構造
+
+```
+XXX.directory-name/
+├── *.tf                    # Terraform設定ファイル（Terraform構成の場合）
+├── cfn/                    # CloudFormationテンプレート（CFN構成の場合）
+├── scripts/                # デプロイ・設定スクリプト
+├── src/
+│   ├── architecture.drawio # アーキテクチャ図（Draw.io形式）
+│   └── architecture.svg    # アーキテクチャ図（SVG形式、自動生成）
+├── terraform.tfvars.example # Terraform変数設定例
+└── README.md               # 構成説明書
+```
 
 ## 共通ディレクトリ
 

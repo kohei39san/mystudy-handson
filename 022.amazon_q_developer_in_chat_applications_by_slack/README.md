@@ -1,3 +1,84 @@
+# Amazon Q Developer in Chat Applications by Slack
+
+このTerraform構成は、SlackでAmazon Q Developerを使用するためのCloudFormationスタックをデプロイします。
+
+## リソース構成
+
+このTerraform構成では以下のリソースを作成します：
+
+### CloudFormation Stack
+- **スタック名**: amazon-q-developer-in-slack
+- **テンプレート**: src/cfn/template.yaml
+- **機能**: CAPABILITY_NAMED_IAM（IAMリソース作成権限）
+
+### 必要なパラメータ
+- **SlackWorkspaceId**: SlackワークスペースのID
+- **SlackChannelId**: 対象SlackチャンネルのID
+- **SlackChannelName**: 対象Slackチャンネルの名前
+
+## ファイル構成
+
+```
+022.amazon_q_developer_in_chat_applications_by_slack/
+├── main.tf                      # メインのTerraform設定
+├── outputs.tf                   # 出力値の定義
+├── terraform.tf                 # Terraformプロバイダー設定
+├── variables.tf                 # 変数定義
+├── terraform.tfvars.example     # 設定例ファイル
+└── src/
+    └── cfn/
+        └── template.yaml        # CloudFormationテンプレート
+```
+
+## 使用方法
+
+### 1. 前提条件
+
+- AWS CLIが設定済みであること
+- 適切なAWS認証情報が設定されていること
+- SlackワークスペースとチャンネルのIDが分かっていること
+
+### 2. 設定ファイルの準備
+
+`terraform.tfvars.example`をコピーして`terraform.tfvars`を作成し、必要な値を設定してください：
+
+```hcl
+# Slack設定
+slack_workspace_id = "T1234567890"
+slack_channel_id   = "C1234567890"
+slack_channel_name = "amazon-q-developer"
+
+# 環境設定
+environment = "production"
+```
+
+### 3. デプロイ
+
+```bash
+# 初期化
+terraform init
+
+# プランの確認
+terraform plan
+
+# 適用
+terraform apply
+
+# 削除
+terraform destroy
+```
+
+## 注意事項
+
+- SlackワークスペースとチャンネルのIDは事前に取得しておく必要があります
+- Amazon Q Developerの利用には適切なAWSアカウントとサブスクリプションが必要です
+- CloudFormationスタックはIAMリソースを作成するため、適切な権限が必要です
+
+## セキュリティ要件
+
+- IAMロール作成権限（`iam:CreateRole`, `iam:AttachRolePolicy`等）が必要
+- CloudFormation実行権限が必要
+- Amazon Q Developerサービスへのアクセス権限が必要
 # Slackでやり取りできるAmazon Q Developer in chat applications（Chatbot）
 
 ## 概要
