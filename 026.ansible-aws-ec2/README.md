@@ -2,6 +2,8 @@
 
 このプロジェクトは、AnsibleでAWS VPCとEC2インスタンスを作成・削除するためのPlaybookです。
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 構成
 
 ### ディレクトリ構造
