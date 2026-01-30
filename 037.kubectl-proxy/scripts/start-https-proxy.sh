@@ -41,10 +41,11 @@ if [ "${ENABLE_HTTPS}" = "true" ]; then
     fi
     
     echo "Starting socat HTTPS wrapper on port ${HTTPS_PORT}..."
-    echo "Forwarding HTTPS:${HTTPS_PORT} -> HTTP:${PROXY_PORT}"
+    echo "Forwarding HTTPS:${HTTPS_PORT} -> HTTP:kubectl-proxy:${PROXY_PORT}"
     
     # Start socat in background to wrap HTTP with HTTPS
-    socat OPENSSL-LISTEN:${HTTPS_PORT},cert=${CERT_FILE},key=${KEY_FILE},verify=0,fork,reuseaddr TCP:localhost:${PROXY_PORT} &
+    # Connect to kubectl-proxy service via Docker networking
+    socat OPENSSL-LISTEN:${HTTPS_PORT},cert=${CERT_FILE},key=${KEY_FILE},verify=0,fork,reuseaddr TCP:kubectl-proxy:${PROXY_PORT} &
     SOCAT_PID=$!
     
     echo "✓ HTTPS proxy started (PID: ${SOCAT_PID})"

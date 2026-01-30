@@ -89,6 +89,8 @@ services:
       # リソース設定
       - RESOURCE_NAME=${RESOURCE_NAME:-ansible-website}
       - RESOURCE_NAMESPACE=${RESOURCE_NAMESPACE:-hoge}
+      # SSL証明書検証設定
+      - VALIDATE_CERTS=${VALIDATE_CERTS:-no}
     command: >
       sh -c "echo 'Ansible container is ready. Run playbooks with:' &&
              echo '  docker compose exec ansible ansible-playbook create-custom-resources.yml' &&

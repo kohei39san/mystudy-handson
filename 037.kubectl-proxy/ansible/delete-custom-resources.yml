@@ -11,6 +11,7 @@
     crd_group: "{{ lookup('env', 'CRD_GROUP') | default('example.com', true) }}"
     crd_version: "{{ lookup('env', 'CRD_VERSION') | default('v1', true) }}"
     crd_plural: "{{ lookup('env', 'CRD_PLURAL') | default('websites', true) }}"
+    validate_certs: "{{ lookup('env', 'VALIDATE_CERTS') | default('no', true) }}"
     
   tasks:
     - name: Check if custom resource exists
@@ -18,7 +19,7 @@
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name }}"
         method: GET
         status_code: [200, 404]
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       register: resource_check
 
     - name: Delete custom resource if exists
@@ -26,7 +27,7 @@
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name }}"
         method: DELETE
         status_code: [200, 404]
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       when: resource_check.status == 200
       register: resource_delete
 

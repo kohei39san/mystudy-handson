@@ -11,13 +11,14 @@
     crd_group: "{{ lookup('env', 'CRD_GROUP') | default('example.com', true) }}"
     crd_version: "{{ lookup('env', 'CRD_VERSION') | default('v1', true) }}"
     crd_plural: "{{ lookup('env', 'CRD_PLURAL') | default('websites', true) }}"
+    validate_certs: "{{ lookup('env', 'VALIDATE_CERTS') | default('no', true) }}"
     
   tasks:
     - name: Wait for kubectl-proxy to be ready
       uri:
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/version"
         method: GET
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       register: proxy_status
       until: proxy_status.status == 200
       retries: 10
@@ -32,7 +33,7 @@
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/api/v1/namespaces/{{ namespace }}"
         method: GET
         status_code: [200, 404]
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       register: namespace_check
       
     - name: Create namespace if not exists
@@ -46,7 +47,7 @@
           metadata:
             name: "{{ namespace }}"
         status_code: [201, 409]
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       when: namespace_check.status == 404
       register: namespace_create
 
@@ -59,7 +60,7 @@
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/{{ crd_plural }}.{{ crd_group }}"
         method: GET
         status_code: [200, 404]
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       register: crd_check
       
     - name: Display CRD check result
@@ -76,7 +77,7 @@
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name }}"
         method: GET
         status_code: [200, 404]
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       register: resource_check
 
     - name: Create custom resource (Website) via curl
@@ -97,7 +98,7 @@
             ssl: true
             environment: "production"
         status_code: [201, 409]
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       when: resource_check.status == 404
       register: resource_create
 
@@ -110,7 +111,7 @@
       uri:
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name }}"
         method: GET
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       register: resource_details
 
     - name: Display custom resource details
@@ -121,7 +122,7 @@
       uri:
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}"
         method: GET
-        validate_certs: no
+        validate_certs: "{{ validate_certs }}"
       register: all_resources
 
     - name: Display all custom resources
