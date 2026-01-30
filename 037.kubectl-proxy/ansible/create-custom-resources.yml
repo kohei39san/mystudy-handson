@@ -1,7 +1,7 @@
 ---
 - name: Create Custom Resources via kubectl-proxy using curl
   hosts: local
-  gather_facts: no
+  gather_facts: false
   vars:
     proxy_url: "{{ lookup('env', 'PROXY_URL') | default('http://kubectl-proxy:8001', true) }}"
     proxy_protocol: "{{ lookup('env', 'PROXY_PROTOCOL') | default('http', true) }}"
@@ -12,10 +12,10 @@
     crd_version: "{{ lookup('env', 'CRD_VERSION') | default('v1', true) }}"
     crd_plural: "{{ lookup('env', 'CRD_PLURAL') | default('websites', true) }}"
     validate_certs: "{{ lookup('env', 'VALIDATE_CERTS') | default('no', true) }}"
-    
+
   tasks:
     - name: Wait for kubectl-proxy to be ready
-      uri:
+      ansible.builtin.uri:
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/version"
         method: GET
         validate_certs: "{{ validate_certs }}"
@@ -23,21 +23,21 @@
       until: proxy_status.status == 200
       retries: 10
       delay: 5
-      
+
     - name: Display kubectl-proxy version
-      debug:
+      ansible.builtin.debug:
         msg: "kubectl-proxy is ready. Kubernetes version: {{ proxy_status.json.gitVersion }}"
 
     - name: Check if namespace exists
-      uri:
+      ansible.builtin.uri:
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/api/v1/namespaces/{{ namespace }}"
         method: GET
         status_code: [200, 404]
         validate_certs: "{{ validate_certs }}"
       register: namespace_check
-      
+
     - name: Create namespace if not exists
-      uri:
+      ansible.builtin.uri:
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/api/v1/namespaces"
         method: POST
         body_format: json
@@ -52,36 +52,38 @@
       register: namespace_create
 
     - name: Display namespace creation result
-      debug:
+      ansible.builtin.debug:
         msg: "Namespace '{{ namespace }}' {{ 'created' if namespace_create.changed else 'already exists' }}"
 
     - name: Check if CRD exists
-      uri:
+      ansible.builtin.uri:
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/{{ crd_plural }}.{{ crd_group }}"
         method: GET
         status_code: [200, 404]
         validate_certs: "{{ validate_certs }}"
       register: crd_check
-      
+
     - name: Display CRD check result
-      debug:
+      ansible.builtin.debug:
         msg: "CRD '{{ crd_plural }}.{{ crd_group }}' {{ 'exists' if crd_check.status == 200 else 'does not exist' }}"
-      
+
     - name: Fail if CRD does not exist
-      fail:
-        msg: "CRD '{{ crd_plural }}.{{ crd_group }}' must be installed before creating custom resources. Please run './scripts/manage-crd.sh generate && ./scripts/manage-crd.sh install' first."
+      ansible.builtin.fail:
+        msg: "CRD '{{ crd_plural }}.{{ crd_group }}' must be installed before creating custom resources. Please run './scripts/manage-crd.sh generate && ./scripts/manage-crd.sh
+          install' first."
       when: crd_check.status == 404
 
     - name: Check if custom resource already exists
-      uri:
-        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name }}"
+      ansible.builtin.uri:
+        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name
+          }}"
         method: GET
         status_code: [200, 404]
         validate_certs: "{{ validate_certs }}"
       register: resource_check
 
     - name: Create custom resource (Website) via curl
-      uri:
+      ansible.builtin.uri:
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}"
         method: POST
         body_format: json
@@ -103,28 +105,30 @@
       register: resource_create
 
     - name: Display custom resource creation result
-      debug:
+      ansible.builtin.debug:
         msg: "Custom resource '{{ resource_name }}' {{ 'created successfully' if resource_create.changed else 'already exists' }}"
       when: resource_check.status == 404
 
     - name: Get created custom resource details
-      uri:
-        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name }}"
+      ansible.builtin.uri:
+        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name
+          }}"
         method: GET
         validate_certs: "{{ validate_certs }}"
       register: resource_details
 
     - name: Display custom resource details
-      debug:
-        msg: "Resource Details: Name={{ resource_details.json.metadata.name }}, URL={{ resource_details.json.spec.url }}, Replicas={{ resource_details.json.spec.replicas }}"
+      ansible.builtin.debug:
+        msg: "Resource Details: Name={{ resource_details.json.metadata.name }}, URL={{ resource_details.json.spec.url }}, Replicas={{ resource_details.json.spec.replicas
+          }}"
 
     - name: List all custom resources in namespace
-      uri:
+      ansible.builtin.uri:
         url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}"
         method: GET
         validate_certs: "{{ validate_certs }}"
       register: all_resources
 
     - name: Display all custom resources
-      debug:
+      ansible.builtin.debug:
         msg: "Found {{ all_resources.json.items | length }} Website resource(s) in namespace '{{ namespace }}'"
