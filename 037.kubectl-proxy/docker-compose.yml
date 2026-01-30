@@ -43,3 +43,57 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  kubectl-proxy-https:
+    image: bitnami/kubectl:latest
+    container_name: kubectl-proxy-https
+    entrypoint: ["/bin/sh"]
+    command: ["/scripts/start-https-proxy.sh"]
+    ports:
+      - "${HTTPS_PORT:-8443}:${HTTPS_PORT:-8443}"
+    volumes:
+      # スクリプトファイルをマウント
+      - "./scripts:/scripts:ro"
+      # .envファイルをマウント（存在する場合）
+      - "./.env:/.env:ro"
+    environment:
+      - PROXY_PORT=${PROXY_PORT:-8001}
+      - HTTPS_PORT=${HTTPS_PORT:-8443}
+      - ENABLE_HTTPS=${ENABLE_HTTPS:-false}
+      - CERT_DIR=${CERT_DIR:-/tmp/certs}
+    depends_on:
+      - kubectl-proxy
+    restart: unless-stopped
+    profiles:
+      - https
+
+  ansible:
+    image: cytopia/ansible:latest
+    container_name: ansible-kubectl-proxy
+    working_dir: /ansible
+    volumes:
+      # Ansibleプレイブックとインベントリをマウント
+      - "./ansible:/ansible"
+      # .envファイルをマウント（存在する場合）
+      - "./.env:/.env:ro"
+    environment:
+      # kubectl-proxyへの接続設定
+      - PROXY_URL=${PROXY_URL:-http://kubectl-proxy:8001}
+      - PROXY_PROTOCOL=${PROXY_PROTOCOL:-http}
+      - PROXY_PORT=${PROXY_PORT:-8001}
+      # CRD設定
+      - CRD_GROUP=${CRD_GROUP:-example.com}
+      - CRD_VERSION=${CRD_VERSION:-v1}
+      - CRD_PLURAL=${CRD_PLURAL:-websites}
+      - CRD_KIND=${CRD_KIND:-Website}
+      # リソース設定
+      - RESOURCE_NAME=${RESOURCE_NAME:-ansible-website}
+      - RESOURCE_NAMESPACE=${RESOURCE_NAMESPACE:-hoge}
+    command: >
+      sh -c "echo 'Ansible container is ready. Run playbooks with:' &&
+             echo '  docker compose exec ansible ansible-playbook create-custom-resources.yml' &&
+             echo '  docker compose exec ansible ansible-playbook delete-custom-resources.yml' &&
+             tail -f /dev/null"
+    depends_on:
+      - kubectl-proxy
+    restart: unless-stopped
