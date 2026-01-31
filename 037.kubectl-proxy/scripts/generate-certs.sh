@@ -3,7 +3,7 @@
 
 set -e
 
-CERT_DIR="/tmp/certs"
+CERT_DIR="${CERT_DIR:-/tmp/certs}"
 CERT_FILE="${CERT_DIR}/server.crt"
 KEY_FILE="${CERT_DIR}/server.key"
 
