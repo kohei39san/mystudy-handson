@@ -3,15 +3,18 @@ version: '3.8'
 # Windows + Docker Desktop Kubernetes用kubectl proxy
 services:
   kubectl-proxy:
-    image: bitnami/kubectl:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: kubectl-proxy
     entrypoint: ["/bin/sh"]
     command: ["/scripts/start-proxy.sh"]
     ports:
       - "${PROXY_PORT:-8001}:${PROXY_PORT:-8001}"
+      - "${HTTPS_PORT:-8443}:${HTTPS_PORT:-8443}"
     volumes:
       # Windows環境のkubeconfigをマウント
-      - "C:\\Users\\user\\.kube\\config:/original-kubeconfig:ro"
+      - "${KUBECONFIG_PATH}:/original-kubeconfig:ro"
       # スクリプトファイルをマウント
       - "./scripts:/scripts:ro"
       # YAMLファイル（CRD定義とサンプル）をマウント
@@ -33,6 +36,10 @@ services:
       - K8S_ORIGINAL_SERVER=${K8S_ORIGINAL_SERVER:-https://127.0.0.1:55420}
       - K8S_TARGET_SERVER=${K8S_TARGET_SERVER:-https://host.docker.internal:55420}
       - INSECURE_SKIP_TLS=${INSECURE_SKIP_TLS:-true}
+      # HTTPS設定
+      - ENABLE_HTTPS=${ENABLE_HTTPS:-false}
+      - HTTPS_PORT=${HTTPS_PORT:-8443}
+      - CERT_DIR=${CERT_DIR:-/tmp/certs}
     restart: unless-stopped
     # Docker Desktop環境でのホスト接続を可能にする
     extra_hosts:
@@ -43,3 +50,38 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  ansible:
+    build:
+      context: .
+      dockerfile: Dockerfile.ansible
+    container_name: ansible-kubectl-proxy
+    working_dir: /ansible
+    volumes:
+      # Ansibleプレイブックとインベントリをマウント
+      - "./ansible:/ansible"
+      # .envファイルをマウント（存在する場合）
+      - "./.env:/.env:ro"
+    environment:
+      # kubectl-proxyへの接続設定
+      - PROXY_URL=${PROXY_URL:-http://kubectl-proxy:8001}
+      - PROXY_PROTOCOL=${PROXY_PROTOCOL:-http}
+      - PROXY_PORT=${PROXY_PORT:-8001}
+      # CRD設定
+      - CRD_GROUP=${CRD_GROUP:-example.com}
+      - CRD_VERSION=${CRD_VERSION:-v1}
+      - CRD_PLURAL=${CRD_PLURAL:-websites}
+      - CRD_KIND=${CRD_KIND:-Website}
+      # リソース設定
+      - RESOURCE_NAME=${RESOURCE_NAME:-ansible-website}
+      - RESOURCE_NAMESPACE=${RESOURCE_NAMESPACE:-hoge}
+      # SSL証明書検証設定
+      - VALIDATE_CERTS=${VALIDATE_CERTS:-no}
+    command: >
+      sh -c "echo 'Ansible container is ready. Run playbooks with:' &&
+             echo '  docker compose exec ansible ansible-playbook create-custom-resources.yml' &&
+             echo '  docker compose exec ansible ansible-playbook delete-custom-resources.yml' &&
+             tail -f /dev/null"
+    depends_on:
+      - kubectl-proxy
+    restart: unless-stopped

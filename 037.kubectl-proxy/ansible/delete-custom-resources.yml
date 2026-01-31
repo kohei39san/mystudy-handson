@@ -1,0 +1,41 @@
+---
+- name: Delete Custom Resources via kubectl-proxy using curl
+  hosts: localhost
+  gather_facts: false
+  vars:
+    enable_https: "{{ lookup('env', 'ENABLE_HTTPS') | default('false', true) }}"
+    https_port: "{{ lookup('env', 'HTTPS_PORT') | default('8443', true) }}"
+    http_port: "{{ lookup('env', 'PROXY_PORT') | default('8001', true) }}"
+    proxy_protocol: "{{ 'https' if enable_https == 'true' else lookup('env', 'PROXY_PROTOCOL') | default('http', true) }}"
+    proxy_port: "{{ https_port if enable_https == 'true' else http_port }}"
+    proxy_url: "{{ lookup('env', 'PROXY_URL') | default(proxy_protocol + '://kubectl-proxy:' + proxy_port, true) }}"
+    namespace: "{{ lookup('env', 'RESOURCE_NAMESPACE') | default('hoge', true) }}"
+    resource_name: "{{ lookup('env', 'RESOURCE_NAME') | default('ansible-website', true) }}"
+    crd_group: "{{ lookup('env', 'CRD_GROUP') | default('example.com', true) }}"
+    crd_version: "{{ lookup('env', 'CRD_VERSION') | default('v1', true) }}"
+    crd_plural: "{{ lookup('env', 'CRD_PLURAL') | default('websites', true) }}"
+    validate_certs: "{{ lookup('env', 'VALIDATE_CERTS') | default('no', true) }}"
+
+  tasks:
+    - name: Check if custom resource exists
+      ansible.builtin.uri:
+        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name
+          }}"
+        method: GET
+        status_code: [200, 404]
+        validate_certs: "{{ validate_certs }}"
+      register: resource_check
+
+    - name: Delete custom resource if exists
+      ansible.builtin.uri:
+        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name
+          }}"
+        method: DELETE
+        status_code: [200, 404]
+        validate_certs: "{{ validate_certs }}"
+      when: resource_check.status == 200
+      register: resource_delete
+
+    - name: Display deletion result
+      ansible.builtin.debug:
+        msg: "Custom resource '{{ resource_name }}' {{ 'deleted successfully' if resource_delete.changed else 'does not exist' }}"

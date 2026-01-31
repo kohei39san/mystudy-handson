@@ -1,0 +1,5 @@
+[local]
+localhost ansible_connection=local
+
+[kubectl_proxy]
+kubectl-proxy ansible_connection=docker
