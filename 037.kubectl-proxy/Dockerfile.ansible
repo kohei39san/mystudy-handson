@@ -1,0 +1,10 @@
+FROM cytopia/ansible:latest
+
+USER root
+
+# Install curl for curl-based playbooks and jmespath for json_query filter
+RUN apk add --no-cache curl && \
+    pip3 install --no-cache-dir jmespath
+
+# Stay as root user (cytopia/ansible runs as root by default)
+WORKDIR /ansible

@@ -3,15 +3,18 @@ version: '3.8'
 # Windows + Docker Desktop Kubernetes用kubectl proxy
 services:
   kubectl-proxy:
-    image: bitnami/kubectl:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: kubectl-proxy
     entrypoint: ["/bin/sh"]
     command: ["/scripts/start-proxy.sh"]
     ports:
       - "${PROXY_PORT:-8001}:${PROXY_PORT:-8001}"
+      - "${HTTPS_PORT:-8443}:${HTTPS_PORT:-8443}"
     volumes:
       # Windows環境のkubeconfigをマウント
-      - "C:\\Users\\user\\.kube\\config:/original-kubeconfig:ro"
+      - "${KUBECONFIG_PATH}:/original-kubeconfig:ro"
       # スクリプトファイルをマウント
       - "./scripts:/scripts:ro"
       # YAMLファイル（CRD定義とサンプル）をマウント
@@ -33,6 +36,10 @@ services:
       - K8S_ORIGINAL_SERVER=${K8S_ORIGINAL_SERVER:-https://127.0.0.1:55420}
       - K8S_TARGET_SERVER=${K8S_TARGET_SERVER:-https://host.docker.internal:55420}
       - INSECURE_SKIP_TLS=${INSECURE_SKIP_TLS:-true}
+      # HTTPS設定
+      - ENABLE_HTTPS=${ENABLE_HTTPS:-false}
+      - HTTPS_PORT=${HTTPS_PORT:-8443}
+      - CERT_DIR=${CERT_DIR:-/tmp/certs}
     restart: unless-stopped
     # Docker Desktop環境でのホスト接続を可能にする
     extra_hosts:
@@ -44,31 +51,10 @@ services:
       retries: 3
       start_period: 15s
 
-  kubectl-proxy-https:
-    image: bitnami/kubectl:latest
-    container_name: kubectl-proxy-https
-    entrypoint: ["/bin/sh"]
-    command: ["/scripts/start-https-proxy.sh"]
-    ports:
-      - "${HTTPS_PORT:-8443}:${HTTPS_PORT:-8443}"
-    volumes:
-      # スクリプトファイルをマウント
-      - "./scripts:/scripts:ro"
-      # .envファイルをマウント（存在する場合）
-      - "./.env:/.env:ro"
-    environment:
-      - PROXY_PORT=${PROXY_PORT:-8001}
-      - HTTPS_PORT=${HTTPS_PORT:-8443}
-      - ENABLE_HTTPS=${ENABLE_HTTPS:-false}
-      - CERT_DIR=${CERT_DIR:-/tmp/certs}
-    depends_on:
-      - kubectl-proxy
-    restart: unless-stopped
-    profiles:
-      - https
-
   ansible:
-    image: cytopia/ansible:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.ansible
     container_name: ansible-kubectl-proxy
     working_dir: /ansible
     volumes:

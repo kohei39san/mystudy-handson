@@ -46,17 +46,47 @@ INSECURE_SKIP_TLS=true
 - `K8S_TARGET_SERVER`: 置き換え先のKubernetesサーバーURL
 - `INSECURE_SKIP_TLS`: TLS証明書検証をスキップ（デフォルト: true）
 
-### 2. Docker Composeでサービスを開始
+### 2. Dockerイメージのビルド
+
+カスタムDockerfileを使用しているため、初回起動前またはDockerfile変更後はビルドが必要です：
 
 ```bash
-docker-compose up -d
+# すべてのサービスをビルド
+docker compose build
+
+# 特定のサービスのみビルド
+docker compose build kubectl-proxy
+docker compose build ansible
+
+# キャッシュを使わずにビルド（クリーンビルド）
+docker compose build --no-cache
 ```
 
-### 3. プロキシの動作確認（kubectl-proxyコンテナ内での実行）
+**カスタムイメージに含まれるもの：**
+- **kubectl-proxy**: `socat`（HTTPS対応用）
+- **ansible**: `curl`、`jmespath`（Ansible Playbookで使用）
+
+### 3. Docker Composeでサービスを開始
 
 ```bash
-# APIサーバーの情報を取得
+# 基本的な起動（HTTPのみ）
+docker compose up -d
+
+# HTTPSを有効化して起動（統合モード）
+ENABLE_HTTPS=true docker compose up -d
+
+# または、.envファイルでENABLE_HTTPS=trueを設定してから起動
+docker compose up -d
+```
+
+### 4. プロキシの動作確認（kubectl-proxyコンテナ内での実行）
+
+```bash
+# HTTPで接続確認
 curl http://localhost:8001/api/v1
+
+# HTTPS有効時の接続確認
+curl -k https://localhost:8443/api/v1
 
 # Namespace一覧を取得
 curl http://localhost:8001/api/v1/namespaces
@@ -65,7 +95,7 @@ curl http://localhost:8001/api/v1/namespaces
 curl http://localhost:8001/api/v1/namespaces/default/pods
 ```
 
-### 4. サービスの停止
+### 5. サービスの停止
 
 ```bash
 docker-compose down
@@ -290,8 +320,9 @@ kubectl proxyを通してAnsibleでカスタムリソースを自動的に作成
 
 ### 前提条件
 
+- Dockerイメージがビルド済みであること（`docker compose build`）
 - kubectl proxyが起動していること（`docker compose up -d`で起動）
-- CRDがインストールされていること（`./scripts/manage-crd.sh generate && ./scripts/manage-crd.sh install`）
+- CRDがインストールされていること（`docker exec kubectl-proxy ./scripts/manage-crd.sh generate && docker exec kubectl-proxy kubectl apply -f /src/crd-website-generated.yaml`）
 - Ansibleコンテナが起動していること
 
 ### Ansibleサービスの起動
@@ -306,14 +337,28 @@ docker compose --profile https up -d
 
 ### Ansibleプレイブック実行
 
+2種類のPlaybookが利用可能です：
+- **uriベース**: `ansible.builtin.uri`モジュールを使用（標準的なアプローチ）
+- **curlベース**: `curl`コマンドを使用（より柔軟な制御が可能）
+
 #### 1. カスタムリソース（Website）の作成
 
+**uriベースのPlaybook:**
 ```bash
 # Ansibleコンテナ内でプレイブックを実行
 docker compose exec ansible ansible-playbook create-custom-resources.yml
 
 # 環境変数で設定をカスタマイズして実行
 docker compose exec -e RESOURCE_NAME=my-custom-site ansible ansible-playbook create-custom-resources.yml
+```
+
+**curlベースのPlaybook:**
+```bash
+# curlを使用したPlaybook実行
+docker compose exec ansible ansible-playbook create-custom-resources-curl.yml
+
+# カスタマイズして実行
+docker compose exec -e RESOURCE_NAME=my-custom-site ansible ansible-playbook create-custom-resources-curl.yml
 ```
 
 このプレイブックは以下の操作を実行します：
@@ -326,12 +371,34 @@ docker compose exec -e RESOURCE_NAME=my-custom-site ansible ansible-playbook cre
 
 #### 2. カスタムリソースの削除
 
+**uriベースのPlaybook:**
 ```bash
 # リソースを削除
 docker compose exec ansible ansible-playbook delete-custom-resources.yml
 
 # 特定のリソースを削除
 docker compose exec -e RESOURCE_NAME=my-custom-site ansible ansible-playbook delete-custom-resources.yml
+```
+
+**curlベースのPlaybook:**
+```bash
+# curlを使用した削除
+docker compose exec ansible ansible-playbook delete-custom-resources-curl.yml
+
+# 特定のリソースを削除
+docker compose exec -e RESOURCE_NAME=my-custom-site ansible ansible-playbook delete-custom-resources-curl.yml
+```
+
+#### PlaybookとHTTPS接続
+
+両方のPlaybook（uriベース、curlベース）は`ENABLE_HTTPS`環境変数に基づいて自動的にHTTP/HTTPSを切り替えます：
+
+```bash
+# HTTPで実行（デフォルト）
+docker compose exec ansible ansible-playbook create-custom-resources.yml
+
+# HTTPSで実行（ENABLE_HTTPS=trueの場合、自動的にhttps://kubectl-proxy:8443に接続）
+docker compose exec ansible ansible-playbook create-custom-resources-curl.yml
 ```
 
 #### 3. カスタマイズ可能な環境変数
@@ -355,25 +422,43 @@ RESOURCE_NAMESPACE=hoge             # リソースの名前空間
 
 ### Ansibleワークフロー例
 
+**標準的なワークフロー（uriベース）:**
 ```bash
-# 1. 環境を起動
+# 1. イメージをビルド（初回のみ）
+docker compose build
+
+# 2. 環境を起動
 docker compose up -d
 
-# 2. YAMLファイル生成とCRDインストール
+# 3. YAMLファイル生成とCRDインストール
 docker compose exec kubectl-proxy ./scripts/manage-crd.sh generate
-docker compose exec kubectl-proxy ./scripts/manage-crd.sh install
+docker compose exec kubectl-proxy kubectl apply -f /src/crd-website-generated.yaml
+docker compose exec kubectl-proxy kubectl apply -f /src/namespace-generated.yaml
 
-# 3. Ansibleでカスタムリソースを作成
+# 4. Ansibleでカスタムリソースを作成（uriベース）
 docker compose exec ansible ansible-playbook create-custom-resources.yml
 
-# 4. 作成されたリソースを確認
+# 5. 作成されたリソースを確認
 docker compose exec kubectl-proxy kubectl get websites -n hoge
 
-# 5. リソースの詳細を確認
-docker compose exec kubectl-proxy kubectl describe website ansible-website -n hoge
+# 6. リソースの詳細を確認
+docker compose exec kubectl-proxy kubectl describe website sample-website -n hoge
 
-# 6. Ansibleでリソースを削除
+# 7. Ansibleでリソースを削除
 docker compose exec ansible ansible-playbook delete-custom-resources.yml
+```
+
+**curlベースのワークフロー:**
+```bash
+# 1-3は同じ
+
+# 4. Ansibleでカスタムリソースを作成（curlベース）
+docker compose exec ansible ansible-playbook create-custom-resources-curl.yml
+
+# 5-6は同じ
+
+# 7. Ansibleでリソースを削除（curlベース）
+docker compose exec ansible ansible-playbook delete-custom-resources-curl.yml
 ```
 
 ### Ansibleプレイブックの詳細
@@ -412,30 +497,38 @@ env | grep -E "PROXY|CRD|RESOURCE"
 exit
 ```
 
-## HTTPS対応
+## HTTPS対応（統合モード）
 
-kubectl-proxyはデフォルトでHTTPのみをサポートしていますが、このプロジェクトではHTTPS対応を追加しています。
+kubectl-proxyはデフォルトでHTTPのみをサポートしていますが、このプロジェクトではHTTPS対応が統合されています。
 
-### HTTPS有効化方法
+### HTTPS有効化方法（統合アプローチ）
 
-#### 1. HTTPSサービスの起動
+HTTP/HTTPS機能は単一のコンテナに統合されており、`ENABLE_HTTPS`環境変数で制御できます。
+
+#### 1. HTTPS有効化して起動
 
 ```bash
-# HTTPS対応のプロファイルを含めて起動
-docker compose --profile https up -d
+# .envファイルでENABLE_HTTPS=trueを設定
+echo "ENABLE_HTTPS=true" >> .env
+
+# または、環境変数で直接指定して起動
+ENABLE_HTTPS=true docker compose up -d
 ```
 
-これにより以下のサービスが起動します：
-- `kubectl-proxy`: HTTP接続（ポート8001）
-- `kubectl-proxy-https`: HTTPS接続（ポート8443）
-- `ansible`: Ansibleコンテナ
+これにより以下のポートで接続可能になります：
+- **HTTP**: ポート8001（常に利用可能）
+- **HTTPS**: ポート8443（ENABLE_HTTPS=trueの場合のみ）
 
 #### 2. 自己署名証明書の自動生成
 
-`kubectl-proxy-https`サービスは起動時に自動的に自己署名証明書を生成します：
+HTTPS有効時、起動スクリプトは自動的に自己署名証明書を生成します：
 - 証明書: `/tmp/certs/server.crt`
 - 秘密鍵: `/tmp/certs/server.key`
 - 有効期間: 365日
+- CN: `kubectl-proxy`
+- SAN: `DNS:kubectl-proxy,DNS:localhost,IP:127.0.0.1`
+
+証明書は`socat`を使用してHTTPプロキシをHTTPSでラップすることで機能します。
 
 #### 3. HTTPS接続の確認
 
@@ -445,33 +538,41 @@ curl -k https://localhost:8443/version
 
 # Ansibleコンテナ内から接続
 docker compose exec ansible sh
-curl -k https://kubectl-proxy-https:8443/api/v1/namespaces
+curl -k https://kubectl-proxy:8443/api/v1/namespaces
 ```
 
 #### 4. AnsibleでHTTPS接続を使用
 
-.envファイルまたは環境変数でHTTPS接続を指定：
+Playbookは`ENABLE_HTTPS`環境変数を検出し、自動的にHTTPS接続に切り替わります：
 
 ```bash
-# 環境変数で指定
+# ENABLE_HTTPS=trueの場合、自動的にhttps://kubectl-proxy:8443に接続
+docker compose exec ansible ansible-playbook create-custom-resources.yml
+
+# または明示的にHTTPS設定で実行
 docker compose exec \
-  -e PROXY_PROTOCOL=https \
-  -e PROXY_PORT=8443 \
-  ansible ansible-playbook create-custom-resources.yml
+  -e ENABLE_HTTPS=true \
+  ansible ansible-playbook create-custom-resources-curl.yml
 ```
 
-または、.envファイルを編集：
+**手動設定（オプション）:**
+
+.envファイルで手動設定することも可能：
 
 ```env
+ENABLE_HTTPS=true
+HTTPS_PORT=8443
 PROXY_PROTOCOL=https
 PROXY_PORT=8443
-PROXY_URL=https://kubectl-proxy-https:8443
 ```
 
 ### HTTPS技術詳細
 
-- **実装方法**: `socat`を使用してHTTPプロキシをHTTPSでラップ
-- **証明書**: OpenSSLで生成される自己署名証明書
+- **実装方法**: `socat`を使用してHTTPプロキシをHTTPSでラップ（単一コンテナ内で動作）
+- **証明書**: `generate-certs.sh`スクリプトでOpenSSLにより自動生成
+- **プロセス構成**: 
+  - `kubectl proxy`がHTTPで8001ポートをリッスン
+  - `socat`がHTTPSで8443ポートをリッスンし、127.0.0.1:8001に転送
 - **セキュリティ**: 開発・テスト環境向け。本番環境では信頼された証明書を使用してください
 
 ### HTTPSの有効化・無効化
@@ -480,11 +581,11 @@ PROXY_URL=https://kubectl-proxy-https:8443
 # HTTPのみ（デフォルト）
 docker compose up -d
 
-# HTTPSを追加
-docker compose --profile https up -d
+# HTTPSを有効化
+ENABLE_HTTPS=true docker compose up -d
 
-# HTTPSサービスのみ停止
-docker compose stop kubectl-proxy-https
+# 設定変更後は再起動が必要
+docker compose restart kubectl-proxy
 
 # すべて停止
 docker compose down

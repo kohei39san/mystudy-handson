@@ -1,11 +1,14 @@
 ---
 - name: Delete Custom Resources via kubectl-proxy using curl
-  hosts: local
+  hosts: localhost
   gather_facts: false
   vars:
-    proxy_url: "{{ lookup('env', 'PROXY_URL') | default('http://kubectl-proxy:8001', true) }}"
-    proxy_protocol: "{{ lookup('env', 'PROXY_PROTOCOL') | default('http', true) }}"
-    proxy_port: "{{ lookup('env', 'PROXY_PORT') | default('8001', true) }}"
+    enable_https: "{{ lookup('env', 'ENABLE_HTTPS') | default('false', true) }}"
+    https_port: "{{ lookup('env', 'HTTPS_PORT') | default('8443', true) }}"
+    http_port: "{{ lookup('env', 'PROXY_PORT') | default('8001', true) }}"
+    proxy_protocol: "{{ 'https' if enable_https == 'true' else lookup('env', 'PROXY_PROTOCOL') | default('http', true) }}"
+    proxy_port: "{{ https_port if enable_https == 'true' else http_port }}"
+    proxy_url: "{{ lookup('env', 'PROXY_URL') | default(proxy_protocol + '://kubectl-proxy:' + proxy_port, true) }}"
     namespace: "{{ lookup('env', 'RESOURCE_NAMESPACE') | default('hoge', true) }}"
     resource_name: "{{ lookup('env', 'RESOURCE_NAME') | default('ansible-website', true) }}"
     crd_group: "{{ lookup('env', 'CRD_GROUP') | default('example.com', true) }}"
