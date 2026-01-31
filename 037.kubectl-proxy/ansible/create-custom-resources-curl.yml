@@ -81,7 +81,8 @@
 
     - name: Fail if CRD does not exist
       ansible.builtin.fail:
-        msg: "CRD '{{ crd_plural }}.{{ crd_group }}' must be installed before creating custom resources. Please run './scripts/manage-crd.sh generate && ./scripts/manage-crd.sh install' first."
+        msg: "CRD '{{ crd_plural }}.{{ crd_group }}' must be installed before creating custom resources. Please run './scripts/manage-crd.sh generate && ./scripts/manage-crd.sh
+          install' first."
       when: crd_check.stdout == "404"
 
     - name: Check if custom resource already exists
