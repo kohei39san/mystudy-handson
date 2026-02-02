@@ -1,5 +1,7 @@
 # API Gateway + OpenAPI + Cognito + Lambda Authorizer
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 概要
 
 このプロジェクトは、OpenAPI定義書を使用してAPI Gatewayを構築し、Cognito認証とLambdaオーソライザーによる役割ベースのアクセス制御を実装します。

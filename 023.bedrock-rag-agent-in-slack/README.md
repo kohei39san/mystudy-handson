@@ -1,5 +1,7 @@
 # Bedrock Agent を使用した Slack チャットアプリケーション
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 概要
 
 このプロジェクトは、Amazon Bedrock Agent を使用して Slack からチャットで応答できるシステムを構築するための CloudFormation スタックを提供します。ユーザーは Slack チャンネル内で質問を投げかけると、Bedrock Agent が回答を生成し、その場で返信します。
