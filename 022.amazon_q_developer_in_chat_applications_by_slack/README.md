@@ -1,5 +1,7 @@
 # Amazon Q Developer in Chat Applications by Slack
 
+![アーキテクチャ図](src/architecture.svg)
+
 このTerraform構成は、SlackでAmazon Q Developerを使用するためのCloudFormationスタックをデプロイします。
 
 ## リソース構成

@@ -1,5 +1,7 @@
 # Bedrock ナレッジベース Terraform アーキテクチャ
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 概要
 
 このプロジェクトは、Amazon BedrockとTerraformを使用してナレッジベースアーキテクチャを実装します。BedrockのTitan Embed Text v2モデルを使用してコンテンツを解析し、OpenSearchをベクトルデータベースとして使用します。
