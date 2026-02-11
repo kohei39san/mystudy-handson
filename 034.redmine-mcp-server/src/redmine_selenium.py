@@ -704,6 +704,12 @@ class RedmineSeleniumScraper:
             description: Description text search
             notes: Notes text search
             q: General text search (searches across multiple fields)
+            start_date_start: Start date start (YYYY-MM-DD)
+            start_date_end: Start date end (YYYY-MM-DD)
+            updated_on_start: Updated date start (YYYY-MM-DD)
+            updated_on_end: Updated date end (YYYY-MM-DD)
+            created_on_start: Created date start (YYYY-MM-DD)
+            created_on_end: Created date end (YYYY-MM-DD)
             page: Page number for pagination (default: 1)
             
         Returns:
@@ -781,6 +787,42 @@ class RedmineSeleniumScraper:
                     "op[any_searchable]=~",
                     f"v[any_searchable][]={search_text}"
                 ])
+
+            start_date_start = kwargs.get('start_date_start')
+            start_date_end = kwargs.get('start_date_end')
+            if start_date_start and start_date_end:
+                search_params.extend([
+                    "f[]=start_date",
+                    "op[start_date]=><",
+                    f"v[start_date][]={start_date_start}",
+                    f"v[start_date][]={start_date_end}"
+                ])
+            elif start_date_start or start_date_end:
+                logger.warning("start_date_start and start_date_end must both be set to apply start_date filter")
+
+            updated_on_start = kwargs.get('updated_on_start')
+            updated_on_end = kwargs.get('updated_on_end')
+            if updated_on_start and updated_on_end:
+                search_params.extend([
+                    "f[]=updated_on",
+                    "op[updated_on]=><",
+                    f"v[updated_on][]={updated_on_start}",
+                    f"v[updated_on][]={updated_on_end}"
+                ])
+            elif updated_on_start or updated_on_end:
+                logger.warning("updated_on_start and updated_on_end must both be set to apply updated_on filter")
+
+            created_on_start = kwargs.get('created_on_start')
+            created_on_end = kwargs.get('created_on_end')
+            if created_on_start and created_on_end:
+                search_params.extend([
+                    "f[]=created_on",
+                    "op[created_on]=><",
+                    f"v[created_on][]={created_on_start}",
+                    f"v[created_on][]={created_on_end}"
+                ])
+            elif created_on_start or created_on_end:
+                logger.warning("created_on_start and created_on_end must both be set to apply created_on filter")
             
             # Add empty filter field
             search_params.append("f[]=")
@@ -792,6 +834,7 @@ class RedmineSeleniumScraper:
                 "c[]=priority",
                 "c[]=subject",
                 "c[]=assigned_to",
+                "c[]=start_date",
                 "c[]=updated_on"
             ])
             
@@ -989,6 +1032,10 @@ class RedmineSeleniumScraper:
                                                 issue_data['status'] = cell_text
                                             elif 'priority' in cell_class and not issue_data.get('priority'):
                                                 issue_data['priority'] = cell_text
+                                            elif 'start_date' in cell_class and not issue_data.get('start_date'):
+                                                issue_data['start_date'] = cell_text
+                                            elif 'updated_on' in cell_class and not issue_data.get('updated_on'):
+                                                issue_data['updated_on'] = cell_text
                                     
                                     # If we still don't have a subject, use a default
                                     if 'subject' not in issue_data:
