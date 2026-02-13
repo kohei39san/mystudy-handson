@@ -1,0 +1,10 @@
+# AWS Configuration
+aws_region = "ap-northeast-1"
+
+# Project Configuration
+project_name = "nested-sfn-study"
+environment  = "dev"
+
+# Lambda Configuration
+lambda_timeout     = 30
+lambda_memory_size = 128
