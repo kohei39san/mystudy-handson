@@ -24,6 +24,12 @@ class SearchIssuesRequest(BaseModel):
     description: Optional[str] = Field(None, description="Description text search")
     notes: Optional[str] = Field(None, description="Notes text search")
     parent_id: Optional[str] = Field(None, description="Parent issue ID")
+    start_date_start: Optional[str] = Field(None, description="Start date start (YYYY-MM-DD)")
+    start_date_end: Optional[str] = Field(None, description="Start date end (YYYY-MM-DD)")
+    updated_on_start: Optional[str] = Field(None, description="Updated date start (YYYY-MM-DD)")
+    updated_on_end: Optional[str] = Field(None, description="Updated date end (YYYY-MM-DD)")
+    created_on_start: Optional[str] = Field(None, description="Created date start (YYYY-MM-DD)")
+    created_on_end: Optional[str] = Field(None, description="Created date end (YYYY-MM-DD)")
     page: int = Field(1, ge=1, description="Page number for pagination (default: 1)")
 
 

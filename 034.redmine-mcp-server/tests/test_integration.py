@@ -124,6 +124,78 @@ class TestRedmineIntegration:
             print(f"Response text: {search_response.text[:200]}...")
             pytest.skip("Invalid response format from search")
 
+    @pytest.mark.skipif(not (os.getenv('REDMINE_USERNAME') and os.getenv('REDMINE_PASSWORD')),
+                       reason="Credentials not configured")
+    @pytest.mark.asyncio
+    async def test_search_issues_with_start_date_ranges_and_counts(self, mcp_server):
+        """Test search_issues with start_date ranges and expected counts"""
+        username = os.getenv('REDMINE_USERNAME', '')
+        password = os.getenv('REDMINE_PASSWORD', '')
+        project_id = os.getenv('TEST_PROJECT_ID', '')
+
+        if not username or not password:
+            pytest.skip("Credentials not available")
+
+        if not project_id:
+            pytest.skip("TEST_PROJECT_ID is required for deterministic counts")
+
+        # First login
+        login_result = await mcp_server._handle_login({
+            'username': username,
+            'password': password
+        })
+
+        login_text = login_result[0].text
+        if 'error' in login_text.lower() or 'failed' in login_text.lower():
+            pytest.skip(f"Login failed: {login_text}")
+
+        import ast
+        expected_ranges = [
+            ("2025-12-11", "2025-12-11", 2),
+            ("2025-11-01", "2025-11-08", 43)
+        ]
+
+        for start_date, end_date, expected_count in expected_ranges:
+            search_args = {
+                'project_id': project_id,
+                'start_date_start': start_date,
+                'start_date_end': end_date
+            }
+
+            search_result = await mcp_server._handle_search_issues(search_args)
+
+            assert len(search_result) == 1
+            search_text = search_result[0].text
+            assert isinstance(search_text, str)
+
+            result_dict = ast.literal_eval(search_text)
+            assert result_dict.get('success') is True
+            assert 'issues' in result_dict
+            assert isinstance(result_dict['issues'], list)
+            assert result_dict.get('total_count') == expected_count
+
+            issue_summaries = []
+            for issue in result_dict['issues']:
+                issue_summaries.append({
+                    'id': issue.get('id'),
+                    'subject': issue.get('subject'),
+                    'start_date': issue.get('start_date')
+                })
+
+            print(f"Start date range {start_date} - {end_date} issue summaries:")
+            for summary in issue_summaries:
+                print(summary)
+
+            if expected_count > 0:
+                assert len(result_dict['issues']) > 0
+                assert all(issue.get('start_date') for issue in result_dict['issues'])
+
+            if hasattr(mcp_server.scraper, 'driver') and mcp_server.scraper.driver:
+                current_url = mcp_server.scraper.driver.current_url
+                assert "op[start_date]" in current_url
+                assert start_date in current_url
+                assert end_date in current_url
+
     @pytest.mark.skipif(not (os.getenv('REDMINE_USERNAME') and os.getenv('REDMINE_PASSWORD')), 
                        reason="Credentials not configured")
     @pytest.mark.asyncio
