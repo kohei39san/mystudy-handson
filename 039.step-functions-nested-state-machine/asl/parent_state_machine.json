@@ -1,0 +1,55 @@
+{
+  "Comment": "Parent state machine that invokes child state machine and processes the result",
+  "StartAt": "ParentLambdaPreProcess",
+  "States": {
+    "ParentLambdaPreProcess": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${parent_lambda_function_arn}",
+        "Payload": {
+          "action": "preprocess",
+          "data.$": "$"
+        }
+      },
+      "ResultSelector": {
+        "preprocessed_data.$": "$.Payload"
+      },
+      "ResultPath": "$.preprocess_result",
+      "Next": "InvokeChildStateMachine"
+    },
+    "InvokeChildStateMachine": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::states:startExecution.sync:2",
+      "Parameters": {
+        "StateMachineArn": "${child_state_machine_arn}",
+        "Input": {
+          "input_value.$": "$.preprocess_result.preprocessed_data.value",
+          "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type"
+        }
+      },
+      "ResultSelector": {
+        "child_output.$": "$.Output"
+      },
+      "ResultPath": "$.child_result",
+      "Next": "ParentLambdaPostProcess"
+    },
+    "ParentLambdaPostProcess": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${parent_lambda_function_arn}",
+        "Payload": {
+          "action": "postprocess",
+          "original_data.$": "$",
+          "child_output.$": "$.child_result.child_output"
+        }
+      },
+      "ResultSelector": {
+        "final_result.$": "$.Payload"
+      },
+      "OutputPath": "$.final_result",
+      "End": true
+    }
+  }
+}
