@@ -40,7 +40,7 @@
       "Parameters": {
         "FunctionName": "${child_output_filter_lambda_arn}",
         "Payload": {
-          "operation.$": "$.child_result.child_output.operation"
+          "operation.$": "$.child_result.child_output.first_result.output.operation"
         }
       },
       "ResultSelector": {
