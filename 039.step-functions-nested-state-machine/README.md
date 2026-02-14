@@ -35,7 +35,8 @@
 2. **InvokeChildStateMachine**: 子ステートマシンを同期的に呼び出し
    - `states:startExecution.sync:2` を使用して同期実行
    - 子ステートマシンの完了を待機
-3. **ParentLambdaPostProcess**: 子ステートマシンの出力を受け取り、親Lambda関数で後処理を実行
+3. **FilterChildOutput**: 子ステートマシンの出力から必要な値のみ抽出
+4. **ParentLambdaPostProcess**: 抽出した出力を受け取り、親Lambda関数で後処理を実行
 
 #### 子ステートマシン (child_state_machine.json)
 1. **ChildLambdaTask**: 子Lambda関数でデータ処理を実行
@@ -58,6 +59,9 @@
   - `add`: 値に10を加算する
   - `square`: 値を2乗する
 
+#### 子出力フィルタLambda関数 (child_output_filter_lambda.py)
+- 子ステートマシンの出力から必要な値だけを抽出して返却
+
 ### データフロー
 
 ```json
@@ -66,8 +70,41 @@
   "initial_value": 10,
   "processing_type": "multiply"
 }
+```
 
-親Lambda前処理の出力:
+1. 親ステートマシン: ParentLambdaPreProcess (Lambda: parent_lambda.py)
+
+ASLでの入力指定:
+
+```json
+{
+  "Type": "Task",
+  "Resource": "arn:aws:states:::lambda:invoke",
+  "Parameters": {
+    "FunctionName": "${parent_lambda_function_arn}",
+    "Payload": {
+      "action": "preprocess",
+      "data.$": "$"
+    }
+  }
+}
+```
+
+親Lambda前処理の入力 (ASL: ParentLambdaPreProcess / Lambda: parent_lambda.py):
+```json
+{
+  "action": "preprocess",
+  "data": {
+    "initial_value": 10,
+    "processing_type": "multiply"
+  }
+}
+```
+
+ResultPath: $.preprocess_result
+
+親Lambda前処理の出力 (ASL: ParentLambdaPreProcess / Lambda: parent_lambda.py):
+```json
 {
   "statusCode": 200,
   "value": 10,
@@ -75,8 +112,60 @@
   "timestamp": "...",
   "message": "Parent Lambda: Pre-processed with value 10 and type multiply"
 }
+```
 
-子Lambdaの出力:
+2. 親ステートマシン: InvokeChildStateMachine (子ステートマシン起動)
+
+ASLでの入力指定:
+
+```json
+{
+  "Type": "Task",
+  "Resource": "arn:aws:states:::states:startExecution.sync:2",
+  "Parameters": {
+    "StateMachineArn": "${child_state_machine_arn}",
+    "Input": {
+      "input_value.$": "$.preprocess_result.preprocessed_data.value",
+      "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type"
+    }
+  }
+}
+```
+
+Inputで参照しているフィールド:
+- 親ステートマシンの状態 `$.preprocess_result.preprocessed_data.value` を子ステートマシンの `input_value` に渡す
+- 親ステートマシンの状態 `$.preprocess_result.preprocessed_data.processing_type` を子ステートマシンの `processing_type` に渡す
+
+ResultPath: $.child_result
+
+3. 子ステートマシン: ChildLambdaTask (Lambda: child_lambda.py)
+
+ASLでの入力指定:
+
+```json
+{
+  "Type": "Task",
+  "Resource": "arn:aws:states:::lambda:invoke",
+  "Parameters": {
+    "FunctionName": "${child_lambda_function_arn}",
+    "Payload": {
+      "input_value.$": "$.input_value",
+      "processing_type.$": "$.processing_type"
+    }
+  }
+}
+```
+
+子Lambdaの入力 (ASL: ChildLambdaTask / Lambda: child_lambda.py):
+```json
+{
+  "input_value": 10,
+  "processing_type": "multiply"
+}
+```
+
+子Lambdaの出力 (ASL: ChildLambdaTask / Lambda: child_lambda.py):
+```json
 {
   "statusCode": 200,
   "processed_value": 20,
@@ -85,17 +174,91 @@
   "processing_type": "multiply",
   "message": "Child Lambda: multiplied by 2 to get 20"
 }
+```
 
-親Lambda後処理の出力 (最終結果):
+OutputPath: $.output
+
+4. 親ステートマシン: FilterChildOutput (Lambda: child_output_filter_lambda.py)
+
+ASLでの入力指定:
+
+```json
+{
+  "Type": "Task",
+  "Resource": "arn:aws:states:::lambda:invoke",
+  "Parameters": {
+    "FunctionName": "${child_output_filter_lambda_arn}",
+    "Payload": {
+      "operation.$": "$.child_result.child_output.operation"
+    }
+  }
+}
+```
+
+Payloadで参照しているフィールド:
+- 親ステートマシンの状態 `$.child_result.child_output.operation` をフィルタ用Lambdaの `operation` に渡す
+
+子出力フィルタの入力 (ASL: FilterChildOutput / Lambda: child_output_filter_lambda.py):
+```json
+{
+  "operation": "multiplied by 2"
+}
+```
+
+子出力フィルタの出力 (ASL: FilterChildOutput / Lambda: child_output_filter_lambda.py):
+```json
+{
+  "operation": "multiplied by 2"
+}
+```
+
+ResultPath: $.child_result
+
+5. 親ステートマシン: ParentLambdaPostProcess (Lambda: parent_lambda.py)
+
+ASLでの入力指定:
+
+```json
+{
+  "Type": "Task",
+  "Resource": "arn:aws:states:::lambda:invoke",
+  "Parameters": {
+    "FunctionName": "${parent_lambda_function_arn}",
+    "Payload": {
+      "action": "postprocess",
+      "original_data.$": "$",
+      "child_output.$": "$.child_result.child_output"
+    }
+  }
+}
+```
+
+親Lambda後処理の入力 (ASL: ParentLambdaPostProcess / Lambda: parent_lambda.py):
+```json
+{
+  "action": "postprocess",
+  "original_data": "<state> (全体)" ,
+  "child_output": {
+    "operation": "multiplied by 2"
+  }
+}
+```
+
+親Lambda後処理の出力 (ASL: ParentLambdaPostProcess / Lambda: parent_lambda.py):
+```json
 {
   "statusCode": 200,
-  "final_value": 20,
+  "final_value": null,
   "original_value": 10,
   "operation_performed": "multiplied by 2",
-  "child_output": {...},
-  "message": "Parent Lambda: Post-processed result - original: 10, final: 20",
-  "summary": "Complete processing chain: 10 -> multiplied by 2 -> 20"
+  "child_output": {"operation": "multiplied by 2"},
+  "message": "Parent Lambda: Post-processed result - original: 10, final: None",
+  "summary": "Complete processing chain: 10 -> multiplied by 2 -> None"
 }
+```
+
+OutputPath: $.final_result
+```
 ```
 
 ## クイックスタート
@@ -110,6 +273,9 @@
 
 #### 方法1: Terraform を使用
 
+TerraformはCloudFormationスタックの作成のみを行います。AWSリソース定義は
+[cfn/infrastructure.yaml](cfn/infrastructure.yaml) に集約しています。
+
 ```bash
 cd 039.step-functions-nested-state-machine
 
@@ -122,39 +288,21 @@ terraform plan
 # デプロイの実行
 terraform apply
 
+# スタック名を変更したい場合
+terraform apply -var "stack_name=nested-sfn-study-dev"
+
 # 出力の確認
 terraform output
 ```
 
-#### 方法2: CloudFormation を使用
+#### 方法2: CloudFormation + ローカルsrc/asl反映 (S3なし)
 
-```bash
+CloudFormationでスタック作成/更新後、`src`/`asl`から
+Lambdaとステートマシン定義を更新します。
+
+```powershell
 cd 039.step-functions-nested-state-machine
-
-# CloudFormationスタックのデプロイ
-aws cloudformation create-stack \
-  --stack-name nested-sfn-study-dev \
-  --template-body file://cfn/infrastructure.yaml \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --region ap-northeast-1
-
-# デプロイ完了を待機
-aws cloudformation wait stack-create-complete \
-  --stack-name nested-sfn-study-dev \
-  --region ap-northeast-1
-
-# 出力の確認
-aws cloudformation describe-stacks \
-  --stack-name nested-sfn-study-dev \
-  --region ap-northeast-1 \
-  --query 'Stacks[0].Outputs'
-```
-
-#### 方法3: デプロイスクリプトを使用
-
-```bash
-cd 039.step-functions-nested-state-machine
-./scripts/deploy.sh
+./scripts/deploy_cfn_local_code.ps1 -StackName nested-sfn-study-dev -Region ap-northeast-1
 ```
 
 ## テスト方法
@@ -250,6 +398,57 @@ python scripts/test_execution.py \
 - `ResultSelector`: 子ステートマシンの出力を選択
 - `ResultPath`: 親ステートマシンの状態に出力を保存する場所を指定
 
+### 親で参照する具体パスとフィルタ後の形
+
+子ステートマシン呼び出し後の出力は `$.child_result.child_output` に保存されます。
+その後のフィルタステップで `operation` のみを抽出し、同じパスへ上書きします。
+
+```json
+{
+  "Type": "Task",
+  "Resource": "arn:aws:states:::lambda:invoke",
+  "Parameters": {
+    "FunctionName": "${child_output_filter_lambda_arn}",
+    "Payload": {
+      "operation.$": "$.child_result.child_output.operation"
+    }
+  },
+  "ResultSelector": {
+    "child_output.$": "$.Payload"
+  },
+  "ResultPath": "$.child_result"
+}
+```
+
+親Lambdaの後処理では `$.child_result.child_output` を参照します。
+
+```json
+{
+  "Type": "Task",
+  "Resource": "arn:aws:states:::lambda:invoke",
+  "Parameters": {
+    "FunctionName": "${parent_lambda_function_arn}",
+    "Payload": {
+      "action": "postprocess",
+      "original_data.$": "$",
+      "child_output.$": "$.child_result.child_output"
+    }
+  }
+}
+```
+
+フィルタ後のデータ形は以下のようになります。
+
+```json
+{
+  "child_result": {
+    "child_output": {
+      "operation": "multiplied by 2"
+    }
+  }
+}
+```
+
 ### Lambda関数への入力設定
 
 ```json
@@ -288,6 +487,8 @@ python scripts/test_execution.py \
 │   └── child_lambda.py               # 子Lambda関数
 └── scripts/                           # デプロイ・テストスクリプト
     ├── deploy.sh                     # デプロイスクリプト
+    ├── deploy_cfn_local_code.ps1      # CloudFormation + ローカルsrc/asl反映
+    ├── update_resources_from_local.ps1 # deploy_cfn_local_code.ps1から呼び出し
     └── test_execution.py             # テスト実行スクリプト
 ```
 

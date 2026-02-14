@@ -30,7 +30,7 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'value': initial_value,
             'processing_type': processing_type,
-            'timestamp': context.request_id,
+            'timestamp': context.aws_request_id,
             'message': f'Parent Lambda: Pre-processed with value {initial_value} and type {processing_type}'
         }
         
@@ -39,9 +39,16 @@ def lambda_handler(event, context):
         child_output = event.get('child_output', {})
         original_data = event.get('original_data', {})
         
-        processed_value = child_output.get('processed_value', 0)
-        original_value = child_output.get('original_value', 0)
+        processed_value = child_output.get('processed_value')
+        original_value = child_output.get('original_value')
         operation = child_output.get('operation', 'unknown')
+
+        if original_value is None:
+            original_value = (
+                original_data.get('preprocess_result', {})
+                .get('preprocessed_data', {})
+                .get('value', 0)
+            )
         
         response = {
             'statusCode': 200,

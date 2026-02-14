@@ -1,48 +1,48 @@
 output "parent_lambda_function_name" {
   description = "Name of the parent Lambda function"
-  value       = aws_lambda_function.parent_lambda.function_name
+  value       = aws_cloudformation_stack.nested.outputs["ParentLambdaFunctionName"]
 }
 
 output "parent_lambda_function_arn" {
   description = "ARN of the parent Lambda function"
-  value       = aws_lambda_function.parent_lambda.arn
+  value       = aws_cloudformation_stack.nested.outputs["ParentLambdaFunctionArn"]
 }
 
 output "child_lambda_function_name" {
   description = "Name of the child Lambda function"
-  value       = aws_lambda_function.child_lambda.function_name
+  value       = aws_cloudformation_stack.nested.outputs["ChildLambdaFunctionName"]
 }
 
 output "child_lambda_function_arn" {
   description = "ARN of the child Lambda function"
-  value       = aws_lambda_function.child_lambda.arn
+  value       = aws_cloudformation_stack.nested.outputs["ChildLambdaFunctionArn"]
 }
 
 output "parent_state_machine_arn" {
   description = "ARN of the parent Step Functions state machine"
-  value       = aws_sfn_state_machine.parent_state_machine.arn
+  value       = aws_cloudformation_stack.nested.outputs["ParentStateMachineArn"]
 }
 
 output "parent_state_machine_name" {
   description = "Name of the parent Step Functions state machine"
-  value       = aws_sfn_state_machine.parent_state_machine.name
+  value       = aws_cloudformation_stack.nested.outputs["ParentStateMachineName"]
 }
 
 output "child_state_machine_arn" {
   description = "ARN of the child Step Functions state machine"
-  value       = aws_sfn_state_machine.child_state_machine.arn
+  value       = aws_cloudformation_stack.nested.outputs["ChildStateMachineArn"]
 }
 
 output "child_state_machine_name" {
   description = "Name of the child Step Functions state machine"
-  value       = aws_sfn_state_machine.child_state_machine.name
+  value       = aws_cloudformation_stack.nested.outputs["ChildStateMachineName"]
 }
 
 output "execution_command" {
   description = "Command to execute the parent state machine"
   value       = <<-EOT
     aws stepfunctions start-execution \
-      --state-machine-arn ${aws_sfn_state_machine.parent_state_machine.arn} \
+      --state-machine-arn ${aws_cloudformation_stack.nested.outputs["ParentStateMachineArn"]} \
       --input '{"initial_value": 10, "processing_type": "multiply"}' \
       --region ${var.aws_region}
   EOT

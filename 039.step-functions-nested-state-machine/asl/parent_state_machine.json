@@ -32,6 +32,21 @@
         "child_output.$": "$.Output"
       },
       "ResultPath": "$.child_result",
+      "Next": "FilterChildOutput"
+    },
+    "FilterChildOutput": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${child_output_filter_lambda_arn}",
+        "Payload": {
+          "operation.$": "$.child_result.child_output.operation"
+        }
+      },
+      "ResultSelector": {
+        "child_output.$": "$.Payload"
+      },
+      "ResultPath": "$.child_result",
       "Next": "ParentLambdaPostProcess"
     },
     "ParentLambdaPostProcess": {

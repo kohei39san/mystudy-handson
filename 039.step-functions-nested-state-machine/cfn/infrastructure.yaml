@@ -47,70 +47,7 @@ Resources:
           ENVIRONMENT: !Ref Environment
       Code:
         ZipFile: |
-          """
-          Parent Lambda function for nested Step Functions state machine
-          This function handles pre-processing and post-processing
-          """
-          import json
-
-
-          def lambda_handler(event, context):
-              """
-              Handle pre-processing and post-processing in parent state machine
-              
-              Args:
-                  event: Input event containing action type and data
-                  context: Lambda context object
-                  
-              Returns:
-                  dict: Processing result
-              """
-              print(f"Parent Lambda received event: {json.dumps(event)}")
-              
-              action = event.get('action', 'unknown')
-              
-              if action == 'preprocess':
-                  # Pre-processing: Prepare data for child state machine
-                  input_data = event.get('data', {})
-                  initial_value = input_data.get('initial_value', 10)
-                  processing_type = input_data.get('processing_type', 'multiply')
-                  
-                  response = {
-                      'statusCode': 200,
-                      'value': initial_value,
-                      'processing_type': processing_type,
-                      'timestamp': context.request_id,
-                      'message': f'Parent Lambda: Pre-processed with value {initial_value} and type {processing_type}'
-                  }
-                  
-              elif action == 'postprocess':
-                  # Post-processing: Process output from child state machine
-                  child_output = event.get('child_output', {})
-                  original_data = event.get('original_data', {})
-                  
-                  processed_value = child_output.get('processed_value', 0)
-                  original_value = child_output.get('original_value', 0)
-                  operation = child_output.get('operation', 'unknown')
-                  
-                  response = {
-                      'statusCode': 200,
-                      'final_value': processed_value,
-                      'original_value': original_value,
-                      'operation_performed': operation,
-                      'child_output': child_output,
-                      'message': f'Parent Lambda: Post-processed result - original: {original_value}, final: {processed_value}',
-                      'summary': f'Complete processing chain: {original_value} -> {operation} -> {processed_value}'
-                  }
-                  
-              else:
-                  response = {
-                      'statusCode': 400,
-                      'error': f'Unknown action: {action}',
-                      'message': 'Parent Lambda: Invalid action specified'
-                  }
-              
-              print(f"Parent Lambda returning: {json.dumps(response)}")
-              return response
+          # Placeholder: rendered from src/parent_lambda.py by deploy script
 
   ChildLambdaFunction:
     Type: AWS::Lambda::Function
@@ -126,55 +63,23 @@ Resources:
           ENVIRONMENT: !Ref Environment
       Code:
         ZipFile: |
-          """
-          Child Lambda function for nested Step Functions state machine
-          This function processes input data and returns results
-          """
-          import json
+          # Placeholder: rendered from src/child_lambda.py by deploy script
 
-
-          def lambda_handler(event, context):
-              """
-              Process input data from child state machine
-              
-              Args:
-                  event: Input event containing input_value and processing_type
-                  context: Lambda context object
-                  
-              Returns:
-                  dict: Processed result
-              """
-              print(f"Child Lambda received event: {json.dumps(event)}")
-              
-              # Extract input parameters
-              input_value = event.get('input_value', 0)
-              processing_type = event.get('processing_type', 'multiply')
-              
-              # Process based on type
-              if processing_type == 'multiply':
-                  result = input_value * 2
-                  operation = "multiplied by 2"
-              elif processing_type == 'add':
-                  result = input_value + 10
-                  operation = "added 10"
-              elif processing_type == 'square':
-                  result = input_value ** 2
-                  operation = "squared"
-              else:
-                  result = input_value
-                  operation = "no operation"
-              
-              response = {
-                  'statusCode': 200,
-                  'processed_value': result,
-                  'original_value': input_value,
-                  'operation': operation,
-                  'processing_type': processing_type,
-                  'message': f'Child Lambda: {operation} to get {result}'
-              }
-              
-              print(f"Child Lambda returning: {json.dumps(response)}")
-              return response
+  ChildOutputFilterLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-child-output-filter-lambda'
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Code:
+        ZipFile: |
+          # Placeholder: rendered from src/child_output_filter_lambda.py by deploy script
 
   # ===== CloudWatch Log Groups =====
   ParentLambdaLogGroup:
@@ -189,17 +94,12 @@ Resources:
       LogGroupName: !Sub '/aws/lambda/${ChildLambdaFunction}'
       RetentionInDays: 7
 
-  ParentStateMachineLogGroup:
+  ChildOutputFilterLambdaLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub '/aws/vendedlogs/states/${ProjectName}-${Environment}-parent-sfn'
+      LogGroupName: !Sub '/aws/lambda/${ChildOutputFilterLambdaFunction}'
       RetentionInDays: 7
 
-  ChildStateMachineLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub '/aws/vendedlogs/states/${ProjectName}-${Environment}-child-sfn'
-      RetentionInDays: 7
 
   # ===== IAM Role for Step Functions =====
   StepFunctionsExecutionRole:
@@ -213,51 +113,49 @@ Resources:
             Principal:
               Service: states.amazonaws.com
             Action: sts:AssumeRole
-      Policies:
-        - PolicyName: LambdaInvokePolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - lambda:InvokeFunction
-                Resource:
-                  - !GetAtt ParentLambdaFunction.Arn
-                  - !GetAtt ChildLambdaFunction.Arn
-        - PolicyName: StatesExecutionPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - states:StartExecution
-                  - states:DescribeExecution
-                  - states:StopExecution
-                Resource:
-                  - !Ref ChildStateMachine
-                  - !Sub '${ChildStateMachine}:*'
-              - Effect: Allow
-                Action:
-                  - events:PutTargets
-                  - events:PutRule
-                  - events:DescribeRule
-                Resource:
-                  - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule'
-        - PolicyName: CloudWatchLogsPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogDelivery
-                  - logs:GetLogDelivery
-                  - logs:UpdateLogDelivery
-                  - logs:DeleteLogDelivery
-                  - logs:ListLogDeliveries
-                  - logs:PutResourcePolicy
-                  - logs:DescribeResourcePolicies
-                  - logs:DescribeLogGroups
-                Resource: '*'
+
+  StepFunctionsLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${ProjectName}-${Environment}-sfn-lambda-policy'
+      Roles:
+        - !Ref StepFunctionsExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt ParentLambdaFunction.Arn
+              - !GetAtt ChildLambdaFunction.Arn
+              - !GetAtt ChildOutputFilterLambdaFunction.Arn
+
+  StepFunctionsStatesPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${ProjectName}-${Environment}-sfn-states-policy'
+      Roles:
+        - !Ref StepFunctionsExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - states:StartExecution
+              - states:DescribeExecution
+              - states:StopExecution
+            Resource:
+              - !Ref ChildStateMachine
+              - !Sub '${ChildStateMachine}:*'
+          - Effect: Allow
+            Action:
+              - events:PutTargets
+              - events:PutRule
+              - events:DescribeRule
+            Resource:
+              - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule'
+
 
   # ===== Step Functions State Machines =====
   ChildStateMachine:
@@ -266,31 +164,13 @@ Resources:
       StateMachineName: !Sub '${ProjectName}-${Environment}-child-sfn'
       RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
       StateMachineType: STANDARD
-      LoggingConfiguration:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt ChildStateMachineLogGroup.Arn
       DefinitionString: !Sub |
         {
-          "Comment": "Child state machine that processes input and returns output",
-          "StartAt": "ChildLambdaTask",
+          "Comment": "Placeholder definition rendered by deploy script",
+          "StartAt": "Pass",
           "States": {
-            "ChildLambdaTask": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${ChildLambdaFunction.Arn}",
-                "Payload": {
-                  "input_value.$": "$.input_value",
-                  "processing_type.$": "$.processing_type"
-                }
-              },
-              "ResultSelector": {
-                "output.$": "$.Payload"
-              },
-              "OutputPath": "$.output",
+            "Pass": {
+              "Type": "Pass",
               "End": true
             }
           }
@@ -302,64 +182,13 @@ Resources:
       StateMachineName: !Sub '${ProjectName}-${Environment}-parent-sfn'
       RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
       StateMachineType: STANDARD
-      LoggingConfiguration:
-        Level: ALL
-        IncludeExecutionData: true
-        Destinations:
-          - CloudWatchLogsLogGroup:
-              LogGroupArn: !GetAtt ParentStateMachineLogGroup.Arn
       DefinitionString: !Sub |
         {
-          "Comment": "Parent state machine that invokes child state machine and processes the result",
-          "StartAt": "ParentLambdaPreProcess",
+          "Comment": "Placeholder definition rendered by deploy script",
+          "StartAt": "Pass",
           "States": {
-            "ParentLambdaPreProcess": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${ParentLambdaFunction.Arn}",
-                "Payload": {
-                  "action": "preprocess",
-                  "data.$": "$"
-                }
-              },
-              "ResultSelector": {
-                "preprocessed_data.$": "$.Payload"
-              },
-              "ResultPath": "$.preprocess_result",
-              "Next": "InvokeChildStateMachine"
-            },
-            "InvokeChildStateMachine": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::states:startExecution.sync:2",
-              "Parameters": {
-                "StateMachineArn": "${ChildStateMachine}",
-                "Input": {
-                  "input_value.$": "$.preprocess_result.preprocessed_data.value",
-                  "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type"
-                }
-              },
-              "ResultSelector": {
-                "child_output.$": "$.Output"
-              },
-              "ResultPath": "$.child_result",
-              "Next": "ParentLambdaPostProcess"
-            },
-            "ParentLambdaPostProcess": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::lambda:invoke",
-              "Parameters": {
-                "FunctionName": "${ParentLambdaFunction.Arn}",
-                "Payload": {
-                  "action": "postprocess",
-                  "original_data.$": "$",
-                  "child_output.$": "$.child_result.child_output"
-                }
-              },
-              "ResultSelector": {
-                "final_result.$": "$.Payload"
-              },
-              "OutputPath": "$.final_result",
+            "Pass": {
+              "Type": "Pass",
               "End": true
             }
           }

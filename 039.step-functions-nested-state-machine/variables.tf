@@ -16,14 +16,8 @@ variable "environment" {
   default     = "dev"
 }
 
-variable "lambda_timeout" {
-  description = "Lambda function timeout in seconds"
-  type        = number
-  default     = 30
-}
-
-variable "lambda_memory_size" {
-  description = "Lambda function memory size in MB"
-  type        = number
-  default     = 128
+variable "stack_name" {
+  description = "CloudFormation stack name"
+  type        = string
+  default     = "nested-sfn-study-dev"
 }
