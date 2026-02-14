@@ -188,8 +188,20 @@ def main():
         args.execution_name
     )
     
+    # Derive AWS region from the state machine ARN for the console URL
+    region = ""
+    try:
+        region = state_machine_arn.split(":")[3]
+    except (AttributeError, IndexError):
+        region = ""
+    
+    if region:
+        console_url = f"https://console.aws.amazon.com/states/home?region={region}#/executions/details/{execution_arn}"
+    else:
+        console_url = f"https://console.aws.amazon.com/states/home#/executions/details/{execution_arn}"
+    
     print(f"\nExecution started: {execution_arn}")
-    print(f"View in console: https://console.aws.amazon.com/states/home?region=ap-northeast-1#/executions/details/{execution_arn}")
+    print(f"View in console: {console_url}")
     
     # Wait for completion
     final_status = wait_for_execution(execution_arn, args.timeout)
