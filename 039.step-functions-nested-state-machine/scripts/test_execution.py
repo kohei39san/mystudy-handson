@@ -11,7 +11,7 @@ import boto3
 from datetime import datetime
 
 
-def start_execution(state_machine_arn, input_data, execution_name=None):
+def start_execution(state_machine_arn, input_data, execution_name=None, region='ap-northeast-1'):
     """
     Start a Step Functions execution
     
@@ -19,11 +19,12 @@ def start_execution(state_machine_arn, input_data, execution_name=None):
         state_machine_arn: ARN of the state machine to execute
         input_data: Input data as a dictionary
         execution_name: Optional execution name
+        region: AWS region (default: ap-northeast-1)
         
     Returns:
         Execution ARN
     """
-    client = boto3.client('stepfunctions')
+    client = boto3.client('stepfunctions', region_name=region)
     
     if not execution_name:
         execution_name = f"test-execution-{int(time.time())}"
@@ -40,17 +41,18 @@ def start_execution(state_machine_arn, input_data, execution_name=None):
     return response['executionArn']
 
 
-def get_execution_status(execution_arn):
+def get_execution_status(execution_arn, region='ap-northeast-1'):
     """
     Get execution status and output
     
     Args:
         execution_arn: ARN of the execution
+        region: AWS region (default: ap-northeast-1)
         
     Returns:
         Dictionary with status, output, and other details
     """
-    client = boto3.client('stepfunctions')
+    client = boto3.client('stepfunctions', region_name=region)
     
     response = client.describe_execution(executionArn=execution_arn)
     
@@ -73,7 +75,7 @@ def get_execution_status(execution_arn):
     return result
 
 
-def wait_for_execution(execution_arn, timeout=300, poll_interval=2):
+def wait_for_execution(execution_arn, timeout=300, poll_interval=2, region='ap-northeast-1'):
     """
     Wait for execution to complete
     
@@ -81,6 +83,7 @@ def wait_for_execution(execution_arn, timeout=300, poll_interval=2):
         execution_arn: ARN of the execution
         timeout: Maximum time to wait in seconds
         poll_interval: Time between status checks in seconds
+        region: AWS region (default: ap-northeast-1)
         
     Returns:
         Final execution status
@@ -90,7 +93,7 @@ def wait_for_execution(execution_arn, timeout=300, poll_interval=2):
     start_time = time.time()
     
     while True:
-        status = get_execution_status(execution_arn)
+        status = get_execution_status(execution_arn, region)
         
         if status['status'] in ['SUCCEEDED', 'FAILED', 'TIMED_OUT', 'ABORTED']:
             return status
@@ -104,23 +107,25 @@ def wait_for_execution(execution_arn, timeout=300, poll_interval=2):
         time.sleep(poll_interval)
 
 
-def get_state_machine_arn_by_name(state_machine_name):
+def get_state_machine_arn_by_name(state_machine_name, region='ap-northeast-1'):
     """
     Get state machine ARN by name
     
     Args:
         state_machine_name: Name of the state machine
+        region: AWS region (default: ap-northeast-1)
         
     Returns:
         State machine ARN
     """
-    client = boto3.client('stepfunctions')
+    client = boto3.client('stepfunctions', region_name=region)
     
-    response = client.list_state_machines()
+    paginator = client.get_paginator('list_state_machines')
     
-    for sm in response['stateMachines']:
-        if sm['name'] == state_machine_name:
-            return sm['stateMachineArn']
+    for page in paginator.paginate():
+        for sm in page.get('stateMachines', []):
+            if sm.get('name') == state_machine_name:
+                return sm.get('stateMachineArn')
     
     raise ValueError(f"State machine not found: {state_machine_name}")
 
@@ -159,6 +164,11 @@ def main():
         default=300,
         help='Timeout in seconds (default: 300)'
     )
+    parser.add_argument(
+        '--region',
+        default='ap-northeast-1',
+        help='AWS region (default: ap-northeast-1)'
+    )
     
     args = parser.parse_args()
     
@@ -166,7 +176,7 @@ def main():
     if args.state_machine_arn:
         state_machine_arn = args.state_machine_arn
     elif args.state_machine_name:
-        state_machine_arn = get_state_machine_arn_by_name(args.state_machine_name)
+        state_machine_arn = get_state_machine_arn_by_name(args.state_machine_name, args.region)
     else:
         print("Error: Either --state-machine-arn or --state-machine-name must be provided")
         return 1
@@ -185,7 +195,8 @@ def main():
     execution_arn = start_execution(
         state_machine_arn,
         input_data,
-        args.execution_name
+        args.execution_name,
+        args.region
     )
     
     # Derive AWS region from the state machine ARN for the console URL
@@ -193,18 +204,13 @@ def main():
     try:
         region = state_machine_arn.split(":")[3]
     except (AttributeError, IndexError):
-        region = ""
-    
-    if region:
-        console_url = f"https://console.aws.amazon.com/states/home?region={region}#/executions/details/{execution_arn}"
-    else:
-        console_url = f"https://console.aws.amazon.com/states/home#/executions/details/{execution_arn}"
+        region = args.region
     
     print(f"\nExecution started: {execution_arn}")
-    print(f"View in console: {console_url}")
+    print(f"View in console: https://console.aws.amazon.com/states/home?region={region}#/executions/details/{execution_arn}")
     
     # Wait for completion
-    final_status = wait_for_execution(execution_arn, args.timeout)
+    final_status = wait_for_execution(execution_arn, args.timeout, region=args.region)
     
     # Display results
     print("\n===== Execution Results =====")

@@ -64,16 +64,25 @@ deploy_cloudformation() {
     # Check if stack exists
     if aws cloudformation describe-stacks --stack-name $STACK_NAME --region $REGION &>/dev/null; then
         echo "Stack exists. Updating..."
-        aws cloudformation update-stack \
+        UPDATE_OUTPUT=$(aws cloudformation update-stack \
             --stack-name $STACK_NAME \
             --template-body file://$TEMPLATE_FILE \
             --capabilities CAPABILITY_NAMED_IAM \
-            --region $REGION
+            --region $REGION 2>&1) || UPDATE_EXIT_CODE=$?
         
-        echo "Waiting for stack update to complete..."
-        aws cloudformation wait stack-update-complete \
-            --stack-name $STACK_NAME \
-            --region $REGION
+        if [ -n "$UPDATE_EXIT_CODE" ]; then
+            if echo "$UPDATE_OUTPUT" | grep -q "No updates are to be performed"; then
+                echo "No changes detected in stack. Stack is already up to date."
+            else
+                echo "Error updating stack: $UPDATE_OUTPUT"
+                exit $UPDATE_EXIT_CODE
+            fi
+        else
+            echo "Waiting for stack update to complete..."
+            aws cloudformation wait stack-update-complete \
+                --stack-name $STACK_NAME \
+                --region $REGION
+        fi
     else
         echo "Creating new stack..."
         aws cloudformation create-stack \
