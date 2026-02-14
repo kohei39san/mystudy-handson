@@ -159,6 +159,31 @@ resource "aws_iam_role_policy" "step_functions_states_policy" {
   })
 }
 
+# Policy to allow Step Functions to manage CloudWatch Logs delivery
+resource "aws_iam_role_policy" "step_functions_cloudwatch_logs_policy" {
+  name = "${var.project_name}-${var.environment}-sfn-cloudwatch-logs-policy"
+  role = aws_iam_role.step_functions_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogDelivery",
+          "logs:GetLogDelivery",
+          "logs:UpdateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:DescribeResourcePolicies",
+          "logs:DescribeLogGroups"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
 # ===== CloudWatch Logs for Step Functions =====
 resource "aws_cloudwatch_log_group" "child_state_machine_logs" {
   name              = "/aws/vendedlogs/states/${var.project_name}-${var.environment}-child-sfn"
