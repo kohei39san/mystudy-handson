@@ -100,6 +100,18 @@ Resources:
       LogGroupName: !Sub '/aws/lambda/${ChildOutputFilterLambdaFunction}'
       RetentionInDays: 7
 
+  ParentStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/vendedlogs/states/${ProjectName}-${Environment}-parent-sfn'
+      RetentionInDays: 7
+
+  ChildStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/vendedlogs/states/${ProjectName}-${Environment}-child-sfn'
+      RetentionInDays: 7
+
 
   # ===== IAM Role for Step Functions =====
   StepFunctionsExecutionRole:
@@ -156,6 +168,27 @@ Resources:
             Resource:
               - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule'
 
+  StepFunctionsCloudWatchLogsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${ProjectName}-${Environment}-sfn-cloudwatch-logs-policy'
+      Roles:
+        - !Ref StepFunctionsExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogDelivery
+              - logs:GetLogDelivery
+              - logs:UpdateLogDelivery
+              - logs:DeleteLogDelivery
+              - logs:ListLogDeliveries
+              - logs:PutResourcePolicy
+              - logs:DescribeResourcePolicies
+              - logs:DescribeLogGroups
+            Resource: '*'
+
 
   # ===== Step Functions State Machines =====
   ChildStateMachine:
@@ -164,6 +197,12 @@ Resources:
       StateMachineName: !Sub '${ProjectName}-${Environment}-child-sfn'
       RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
       StateMachineType: STANDARD
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt ChildStateMachineLogGroup.Arn
       DefinitionString: !Sub |
         {
           "Comment": "Placeholder definition rendered by deploy script",
@@ -182,6 +221,12 @@ Resources:
       StateMachineName: !Sub '${ProjectName}-${Environment}-parent-sfn'
       RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
       StateMachineType: STANDARD
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt ParentStateMachineLogGroup.Arn
       DefinitionString: !Sub |
         {
           "Comment": "Placeholder definition rendered by deploy script",
@@ -210,6 +255,14 @@ Outputs:
   ChildLambdaFunctionArn:
     Description: ARN of the child Lambda function
     Value: !GetAtt ChildLambdaFunction.Arn
+
+  ChildOutputFilterLambdaFunctionName:
+    Description: Name of the child output filter Lambda function
+    Value: !Ref ChildOutputFilterLambdaFunction
+
+  ChildOutputFilterLambdaFunctionArn:
+    Description: ARN of the child output filter Lambda function
+    Value: !GetAtt ChildOutputFilterLambdaFunction.Arn
 
   ParentStateMachineArn:
     Description: ARN of the parent Step Functions state machine

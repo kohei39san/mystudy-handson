@@ -39,9 +39,14 @@
 4. **ParentLambdaPostProcess**: 抽出した出力を受け取り、親Lambda関数で後処理を実行
 
 #### 子ステートマシン (child_state_machine.json)
-1. **ChildLambdaTask**: 子Lambda関数でデータ処理を実行
+1. **ChildLambdaTaskFirst**: 子Lambda関数で最初のデータ処理を実行
    - 入力値を受け取り、指定された処理を実行
-   - 結果を親ステートマシンに返却
+2. **ChildLambdaTaskSecond**: 最初の結果を受け取り、追加処理を実行
+   - 最初の処理結果の `processed_value` を使用
+   - 固定の処理タイプ（add）で処理
+3. **CombineResults**: 2つの処理結果を統合
+   - `first_result` と `second_result` を結合
+   - 統合結果を親ステートマシンに返却
 
 ### Lambda関数
 
@@ -189,14 +194,14 @@ ASLでの入力指定:
   "Parameters": {
     "FunctionName": "${child_output_filter_lambda_arn}",
     "Payload": {
-      "operation.$": "$.child_result.child_output.operation"
+      "operation.$": "$.child_result.child_output.first_result.output.operation"
     }
   }
 }
 ```
 
 Payloadで参照しているフィールド:
-- 親ステートマシンの状態 `$.child_result.child_output.operation` をフィルタ用Lambdaの `operation` に渡す
+- 親ステートマシンの状態 `$.child_result.child_output.first_result.output.operation` をフィルタ用Lambdaの `operation` に渡す
 
 子出力フィルタの入力 (ASL: FilterChildOutput / Lambda: child_output_filter_lambda.py):
 ```json
@@ -258,7 +263,6 @@ ASLでの入力指定:
 ```
 
 OutputPath: $.final_result
-```
 ```
 
 ## クイックスタート
