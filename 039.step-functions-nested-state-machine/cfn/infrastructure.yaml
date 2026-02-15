@@ -1,0 +1,289 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Nested Step Functions State Machine with Lambda functions'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: nested-sfn-study
+    Description: Project name for resource naming
+  
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment name
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+Resources:
+  # ===== IAM Role for Lambda Functions =====
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-lambda-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # ===== Lambda Functions =====
+  ParentLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-parent-lambda'
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Code:
+        ZipFile: |
+          # Placeholder: rendered from src/parent_lambda.py by deploy script
+
+  ChildLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-child-lambda'
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Code:
+        ZipFile: |
+          # Placeholder: rendered from src/child_lambda.py by deploy script
+
+  ChildOutputFilterLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-child-output-filter-lambda'
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Code:
+        ZipFile: |
+          # Placeholder: rendered from src/child_output_filter_lambda.py by deploy script
+
+  # ===== CloudWatch Log Groups =====
+  ParentLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ParentLambdaFunction}'
+      RetentionInDays: 7
+
+  ChildLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ChildLambdaFunction}'
+      RetentionInDays: 7
+
+  ChildOutputFilterLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ChildOutputFilterLambdaFunction}'
+      RetentionInDays: 7
+
+  ParentStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/vendedlogs/states/${ProjectName}-${Environment}-parent-sfn'
+      RetentionInDays: 7
+
+  ChildStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/vendedlogs/states/${ProjectName}-${Environment}-child-sfn'
+      RetentionInDays: 7
+
+
+  # ===== IAM Role for Step Functions =====
+  StepFunctionsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${ProjectName}-${Environment}-sfn-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+
+  StepFunctionsLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${ProjectName}-${Environment}-sfn-lambda-policy'
+      Roles:
+        - !Ref StepFunctionsExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt ParentLambdaFunction.Arn
+              - !GetAtt ChildLambdaFunction.Arn
+              - !GetAtt ChildOutputFilterLambdaFunction.Arn
+
+  StepFunctionsStatesPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${ProjectName}-${Environment}-sfn-states-policy'
+      Roles:
+        - !Ref StepFunctionsExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - states:StartExecution
+              - states:DescribeExecution
+              - states:StopExecution
+            Resource:
+              - !Ref ChildStateMachine
+              - !Sub '${ChildStateMachine}:*'
+          - Effect: Allow
+            Action:
+              - events:PutTargets
+              - events:PutRule
+              - events:DescribeRule
+            Resource:
+              - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule'
+
+  StepFunctionsCloudWatchLogsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${ProjectName}-${Environment}-sfn-cloudwatch-logs-policy'
+      Roles:
+        - !Ref StepFunctionsExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogDelivery
+              - logs:GetLogDelivery
+              - logs:UpdateLogDelivery
+              - logs:DeleteLogDelivery
+              - logs:ListLogDeliveries
+              - logs:PutResourcePolicy
+              - logs:DescribeResourcePolicies
+              - logs:DescribeLogGroups
+            Resource: '*'
+
+
+  # ===== Step Functions State Machines =====
+  ChildStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub '${ProjectName}-${Environment}-child-sfn'
+      RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
+      StateMachineType: STANDARD
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt ChildStateMachineLogGroup.Arn
+      DefinitionString: !Sub |
+        {
+          "Comment": "Placeholder definition rendered by deploy script",
+          "StartAt": "Pass",
+          "States": {
+            "Pass": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        }
+
+  ParentStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub '${ProjectName}-${Environment}-parent-sfn'
+      RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
+      StateMachineType: STANDARD
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt ParentStateMachineLogGroup.Arn
+      DefinitionString: !Sub |
+        {
+          "Comment": "Placeholder definition rendered by deploy script",
+          "StartAt": "Pass",
+          "States": {
+            "Pass": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        }
+
+Outputs:
+  ParentLambdaFunctionName:
+    Description: Name of the parent Lambda function
+    Value: !Ref ParentLambdaFunction
+
+  ParentLambdaFunctionArn:
+    Description: ARN of the parent Lambda function
+    Value: !GetAtt ParentLambdaFunction.Arn
+
+  ChildLambdaFunctionName:
+    Description: Name of the child Lambda function
+    Value: !Ref ChildLambdaFunction
+
+  ChildLambdaFunctionArn:
+    Description: ARN of the child Lambda function
+    Value: !GetAtt ChildLambdaFunction.Arn
+
+  ChildOutputFilterLambdaFunctionName:
+    Description: Name of the child output filter Lambda function
+    Value: !Ref ChildOutputFilterLambdaFunction
+
+  ChildOutputFilterLambdaFunctionArn:
+    Description: ARN of the child output filter Lambda function
+    Value: !GetAtt ChildOutputFilterLambdaFunction.Arn
+
+  ParentStateMachineArn:
+    Description: ARN of the parent Step Functions state machine
+    Value: !Ref ParentStateMachine
+
+  ParentStateMachineName:
+    Description: Name of the parent Step Functions state machine
+    Value: !GetAtt ParentStateMachine.Name
+
+  ChildStateMachineArn:
+    Description: ARN of the child Step Functions state machine
+    Value: !Ref ChildStateMachine
+
+  ChildStateMachineName:
+    Description: Name of the child Step Functions state machine
+    Value: !GetAtt ChildStateMachine.Name
+
+  ExecutionCommand:
+    Description: Command to execute the parent state machine
+    Value: !Sub |
+      aws stepfunctions start-execution \
+        --state-machine-arn ${ParentStateMachine} \
+        --input '{"initial_value": 10, "processing_type": "multiply"}' \
+        --region ${AWS::Region}

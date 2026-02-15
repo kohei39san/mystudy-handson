@@ -1,0 +1,46 @@
+{
+  "Comment": "Child state machine that processes input and returns output",
+  "StartAt": "ChildLambdaTaskFirst",
+  "States": {
+    "ChildLambdaTaskFirst": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${child_lambda_function_arn}",
+        "Payload": {
+          "input_value.$": "$.input_value",
+          "processing_type.$": "$.processing_type"
+        }
+      },
+      "ResultSelector": {
+        "output.$": "$.Payload"
+      },
+      "ResultPath": "$.first_result",
+      "Next": "ChildLambdaTaskSecond"
+    },
+    "ChildLambdaTaskSecond": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${child_lambda_function_arn}",
+        "Payload": {
+          "input_value.$": "$.first_result.output.processed_value",
+          "processing_type": "add"
+        }
+      },
+      "ResultSelector": {
+        "output.$": "$.Payload"
+      },
+      "ResultPath": "$.second_result",
+      "Next": "CombineResults"
+    },
+    "CombineResults": {
+      "Type": "Pass",
+      "Parameters": {
+        "first_result.$": "$.first_result",
+        "second_result.$": "$.second_result"
+      },
+      "End": true
+    }
+  }
+}
