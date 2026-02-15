@@ -484,6 +484,7 @@ python scripts/test_execution.py \
 │   └── infrastructure.yaml           # インフラストラクチャ定義
 ├── src/                               # Lambda関数ソースコード
 │   ├── parent_lambda.py              # 親Lambda関数
+│   ├── child_output_filter_lambda.py  # 子出力フィルタLambda関数
 │   └── child_lambda.py               # 子Lambda関数
 └── scripts/                           # デプロイ・テストスクリプト
     ├── deploy.sh                     # デプロイスクリプト
