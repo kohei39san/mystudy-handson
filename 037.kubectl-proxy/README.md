@@ -2,6 +2,8 @@
 
 Kubernetes APIサーバーへのローカルプロキシを作成するDocker Composeファイルです。
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 概要
 
 `kubectl proxy`をDockerコンテナで実行し、ローカルマシンからKubernetes APIにアクセスできるプロキシサーバーを提供します。
