@@ -2,6 +2,8 @@
 
 このTerraform構成は、Windows ServerのEC2インスタンスを作成し、管理ツールをインストールした後、AMIとして保存する仕組みを提供します。
 
+![構成図](src/architecture.svg)
+
 ## リソース構成
 
 ### ネットワークリソース

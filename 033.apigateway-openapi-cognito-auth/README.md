@@ -4,6 +4,8 @@
 
 このプロジェクトは、OpenAPI定義書を使用してAPI Gatewayを構築し、Cognito認証とLambdaオーソライザーによる役割ベースのアクセス制御を実装します。
 
+![構成図](src/architecture.svg)
+
 **038.apigateway-rest-apiの機能を統合済み：**
 - OpenAPI仕様書の分割管理システム
 - Python マージスクリプト
