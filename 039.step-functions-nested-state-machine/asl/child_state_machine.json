@@ -1,7 +1,51 @@
 {
-  "Comment": "Child state machine that processes input and returns output",
-  "StartAt": "ChildLambdaTaskFirst",
+  "Comment": "Child state machine: invokes external Lambda asynchronously, loops until complete, then processes data",
+  "StartAt": "InvokeExternalLambdaAsync",
   "States": {
+    "InvokeExternalLambdaAsync": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${async_invoke_lambda_arn}",
+        "Payload": {}
+      },
+      "ResultSelector": {
+        "output.$": "$.Payload"
+      },
+      "ResultPath": "$.async_invoke_result",
+      "Next": "WaitForExternalLambda"
+    },
+    "WaitForExternalLambda": {
+      "Type": "Wait",
+      "SecondsPath": "$.wait_seconds",
+      "Next": "CheckExternalLambdaCompletion"
+    },
+    "CheckExternalLambdaCompletion": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${check_completion_lambda_arn}",
+        "Payload": {
+          "start_time.$": "$.async_invoke_result.output.start_time"
+        }
+      },
+      "ResultSelector": {
+        "output.$": "$.Payload"
+      },
+      "ResultPath": "$.check_result",
+      "Next": "IsExternalLambdaComplete"
+    },
+    "IsExternalLambdaComplete": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.check_result.output.status",
+          "StringEquals": "COMPLETED",
+          "Next": "ChildLambdaTaskFirst"
+        }
+      ],
+      "Default": "WaitForExternalLambda"
+    },
     "ChildLambdaTaskFirst": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",

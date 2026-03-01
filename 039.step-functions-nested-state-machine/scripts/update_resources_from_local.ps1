@@ -6,7 +6,10 @@ param(
     [switch]$UpdateChildStateMachine,
     [switch]$UpdateParentLambda,
     [switch]$UpdateChildLambda,
-    [switch]$UpdateFilterLambda
+    [switch]$UpdateFilterLambda,
+    [switch]$UpdateExternalSleepLambda,
+    [switch]$UpdateAsyncInvokeLambda,
+    [switch]$UpdateCheckCompletionLambda
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,12 +25,15 @@ if ($Profile -and $Profile.Trim().Length -gt 0) {
 }
 $AwsArgs += @("--region", $Region)
 
-if (-not ($UpdateParentStateMachine -or $UpdateChildStateMachine -or $UpdateParentLambda -or $UpdateChildLambda -or $UpdateFilterLambda)) {
+if (-not ($UpdateParentStateMachine -or $UpdateChildStateMachine -or $UpdateParentLambda -or $UpdateChildLambda -or $UpdateFilterLambda -or $UpdateExternalSleepLambda -or $UpdateAsyncInvokeLambda -or $UpdateCheckCompletionLambda)) {
     $UpdateParentStateMachine = $true
     $UpdateChildStateMachine = $true
     $UpdateParentLambda = $true
     $UpdateChildLambda = $true
     $UpdateFilterLambda = $true
+    $UpdateExternalSleepLambda = $true
+    $UpdateAsyncInvokeLambda = $true
+    $UpdateCheckCompletionLambda = $true
 }
 
 Write-Host "===== Update Step Functions/Lambda from local src/asl ====="
@@ -68,13 +74,21 @@ $ChildStateMachineArn = Get-OutputValue "ChildStateMachineArn"
 $FilterLambdaName = "$ProjectName-$Environment-child-output-filter-lambda"
 $FilterLambdaArn = (aws lambda get-function --function-name $FilterLambdaName --query "Configuration.FunctionArn" --output text @AwsArgs)
 
+$AsyncInvokeLambdaArn = Get-OutputValue "AsyncInvokeLambdaFunctionArn"
+$CheckCompletionLambdaArn = Get-OutputValue "CheckCompletionLambdaFunctionArn"
+$ExternalSleepLambdaName = Get-OutputValue "ExternalSleepLambdaFunctionName"
+$AsyncInvokeLambdaName = Get-OutputValue "AsyncInvokeLambdaFunctionName"
+$CheckCompletionLambdaName = Get-OutputValue "CheckCompletionLambdaFunctionName"
+
 function Load-AslWithCfnRefs {
     param(
         [string]$Path,
         [string]$ParentLambdaArn,
         [string]$ChildStateMachineArn,
         [string]$FilterLambdaArn,
-        [string]$ChildLambdaArn
+        [string]$ChildLambdaArn,
+        [string]$AsyncInvokeLambdaArn,
+        [string]$CheckCompletionLambdaArn
     )
 
     $raw = Get-Content -Path $Path -Raw
@@ -82,6 +96,8 @@ function Load-AslWithCfnRefs {
     $raw = $raw.Replace('${child_state_machine_arn}', $ChildStateMachineArn)
     $raw = $raw.Replace('${child_output_filter_lambda_arn}', $FilterLambdaArn)
     $raw = $raw.Replace('${child_lambda_function_arn}', $ChildLambdaArn)
+    $raw = $raw.Replace('${async_invoke_lambda_arn}', $AsyncInvokeLambdaArn)
+    $raw = $raw.Replace('${check_completion_lambda_arn}', $CheckCompletionLambdaArn)
     return $raw.Trim()
 }
 
@@ -107,8 +123,8 @@ if (Test-Path $TmpDir) {
 New-Item -ItemType Directory -Path $TmpDir | Out-Null
 
 if ($UpdateParentStateMachine -or $UpdateChildStateMachine) {
-    $ChildAsl = Load-AslWithCfnRefs -Path (Join-Path $AslDir "child_state_machine.json") -ParentLambdaArn $ParentLambdaArn -ChildStateMachineArn $ChildStateMachineArn -FilterLambdaArn $FilterLambdaArn -ChildLambdaArn $ChildLambdaArn
-    $ParentAsl = Load-AslWithCfnRefs -Path (Join-Path $AslDir "parent_state_machine.json") -ParentLambdaArn $ParentLambdaArn -ChildStateMachineArn $ChildStateMachineArn -FilterLambdaArn $FilterLambdaArn -ChildLambdaArn $ChildLambdaArn
+    $ChildAsl = Load-AslWithCfnRefs -Path (Join-Path $AslDir "child_state_machine.json") -ParentLambdaArn $ParentLambdaArn -ChildStateMachineArn $ChildStateMachineArn -FilterLambdaArn $FilterLambdaArn -ChildLambdaArn $ChildLambdaArn -AsyncInvokeLambdaArn $AsyncInvokeLambdaArn -CheckCompletionLambdaArn $CheckCompletionLambdaArn
+    $ParentAsl = Load-AslWithCfnRefs -Path (Join-Path $AslDir "parent_state_machine.json") -ParentLambdaArn $ParentLambdaArn -ChildStateMachineArn $ChildStateMachineArn -FilterLambdaArn $FilterLambdaArn -ChildLambdaArn $ChildLambdaArn -AsyncInvokeLambdaArn $AsyncInvokeLambdaArn -CheckCompletionLambdaArn $CheckCompletionLambdaArn
 
     $ChildAslFile = Join-Path $TmpDir "child_state_machine.json"
     $ParentAslFile = Join-Path $TmpDir "parent_state_machine.json"
@@ -136,6 +152,18 @@ if ($UpdateChildLambda) {
 
 if ($UpdateFilterLambda) {
     Update-LambdaCode -FunctionName $FilterLambdaName -SourceFile (Join-Path $SrcDir "child_output_filter_lambda.py")
+}
+
+if ($UpdateExternalSleepLambda) {
+    Update-LambdaCode -FunctionName $ExternalSleepLambdaName -SourceFile (Join-Path $SrcDir "external_sleep_lambda.py")
+}
+
+if ($UpdateAsyncInvokeLambda) {
+    Update-LambdaCode -FunctionName $AsyncInvokeLambdaName -SourceFile (Join-Path $SrcDir "async_invoke_lambda.py")
+}
+
+if ($UpdateCheckCompletionLambda) {
+    Update-LambdaCode -FunctionName $CheckCompletionLambdaName -SourceFile (Join-Path $SrcDir "check_completion_lambda.py")
 }
 
 Write-Host ""

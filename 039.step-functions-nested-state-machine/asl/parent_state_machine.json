@@ -25,7 +25,8 @@
         "StateMachineArn": "${child_state_machine_arn}",
         "Input": {
           "input_value.$": "$.preprocess_result.preprocessed_data.value",
-          "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type"
+          "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type",
+          "wait_seconds.$": "$.preprocess_result.preprocessed_data.wait_seconds"
         }
       },
       "ResultSelector": {

@@ -25,11 +25,13 @@ def lambda_handler(event, context):
         input_data = event.get('data', {})
         initial_value = input_data.get('initial_value', 10)
         processing_type = input_data.get('processing_type', 'multiply')
+        wait_seconds = input_data.get('wait_seconds', 10)
         
         response = {
             'statusCode': 200,
             'value': initial_value,
             'processing_type': processing_type,
+            'wait_seconds': wait_seconds,
             'timestamp': context.aws_request_id,
             'message': f'Parent Lambda: Pre-processed with value {initial_value} and type {processing_type}'
         }
