@@ -1,5 +1,9 @@
 # OCI Terraform State Bucket
 
+## 概要
+
+※ このプロジェクトはOCI Object Storageの設定のみであり、アーキテクチャ図は不要です。
+
 Oracle Cloud Infrastructure (OCI) でTerraformのstateファイルを保存するためのObject Storage Bucketを作成するTerraform構成です。
 
 ## リソース構成

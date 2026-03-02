@@ -1,12 +1,16 @@
 # Bedrock ナレッジベース Terraform アーキテクチャ
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 概要
 
 このプロジェクトは、Amazon BedrockとTerraformを使用してナレッジベースアーキテクチャを実装します。BedrockのTitan Embed Text v2モデルを使用してコンテンツを解析し、OpenSearchをベクトルデータベースとして使用します。
 
 ## アーキテクチャ
 
-```mermaid
+以下は主要なコンポーネント間の関係を示す概念図です：
+
+```
 graph TB
     Bedrock[Amazon Bedrock<br/>Titan Embed Text v2] --> OpenSearch[OpenSearch<br/>ベクトルDB]
     EventBridge[EventBridge<br/>スケジューラー] --> Lambda[AWS Lambda<br/>クローラー]

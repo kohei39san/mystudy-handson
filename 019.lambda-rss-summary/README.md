@@ -1,5 +1,9 @@
 # RSS Feed Summary to Slack
 
+![アーキテクチャ図](src/architecture.svg)
+
+## 概要
+
 このプロジェクトは、指定したRSSフィードの内容をダウンロードし、OpenRouterを使用して要約し、その結果をSlackに送信するLambda関数を提供します。
 
 ## 機能概要

@@ -1,5 +1,7 @@
 # Ansible VPC テスト構成
 
+![アーキテクチャ図](src/architecture.svg)
+
 このAnsibleプレイブックは、AWSでVPCリソースの作成と管理をテストするための構成です。
 
 ## 構成内容
