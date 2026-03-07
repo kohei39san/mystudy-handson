@@ -35,6 +35,9 @@
     "constructs": "^10.4.5"
   },
   "overrides": {
-    "fast-xml-parser": "^5.3.4"
+    "fast-xml-parser": "^5.3.5",
+    "@aws-sdk/xml-builder": {
+      "fast-xml-parser": "^5.3.5"
+    }
   }
 }
