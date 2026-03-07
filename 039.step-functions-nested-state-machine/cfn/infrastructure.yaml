@@ -99,7 +99,6 @@ Resources:
 
   AsyncInvokeLambdaFunction:
     Type: AWS::Lambda::Function
-    DependsOn: ExternalSleepLambdaFunction
     Properties:
       FunctionName: !Sub '${ProjectName}-${Environment}-async-invoke-lambda'
       Runtime: python3.11
@@ -278,6 +277,9 @@ Resources:
   # ===== Step Functions State Machines =====
   ChildStateMachine:
     Type: AWS::StepFunctions::StateMachine
+    DependsOn:
+      - StepFunctionsLambdaPolicy
+      - StepFunctionsCloudWatchLogsPolicy
     Properties:
       StateMachineName: !Sub '${ProjectName}-${Environment}-child-sfn'
       RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
@@ -302,6 +304,9 @@ Resources:
 
   ParentStateMachine:
     Type: AWS::StepFunctions::StateMachine
+    DependsOn:
+      - StepFunctionsLambdaPolicy
+      - StepFunctionsCloudWatchLogsPolicy
     Properties:
       StateMachineName: !Sub '${ProjectName}-${Environment}-parent-sfn'
       RoleArn: !GetAtt StepFunctionsExecutionRole.Arn

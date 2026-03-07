@@ -44,7 +44,7 @@
 
 ### ステートマシン
 
-#### 親ステートマシン (parent_state_machine.json)
+#### 親ステートマシン (parent_state_machine.asl.json)
 1. **ParentLambdaPreProcess**: 親Lambda関数で入力データの前処理を実行（`wait_seconds` を含む）
 2. **InvokeChildStateMachine**: 子ステートマシンを同期的に呼び出し
    - `states:startExecution.sync:2` を使用して同期実行
@@ -53,7 +53,7 @@
 3. **FilterChildOutput**: 子ステートマシンの出力から必要な値のみ抽出
 4. **ParentLambdaPostProcess**: 抽出した出力を受け取り、親Lambda関数で後処理を実行
 
-#### 子ステートマシン (child_state_machine.json)
+#### 子ステートマシン (child_state_machine.asl.json)
 1. **InvokeExternalLambdaAsync**: 非同期呼び出しLambdaで外部sleepLambdaを非同期起動
    - 外部Lambda呼び出し開始時刻 (`start_time`) を記録
 2. **WaitForExternalLambda**: `wait_seconds` 秒待機（可変）
@@ -599,8 +599,8 @@ aws stepfunctions start-execution \
 ├── main.tf                                # メインのTerraform設定
 ├── outputs.tf                             # 出力定義
 ├── asl/                                   # ASL (Amazon States Language) ファイル
-│   ├── parent_state_machine.json         # 親ステートマシン定義
-│   └── child_state_machine.json          # 子ステートマシン定義（非同期ループ付き）
+│   ├── parent_state_machine.asl.json     # 親ステートマシン定義
+│   └── child_state_machine.asl.json      # 子ステートマシン定義（非同期ループ付き）
 ├── cfn/                                   # CloudFormation テンプレート
 │   └── infrastructure.yaml               # インフラストラクチャ定義
 ├── src/                                   # Lambda関数ソースコード

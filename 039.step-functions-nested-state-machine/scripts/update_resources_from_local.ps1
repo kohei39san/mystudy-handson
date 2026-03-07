@@ -123,11 +123,11 @@ if (Test-Path $TmpDir) {
 New-Item -ItemType Directory -Path $TmpDir | Out-Null
 
 if ($UpdateParentStateMachine -or $UpdateChildStateMachine) {
-    $ChildAsl = Load-AslWithCfnRefs -Path (Join-Path $AslDir "child_state_machine.json") -ParentLambdaArn $ParentLambdaArn -ChildStateMachineArn $ChildStateMachineArn -FilterLambdaArn $FilterLambdaArn -ChildLambdaArn $ChildLambdaArn -AsyncInvokeLambdaArn $AsyncInvokeLambdaArn -CheckCompletionLambdaArn $CheckCompletionLambdaArn
-    $ParentAsl = Load-AslWithCfnRefs -Path (Join-Path $AslDir "parent_state_machine.json") -ParentLambdaArn $ParentLambdaArn -ChildStateMachineArn $ChildStateMachineArn -FilterLambdaArn $FilterLambdaArn -ChildLambdaArn $ChildLambdaArn -AsyncInvokeLambdaArn $AsyncInvokeLambdaArn -CheckCompletionLambdaArn $CheckCompletionLambdaArn
+    $ChildAsl = Load-AslWithCfnRefs -Path (Join-Path $AslDir "child_state_machine.asl.json") -ParentLambdaArn $ParentLambdaArn -ChildStateMachineArn $ChildStateMachineArn -FilterLambdaArn $FilterLambdaArn -ChildLambdaArn $ChildLambdaArn -AsyncInvokeLambdaArn $AsyncInvokeLambdaArn -CheckCompletionLambdaArn $CheckCompletionLambdaArn
+    $ParentAsl = Load-AslWithCfnRefs -Path (Join-Path $AslDir "parent_state_machine.asl.json") -ParentLambdaArn $ParentLambdaArn -ChildStateMachineArn $ChildStateMachineArn -FilterLambdaArn $FilterLambdaArn -ChildLambdaArn $ChildLambdaArn -AsyncInvokeLambdaArn $AsyncInvokeLambdaArn -CheckCompletionLambdaArn $CheckCompletionLambdaArn
 
-    $ChildAslFile = Join-Path $TmpDir "child_state_machine.json"
-    $ParentAslFile = Join-Path $TmpDir "parent_state_machine.json"
+    $ChildAslFile = Join-Path $TmpDir "child_state_machine.asl.json"
+    $ParentAslFile = Join-Path $TmpDir "parent_state_machine.asl.json"
     $ChildAsl | Set-Content -Path $ChildAslFile
     $ParentAsl | Set-Content -Path $ParentAslFile
 
