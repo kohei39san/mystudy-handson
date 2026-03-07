@@ -1,7 +1,19 @@
 {
   "Comment": "Child state machine: invokes external Lambda asynchronously, loops until complete, then processes data",
-  "StartAt": "InvokeExternalLambdaAsync",
+  "StartAt": "InitializeLoopCounter",
   "States": {
+    "InitializeLoopCounter": {
+      "Type": "Pass",
+      "Parameters": {
+        "input_value.$": "$.input_value",
+        "processing_type.$": "$.processing_type",
+        "wait_seconds.$": "$.wait_seconds",
+        "max_loop_count.$": "$.max_loop_count",
+        "loop_count": 0
+      },
+      "ResultPath": "$",
+      "Next": "InvokeExternalLambdaAsync"
+    },
     "InvokeExternalLambdaAsync": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
@@ -33,6 +45,20 @@
         "output.$": "$.Payload"
       },
       "ResultPath": "$.check_result",
+      "Next": "IncrementLoopCounter"
+    },
+    "IncrementLoopCounter": {
+      "Type": "Pass",
+      "Parameters": {
+        "input_value.$": "$.input_value",
+        "processing_type.$": "$.processing_type",
+        "wait_seconds.$": "$.wait_seconds",
+        "max_loop_count.$": "$.max_loop_count",
+        "async_invoke_result.$": "$.async_invoke_result",
+        "check_result.$": "$.check_result",
+        "loop_count.$": "States.MathAdd($.loop_count, 1)"
+      },
+      "ResultPath": "$",
       "Next": "IsExternalLambdaComplete"
     },
     "IsExternalLambdaComplete": {
@@ -42,9 +68,27 @@
           "Variable": "$.check_result.output.status",
           "StringEquals": "COMPLETED",
           "Next": "ChildLambdaTaskFirst"
+        },
+        {
+          "And": [
+            {
+              "Variable": "$.check_result.output.status",
+              "StringEquals": "RUNNING"
+            },
+            {
+              "Variable": "$.loop_count",
+              "NumericLessThanPath": "$.max_loop_count"
+            }
+          ],
+          "Next": "WaitForExternalLambda"
         }
       ],
-      "Default": "WaitForExternalLambda"
+      "Default": "LoopCountExceeded"
+    },
+    "LoopCountExceeded": {
+      "Type": "Fail",
+      "Error": "ExternalLambdaPollingLimitExceeded",
+      "Cause": "External Lambda completion polling exceeded max_loop_count"
     },
     "ChildLambdaTaskFirst": {
       "Type": "Task",

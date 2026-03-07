@@ -26,7 +26,8 @@
         "Input": {
           "input_value.$": "$.preprocess_result.preprocessed_data.value",
           "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type",
-          "wait_seconds.$": "$.preprocess_result.preprocessed_data.wait_seconds"
+          "wait_seconds.$": "$.preprocess_result.preprocessed_data.wait_seconds",
+          "max_loop_count.$": "$.preprocess_result.preprocessed_data.max_loop_count"
         }
       },
       "ResultSelector": {

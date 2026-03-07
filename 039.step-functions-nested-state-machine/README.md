@@ -4,7 +4,7 @@
 
 このプロジェクトは、AWS Step Functions のネストされたステートマシンの実装方法と、親子間でのデータの受け渡し方法を学習するためのものです。親ステートマシンが子ステートマシンを呼び出し、子ステートマシン内で実行されたLambda関数の出力を親ステートマシンで受け取る構成を実装しています。
 
-さらに、子ステートマシンにおいて **ステートマシン外のLambdaを非同期で呼び出し、完了確認ループを実装する** 機能を追加しています。ループ待機時間は可変パラメータとして入力から設定できます。
+さらに、子ステートマシンにおいて **ステートマシン外のLambdaを非同期で呼び出し、完了確認ループを実装する** 機能を追加しています。ループ待機時間 (`wait_seconds`) とループ上限回数 (`max_loop_count`) は入力から設定できます。
 
 ## アーキテクチャ
 
@@ -13,7 +13,7 @@
     ↓
 [親ステートマシン]
     ↓
-[親Lambda関数 (前処理)] ← wait_seconds を含む前処理結果を返す
+[親Lambda関数 (前処理)] ← wait_seconds / max_loop_count を含む前処理結果を返す
     ↓
 [子ステートマシンの呼び出し (同期)]
     ↓
@@ -45,32 +45,35 @@
 ### ステートマシン
 
 #### 親ステートマシン (parent_state_machine.asl.json)
-1. **ParentLambdaPreProcess**: 親Lambda関数で入力データの前処理を実行（`wait_seconds` を含む）
+1. **ParentLambdaPreProcess**: 親Lambda関数で入力データの前処理を実行（`wait_seconds`, `max_loop_count` を含む）
 2. **InvokeChildStateMachine**: 子ステートマシンを同期的に呼び出し
    - `states:startExecution.sync:2` を使用して同期実行
    - 子ステートマシンの完了を待機
-   - `wait_seconds` を子ステートマシンに渡す
+  - `wait_seconds`, `max_loop_count` を子ステートマシンに渡す
 3. **FilterChildOutput**: 子ステートマシンの出力から必要な値のみ抽出
 4. **ParentLambdaPostProcess**: 抽出した出力を受け取り、親Lambda関数で後処理を実行
 
 #### 子ステートマシン (child_state_machine.asl.json)
-1. **InvokeExternalLambdaAsync**: 非同期呼び出しLambdaで外部sleepLambdaを非同期起動
+1. **InitializeLoopCounter**: ループカウンタ (`loop_count=0`) を初期化
+2. **InvokeExternalLambdaAsync**: 非同期呼び出しLambdaで外部sleepLambdaを非同期起動
    - 外部Lambda呼び出し開始時刻 (`start_time`) を記録
-2. **WaitForExternalLambda**: `wait_seconds` 秒待機（可変）
-3. **CheckExternalLambdaCompletion**: 完了確認Lambdaで経過時間を確認
-4. **IsExternalLambdaComplete**: Choice状態でループ継続か終了かを判断
-   - `COMPLETED` → ChildLambdaTaskFirst へ進む
-   - それ以外 → WaitForExternalLambda に戻る（ループ）
-5. **ChildLambdaTaskFirst**: 子Lambda関数で最初のデータ処理を実行
-6. **ChildLambdaTaskSecond**: 最初の結果を受け取り、追加処理を実行
-7. **CombineResults**: 2つの処理結果を統合して親ステートマシンに返却
+3. **WaitForExternalLambda**: `wait_seconds` 秒待機（可変）
+4. **CheckExternalLambdaCompletion**: 完了確認Lambdaで経過時間を確認
+5. **IncrementLoopCounter**: `loop_count` を +1
+6. **IsExternalLambdaComplete**: Choice状態でループ継続か終了かを判断
+  - `COMPLETED` → ChildLambdaTaskFirst へ進む
+  - `RUNNING` かつ `loop_count < max_loop_count` → WaitForExternalLambda に戻る
+  - 上限到達時 → `LoopCountExceeded` (`Fail`)
+7. **ChildLambdaTaskFirst**: 子Lambda関数で最初のデータ処理を実行
+8. **ChildLambdaTaskSecond**: 最初の結果を受け取り、追加処理を実行
+9. **CombineResults**: 2つの処理結果を統合して親ステートマシンに返却
 
 ### Lambda関数
 
 #### 親Lambda関数 (parent_lambda.py)
 - **前処理 (preprocess)**: 
   - 入力データを検証・整形
-  - 子ステートマシンへの入力を準備（`wait_seconds` デフォルト: 10秒）
+  - 子ステートマシンへの入力を準備（`wait_seconds` / `max_loop_count` デフォルト: 10）
 - **後処理 (postprocess)**:
   - 子ステートマシンの出力を受け取り
   - 最終結果をまとめて返却
@@ -470,7 +473,8 @@ python scripts/test_execution.py \
 ```
 
 - 完了確認Lambda は `start_time` からの経過秒数が60秒以上なら `COMPLETED`、未満なら `RUNNING` を返す
-- Choice状態で `COMPLETED` なら次のステップへ、それ以外は `WaitForExternalLambda` に戻ってループ
+- 各ループで `loop_count` をインクリメントし、`loop_count < max_loop_count` の間だけ待機ループを継続
+- 上限到達時は `LoopCountExceeded` で明示的に失敗終了
 
 #### ループ待機時間の設定方法
 
@@ -484,7 +488,7 @@ aws stepfunctions start-execution \
   --region ap-northeast-1
 ```
 
-`wait_seconds` を省略した場合、デフォルト値 **10秒** で動作します。
+`wait_seconds` / `max_loop_count` を省略した場合、デフォルト値 **10** で動作します。
 
 ### 子ステートマシンの同期呼び出し（親ステートマシン）
 
@@ -496,7 +500,9 @@ aws stepfunctions start-execution \
     "StateMachineArn": "${child_state_machine_arn}",
     "Input": {
       "input_value.$": "$.preprocess_result.preprocessed_data.value",
-      "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type"
+      "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type",
+      "wait_seconds.$": "$.preprocess_result.preprocessed_data.wait_seconds",
+      "max_loop_count.$": "$.preprocess_result.preprocessed_data.max_loop_count"
     }
   }
 }
