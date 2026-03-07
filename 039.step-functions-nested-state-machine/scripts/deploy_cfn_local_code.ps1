@@ -110,6 +110,8 @@ function Load-AslWithCfnRefs {
     $raw = $raw.Replace('${child_state_machine_arn}', "${ChildStateMachine}")
     $raw = $raw.Replace('${child_output_filter_lambda_arn}', "${ChildOutputFilterLambdaFunction.Arn}")
     $raw = $raw.Replace('${child_lambda_function_arn}', "${ChildLambdaFunction.Arn}")
+    $raw = $raw.Replace('${async_invoke_lambda_arn}', "${AsyncInvokeLambdaFunction.Arn}")
+    $raw = $raw.Replace('${check_completion_lambda_arn}', "${CheckCompletionLambdaFunction.Arn}")
     return $raw.Trim()
 }
 

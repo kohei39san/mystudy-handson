@@ -4,6 +4,8 @@
 
 このプロジェクトは、AWS Step Functions のネストされたステートマシンの実装方法と、親子間でのデータの受け渡し方法を学習するためのものです。親ステートマシンが子ステートマシンを呼び出し、子ステートマシン内で実行されたLambda関数の出力を親ステートマシンで受け取る構成を実装しています。
 
+さらに、子ステートマシンにおいて **ステートマシン外のLambdaを非同期で呼び出し、完了確認ループを実装する** 機能を追加しています。ループ待機時間 (`wait_seconds`) とループ上限回数 (`max_loop_count`) は入力から設定できます。
+
 ## アーキテクチャ
 
 ```
@@ -11,14 +13,26 @@
     ↓
 [親ステートマシン]
     ↓
-[親Lambda関数 (前処理)]
+[親Lambda関数 (前処理)] ← wait_seconds / max_loop_count を含む前処理結果を返す
     ↓
 [子ステートマシンの呼び出し (同期)]
     ↓
 [子ステートマシン]
     ↓
-[子Lambda関数 (データ処理)]
-    ↓ (出力を返却)
+[非同期呼び出しLambda] ── (Event呼び出し) ──→ [外部sleepLambda (60秒sleep)]
+    ↓                                              (ステートマシン外)
+[Wait (wait_seconds 秒待機)]
+    ↓
+[完了確認Lambda]
+    ↓
+[Choice: COMPLETED?]
+  NO  ↓     YES ↓
+[Wait戻る]  [子Lambda関数 (データ処理 1回目)]
+              ↓
+            [子Lambda関数 (データ処理 2回目)]
+              ↓
+            [結果統合]
+              ↓ (出力を返却)
 [親ステートマシン]
     ↓
 [親Lambda関数 (後処理)]
@@ -30,30 +44,36 @@
 
 ### ステートマシン
 
-#### 親ステートマシン (parent_state_machine.json)
-1. **ParentLambdaPreProcess**: 親Lambda関数で入力データの前処理を実行
+#### 親ステートマシン (parent_state_machine.asl.json)
+1. **ParentLambdaPreProcess**: 親Lambda関数で入力データの前処理を実行（`wait_seconds`, `max_loop_count` を含む）
 2. **InvokeChildStateMachine**: 子ステートマシンを同期的に呼び出し
    - `states:startExecution.sync:2` を使用して同期実行
    - 子ステートマシンの完了を待機
+  - `wait_seconds`, `max_loop_count` を子ステートマシンに渡す
 3. **FilterChildOutput**: 子ステートマシンの出力から必要な値のみ抽出
 4. **ParentLambdaPostProcess**: 抽出した出力を受け取り、親Lambda関数で後処理を実行
 
-#### 子ステートマシン (child_state_machine.json)
-1. **ChildLambdaTaskFirst**: 子Lambda関数で最初のデータ処理を実行
-   - 入力値を受け取り、指定された処理を実行
-2. **ChildLambdaTaskSecond**: 最初の結果を受け取り、追加処理を実行
-   - 最初の処理結果の `processed_value` を使用
-   - 固定の処理タイプ（add）で処理
-3. **CombineResults**: 2つの処理結果を統合
-   - `first_result` と `second_result` を結合
-   - 統合結果を親ステートマシンに返却
+#### 子ステートマシン (child_state_machine.asl.json)
+1. **InitializeLoopCounter**: ループカウンタ (`loop_count=0`) を初期化
+2. **InvokeExternalLambdaAsync**: 非同期呼び出しLambdaで外部sleepLambdaを非同期起動
+   - 外部Lambda呼び出し開始時刻 (`start_time`) を記録
+3. **WaitForExternalLambda**: `wait_seconds` 秒待機（可変）
+4. **CheckExternalLambdaCompletion**: 完了確認Lambdaで経過時間を確認
+5. **IncrementLoopCounter**: `loop_count` を +1
+6. **IsExternalLambdaComplete**: Choice状態でループ継続か終了かを判断
+  - `COMPLETED` → ChildLambdaTaskFirst へ進む
+  - `RUNNING` かつ `loop_count < max_loop_count` → WaitForExternalLambda に戻る
+  - 上限到達時 → `LoopCountExceeded` (`Fail`)
+7. **ChildLambdaTaskFirst**: 子Lambda関数で最初のデータ処理を実行
+8. **ChildLambdaTaskSecond**: 最初の結果を受け取り、追加処理を実行
+9. **CombineResults**: 2つの処理結果を統合して親ステートマシンに返却
 
 ### Lambda関数
 
 #### 親Lambda関数 (parent_lambda.py)
 - **前処理 (preprocess)**: 
   - 入力データを検証・整形
-  - 子ステートマシンへの入力を準備
+  - 子ステートマシンへの入力を準備（`wait_seconds` / `max_loop_count` デフォルト: 10）
 - **後処理 (postprocess)**:
   - 子ステートマシンの出力を受け取り
   - 最終結果をまとめて返却
@@ -66,6 +86,18 @@
 
 #### 子出力フィルタLambda関数 (child_output_filter_lambda.py)
 - 子ステートマシンの出力から必要な値だけを抽出して返却
+
+#### 外部sleepLambda関数 (external_sleep_lambda.py) ※ステートマシン外
+- 60秒sleepするだけの外部Lambda関数
+- ステートマシンから非同期（Event）で呼び出される
+
+#### 非同期呼び出しLambda関数 (async_invoke_lambda.py)
+- 外部sleepLambdaを `InvocationType='Event'` で非同期呼び出し
+- 呼び出し開始時刻 (`start_time`) を記録して返却
+- 環境変数 `EXTERNAL_LAMBDA_ARN` で呼び出し先を指定
+
+#### 完了確認Lambda関数 (check_completion_lambda.py)
+- `start_time` から経過秒数を計算し、60秒以上経過していれば `COMPLETED`、未満なら `RUNNING` を返す
 
 ### データフロー
 
@@ -369,7 +401,96 @@ python scripts/test_execution.py \
 
 ## ASLファイルの重要ポイント
 
-### 子ステートマシンの同期呼び出し
+### 外部Lambda非同期呼び出しと完了確認ループ
+
+子ステートマシンは以下のパターンで外部Lambdaの完了を待機します。
+
+#### 1. 外部Lambdaの非同期起動
+
+```json
+{
+  "InvokeExternalLambdaAsync": {
+    "Type": "Task",
+    "Resource": "arn:aws:states:::lambda:invoke",
+    "Parameters": {
+      "FunctionName": "${async_invoke_lambda_arn}",
+      "Payload": {}
+    },
+    "ResultSelector": { "output.$": "$.Payload" },
+    "ResultPath": "$.async_invoke_result",
+    "Next": "WaitForExternalLambda"
+  }
+}
+```
+
+- `async_invoke_lambda` が `InvocationType='Event'` で外部Lambdaを非同期呼び出し
+- 開始時刻 (`start_time`) を `$.async_invoke_result.output.start_time` に保存
+
+#### 2. 可変待機 (ループ待機時間を入力で設定)
+
+```json
+{
+  "WaitForExternalLambda": {
+    "Type": "Wait",
+    "SecondsPath": "$.wait_seconds",
+    "Next": "CheckExternalLambdaCompletion"
+  }
+}
+```
+
+- `SecondsPath` を使用して `$.wait_seconds` から待機秒数を動的に取得
+- 実行入力の `wait_seconds`（デフォルト: 10秒）で待機時間を可変設定できる
+
+#### 3. 完了確認とChoiceによるループ制御
+
+```json
+{
+  "CheckExternalLambdaCompletion": {
+    "Type": "Task",
+    "Resource": "arn:aws:states:::lambda:invoke",
+    "Parameters": {
+      "FunctionName": "${check_completion_lambda_arn}",
+      "Payload": {
+        "start_time.$": "$.async_invoke_result.output.start_time"
+      }
+    },
+    "ResultSelector": { "output.$": "$.Payload" },
+    "ResultPath": "$.check_result",
+    "Next": "IsExternalLambdaComplete"
+  },
+  "IsExternalLambdaComplete": {
+    "Type": "Choice",
+    "Choices": [
+      {
+        "Variable": "$.check_result.output.status",
+        "StringEquals": "COMPLETED",
+        "Next": "ChildLambdaTaskFirst"
+      }
+    ],
+    "Default": "WaitForExternalLambda"
+  }
+}
+```
+
+- 完了確認Lambda は `start_time` からの経過秒数が60秒以上なら `COMPLETED`、未満なら `RUNNING` を返す
+- 各ループで `loop_count` をインクリメントし、`loop_count < max_loop_count` の間だけ待機ループを継続
+- 上限到達時は `LoopCountExceeded` で明示的に失敗終了
+
+#### ループ待機時間の設定方法
+
+実行入力に `wait_seconds` を含めることで待機時間を変更できます:
+
+```bash
+# wait_seconds を 15秒に設定して実行
+aws stepfunctions start-execution \
+  --state-machine-arn <PARENT_STATE_MACHINE_ARN> \
+  --input '{"initial_value": 10, "processing_type": "multiply", "wait_seconds": 15}' \
+  --region ap-northeast-1
+```
+
+`wait_seconds` / `max_loop_count` を省略した場合、デフォルト値 **10** で動作します。
+
+### 子ステートマシンの同期呼び出し（親ステートマシン）
 
 ```json
 {
@@ -379,7 +500,9 @@ python scripts/test_execution.py \
     "StateMachineArn": "${child_state_machine_arn}",
     "Input": {
       "input_value.$": "$.preprocess_result.preprocessed_data.value",
-      "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type"
+      "processing_type.$": "$.preprocess_result.preprocessed_data.processing_type",
+      "wait_seconds.$": "$.preprocess_result.preprocessed_data.wait_seconds",
+      "max_loop_count.$": "$.preprocess_result.preprocessed_data.max_loop_count"
     }
   }
 }
@@ -476,25 +599,28 @@ python scripts/test_execution.py \
 
 ```
 039.step-functions-nested-state-machine/
-├── README.md                          # このファイル
-├── provider.tf                        # AWSプロバイダー設定
-├── variables.tf                       # 変数定義
-├── main.tf                            # メインのTerraform設定
-├── outputs.tf                         # 出力定義
-├── asl/                               # ASL (Amazon States Language) ファイル
-│   ├── parent_state_machine.json     # 親ステートマシン定義
-│   └── child_state_machine.json      # 子ステートマシン定義
-├── cfn/                               # CloudFormation テンプレート
-│   └── infrastructure.yaml           # インフラストラクチャ定義
-├── src/                               # Lambda関数ソースコード
-│   ├── parent_lambda.py              # 親Lambda関数
-│   ├── child_output_filter_lambda.py  # 子出力フィルタLambda関数
-│   └── child_lambda.py               # 子Lambda関数
-└── scripts/                           # デプロイ・テストスクリプト
-    ├── deploy.sh                     # デプロイスクリプト
-    ├── deploy_cfn_local_code.ps1      # CloudFormation + ローカルsrc/asl反映
-    ├── update_resources_from_local.ps1 # deploy_cfn_local_code.ps1から呼び出し
-    └── test_execution.py             # テスト実行スクリプト
+├── README.md                              # このファイル
+├── provider.tf                            # AWSプロバイダー設定
+├── variables.tf                           # 変数定義
+├── main.tf                                # メインのTerraform設定
+├── outputs.tf                             # 出力定義
+├── asl/                                   # ASL (Amazon States Language) ファイル
+│   ├── parent_state_machine.asl.json     # 親ステートマシン定義
+│   └── child_state_machine.asl.json      # 子ステートマシン定義（非同期ループ付き）
+├── cfn/                                   # CloudFormation テンプレート
+│   └── infrastructure.yaml               # インフラストラクチャ定義
+├── src/                                   # Lambda関数ソースコード
+│   ├── parent_lambda.py                  # 親Lambda関数
+│   ├── child_lambda.py                   # 子Lambda関数
+│   ├── child_output_filter_lambda.py     # 子出力フィルタLambda関数
+│   ├── external_sleep_lambda.py          # 外部sleepLambda（ステートマシン外）
+│   ├── async_invoke_lambda.py            # 非同期呼び出しLambda（ステートマシン内）
+│   └── check_completion_lambda.py        # 完了確認Lambda（ステートマシン内）
+└── scripts/                               # デプロイ・テストスクリプト
+    ├── deploy.sh                         # デプロイスクリプト
+    ├── deploy_cfn_local_code.ps1         # CloudFormation + ローカルsrc/asl反映
+    ├── update_resources_from_local.ps1   # deploy_cfn_local_code.ps1から呼び出し
+    └── test_execution.py                 # テスト実行スクリプト
 ```
 
 ## ログの確認
@@ -507,6 +633,15 @@ aws logs tail /aws/lambda/nested-sfn-study-dev-parent-lambda --follow
 
 # 子Lambda関数のログ
 aws logs tail /aws/lambda/nested-sfn-study-dev-child-lambda --follow
+
+# 外部sleepLambdaのログ
+aws logs tail /aws/lambda/nested-sfn-study-dev-external-sleep-lambda --follow
+
+# 非同期呼び出しLambdaのログ
+aws logs tail /aws/lambda/nested-sfn-study-dev-async-invoke-lambda --follow
+
+# 完了確認Lambdaのログ
+aws logs tail /aws/lambda/nested-sfn-study-dev-check-completion-lambda --follow
 ```
 
 ### Step Functionsのログ
@@ -575,19 +710,25 @@ aws cloudformation delete-stack \
    - 同期実行 (`sync:2`) と非同期実行の違い
    - 子ステートマシンの出力の受け取り方
 
-2. **ASLファイルでのデータの受け渡し**
+2. **外部Lambda非同期呼び出しと完了確認ループ**
+   - `InvocationType='Event'` による非同期Lambda呼び出し
+   - Step Functions Wait状態で `SecondsPath` を使った可変待機時間の設定
+   - Choice状態によるループ継続・終了の制御
+   - 開始時刻ベースの完了確認パターン
+
+3. **ASLファイルでのデータの受け渡し**
    - `Parameters` での入力の指定
    - `ResultSelector` での出力の選択
    - `ResultPath` での状態の保存
 
-3. **Lambda関数の統合**
+4. **Lambda関数の統合**
    - `lambda:invoke` リソースの使用
    - Payload の設定方法
 
-4. **IAM権限の設定**
+5. **IAM権限の設定**
    - Lambda実行ロールの設定
    - Step Functions実行ロールの設定
-   - クロスサービス権限の設定
+   - クロスサービス権限の設定（Lambda→Lambda呼び出し権限）
 
 ## セキュリティ
 

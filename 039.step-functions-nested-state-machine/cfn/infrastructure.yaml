@@ -81,6 +81,55 @@ Resources:
         ZipFile: |
           # Placeholder: rendered from src/child_output_filter_lambda.py by deploy script
 
+  ExternalSleepLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-external-sleep-lambda'
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 90
+      MemorySize: 128
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Code:
+        ZipFile: |
+          # Placeholder: rendered from src/external_sleep_lambda.py by deploy script
+
+  AsyncInvokeLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-async-invoke-lambda'
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          EXTERNAL_LAMBDA_ARN: !GetAtt ExternalSleepLambdaFunction.Arn
+      Code:
+        ZipFile: |
+          # Placeholder: rendered from src/async_invoke_lambda.py by deploy script
+
+  CheckCompletionLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${ProjectName}-${Environment}-check-completion-lambda'
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+      Code:
+        ZipFile: |
+          # Placeholder: rendered from src/check_completion_lambda.py by deploy script
+
   # ===== CloudWatch Log Groups =====
   ParentLambdaLogGroup:
     Type: AWS::Logs::LogGroup
@@ -98,6 +147,24 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub '/aws/lambda/${ChildOutputFilterLambdaFunction}'
+      RetentionInDays: 7
+
+  ExternalSleepLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ExternalSleepLambdaFunction}'
+      RetentionInDays: 7
+
+  AsyncInvokeLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AsyncInvokeLambdaFunction}'
+      RetentionInDays: 7
+
+  CheckCompletionLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${CheckCompletionLambdaFunction}'
       RetentionInDays: 7
 
   ParentStateMachineLogGroup:
@@ -142,6 +209,23 @@ Resources:
               - !GetAtt ParentLambdaFunction.Arn
               - !GetAtt ChildLambdaFunction.Arn
               - !GetAtt ChildOutputFilterLambdaFunction.Arn
+              - !GetAtt AsyncInvokeLambdaFunction.Arn
+              - !GetAtt CheckCompletionLambdaFunction.Arn
+
+  AsyncInvokeLambdaInvokePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub '${ProjectName}-${Environment}-async-invoke-lambda-policy'
+      Roles:
+        - !Ref LambdaExecutionRole
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt ExternalSleepLambdaFunction.Arn
 
   StepFunctionsStatesPolicy:
     Type: AWS::IAM::Policy
@@ -193,6 +277,9 @@ Resources:
   # ===== Step Functions State Machines =====
   ChildStateMachine:
     Type: AWS::StepFunctions::StateMachine
+    DependsOn:
+      - StepFunctionsLambdaPolicy
+      - StepFunctionsCloudWatchLogsPolicy
     Properties:
       StateMachineName: !Sub '${ProjectName}-${Environment}-child-sfn'
       RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
@@ -217,6 +304,9 @@ Resources:
 
   ParentStateMachine:
     Type: AWS::StepFunctions::StateMachine
+    DependsOn:
+      - StepFunctionsLambdaPolicy
+      - StepFunctionsCloudWatchLogsPolicy
     Properties:
       StateMachineName: !Sub '${ProjectName}-${Environment}-parent-sfn'
       RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
@@ -279,6 +369,30 @@ Outputs:
   ChildStateMachineName:
     Description: Name of the child Step Functions state machine
     Value: !GetAtt ChildStateMachine.Name
+
+  ExternalSleepLambdaFunctionName:
+    Description: Name of the external sleep Lambda function
+    Value: !Ref ExternalSleepLambdaFunction
+
+  ExternalSleepLambdaFunctionArn:
+    Description: ARN of the external sleep Lambda function
+    Value: !GetAtt ExternalSleepLambdaFunction.Arn
+
+  AsyncInvokeLambdaFunctionName:
+    Description: Name of the async invoke Lambda function
+    Value: !Ref AsyncInvokeLambdaFunction
+
+  AsyncInvokeLambdaFunctionArn:
+    Description: ARN of the async invoke Lambda function
+    Value: !GetAtt AsyncInvokeLambdaFunction.Arn
+
+  CheckCompletionLambdaFunctionName:
+    Description: Name of the check completion Lambda function
+    Value: !Ref CheckCompletionLambdaFunction
+
+  CheckCompletionLambdaFunctionArn:
+    Description: ARN of the check completion Lambda function
+    Value: !GetAtt CheckCompletionLambdaFunction.Arn
 
   ExecutionCommand:
     Description: Command to execute the parent state machine

@@ -155,6 +155,16 @@ def main():
         help='Type of processing (default: multiply)'
     )
     parser.add_argument(
+        '--wait-seconds',
+        type=int,
+        help='Polling wait seconds for child state machine (optional)'
+    )
+    parser.add_argument(
+        '--max-loop-count',
+        type=int,
+        help='Maximum polling loop count for child state machine (optional)'
+    )
+    parser.add_argument(
         '--execution-name',
         help='Custom execution name'
     )
@@ -190,6 +200,12 @@ def main():
         'initial_value': args.initial_value,
         'processing_type': args.processing_type
     }
+
+    if args.wait_seconds is not None:
+        input_data['wait_seconds'] = args.wait_seconds
+
+    if args.max_loop_count is not None:
+        input_data['max_loop_count'] = args.max_loop_count
     
     # Start execution
     execution_arn = start_execution(
