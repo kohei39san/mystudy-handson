@@ -60,14 +60,20 @@
 │   └── users.csv                # ユーザーインポート用CSV
 ├── scripts/
 │   ├── lambda/
-│   │   ├── login.py             # ログインLambda関数
-│   │   └── refresh.py           # リフレッシュLambda関数
+│   │   ├── login.py                    # ログインLambda関数
+│   │   ├── refresh.py                  # リフレッシュLambda関数
+│   │   ├── test_parallel_api.py        # 並列アクセス性能比較Lambda関数（sequential/multi_session/multi_process）
 │   ├── deploy.ps1               # デプロイスクリプト（PowerShell）
-│   ├── update-lambda-code.ps1   # Lambda更新スクリプト
+│   ├── invoke-test-lambda.sh    # テスト用Lambda関数実行スクリプト（Bash）
 │   ├── merge-openapi.py         # OpenAPIマージスクリプト
 │   ├── requirements.txt         # Python依存関係
 │   ├── test-api-simple.py       # 簡易APIテスト
 │   └── test-cognito-auth.py     # Cognito認証テスト
+├── tests/
+│   ├── test-api.py              # APIテストスクリプト（スタンドアロン）
+│   ├── test-login.py            # ログインテストスクリプト（スタンドアロン）
+│   ├── test-login-user.sh       # ログインシェルスクリプト
+│   └── test-revoke-api.py       # トークン無効化テストスクリプト（スタンドアロン）
 └── .github/
     └── workflows/
         └── merge-openapi.yml    # 自動マージワークフロー
@@ -356,6 +362,153 @@ adminuser,api-admins
 
 ```powershell
 aws cloudformation delete-stack --stack-name openapi-cognito-auth-dev
+```
+
+## 並列アクセス性能比較テスト
+
+テスト用 Lambda 関数を用意しています。
+標準ライブラリ（`urllib.request`, `concurrent.futures`, `multiprocessing`）と
+Lambda ランタイム組み込みの `boto3` のみを使用しているため、**Lambdaレイヤーは不要です**。
+
+| Lambda 関数ファイル | ハンドラ | 説明 |
+|---|---|---|
+| `scripts/lambda/test_parallel_api.py` | `test_parallel_api.lambda_handler` | sequential / multi_session / multi_process の3アプローチを一括実行 |
+
+### テスト用Lambda関数のデプロイ
+
+`cfn/infrastructure.yaml` にテスト用 Lambda（`test_parallel_api`）を定義しています。
+`scripts/deploy.ps1` を実行すると、CloudFormation デプロイ後に `scripts/lambda/test_parallel_api.py` のコードが更新されます。
+
+```powershell
+cd 033.apigateway-openapi-cognito-auth
+
+# 基本実行（デフォルト: リージョン ap-northeast-1、スタック openapi-cognito-auth-dev）
+powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1
+
+# オプション指定例
+powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 \
+  -Region ap-northeast-1 \
+  -StackName openapi-cognito-auth-dev \
+  -Environment dev
+```
+
+`deploy.ps1` が実行する処理（関連部分）:
+1. CloudFormation スタックをデプロイしてテスト用 Lambda リソースを作成/更新
+2. `scripts/lambda/test_parallel_api.py` を zip 化
+3. `update-function-code` で `test-parallel` Lambda のコードを更新
+
+主要パラメータ:
+
+| オプション | デフォルト | 説明 |
+|---|---|---|
+| `-Region` | `ap-northeast-1` | AWSリージョン |
+| `-StackName` | `openapi-cognito-auth-dev` | CloudFormationスタック名 |
+| `-ProjectName` | `openapi-cognito-auth` | リソース名プレフィックス |
+| `-Environment` | `dev` | 環境名（リソース名サフィックス） |
+
+### テスト用Lambda関数の実行
+
+`scripts/invoke-test-lambda.sh` を使用すると、デプロイ済みの Lambda 関数を AWS CLI で呼び出せます。
+
+```bash
+cd 033.apigateway-openapi-cognito-auth
+
+# parallel 関数を実行（デフォルト）
+bash scripts/invoke-test-lambda.sh \
+    --endpoint      https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev \
+    --user-pool-id  ap-northeast-1_XXXXXXXXX \
+    --client-id     <CLIENT_ID> \
+    --username      testuser \
+    --password      'TempPass123!'
+
+# 非同期実行（レスポンスを待たない）
+bash scripts/invoke-test-lambda.sh \
+    --async \
+    --endpoint https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev \
+    --user-pool-id ap-northeast-1_XXXXXXXXX \
+    --client-id <CLIENT_ID> \
+    --username testuser \
+    --password 'TempPass123!'
+```
+
+パラメータは環境変数で渡すこともできます:
+
+```bash
+export API_ENDPOINT="https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev"
+export USER_POOL_ID="ap-northeast-1_XXXXXXXXX"
+export CLIENT_ID="<CLIENT_ID>"
+export LAMBDA_USERNAME="testuser"
+export LAMBDA_PASSWORD="TempPass123!"
+
+bash scripts/invoke-test-lambda.sh
+```
+
+スクリプトのオプション:
+
+| オプション | デフォルト | 説明 |
+|---|---|---|
+| `--function` | `parallel` | 実行する関数: `parallel` |
+| `--region` | `ap-northeast-1` | AWSリージョン |
+| `--project-name` | `openapi-cognito-auth` | Lambda関数名のプレフィックス |
+| `--env` | `dev` | 環境名（関数名のサフィックス） |
+| `--endpoint` | `$API_ENDPOINT` | API GatewayエンドポイントURL |
+| `--user-pool-id` | `$USER_POOL_ID` | Cognito User Pool ID |
+| `--client-id` | `$CLIENT_ID` | Cognito クライアントID |
+| `--username` | `$LAMBDA_USERNAME` | テストユーザー名 |
+| `--password` | `$LAMBDA_PASSWORD` | テストユーザーパスワード |
+| `--num-requests` | `20` | リクエスト数 |
+| `--num-workers` | `5` | スレッド/プロセス数 |
+| `--approaches` | `sequential,multi_session,multi_process` | parallel 関数で実行するアプローチ |
+| `--async` | （同期） | Event 呼び出し（非同期）に切り替え |
+
+### Lambda 関数の共通設定
+
+`cfn/infrastructure.yaml` で定義している値です。
+
+| 設定項目 | デフォルト値 |
+|---|---|
+| ランタイム | Python 3.12 |
+| タイムアウト | 300 秒（リクエスト数に応じて調整） |
+| メモリ | 256 MB 以上 |
+
+Lambda 関数に必要な IAM 権限:
+- `cognito-idp:AdminInitiateAuth`（Cognito でのテストユーザー認証用）
+
+### 環境変数（Lambda コンソール）
+
+```
+API_ENDPOINT   = https://<API_ID>.execute-api.<REGION>.amazonaws.com/<STAGE>
+USER_POOL_ID   = <REGION>_<POOL_ID>
+CLIENT_ID      = <CLIENT_ID>
+USERNAME       = <TEST_USERNAME>
+PASSWORD       = <TEST_PASSWORD>
+AWS_REGION     = ap-northeast-1
+NUM_REQUESTS   = 20
+NUM_WORKERS    = 5
+```
+
+### test_parallel_api — テストイベント例
+
+```json
+{
+  "API_ENDPOINT": "https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev",
+  "USER_POOL_ID": "ap-northeast-1_XXXXXXXXX",
+  "CLIENT_ID": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "USERNAME": "testuser",
+  "PASSWORD": "TempPass123!",
+  "NUM_REQUESTS": "20",
+  "NUM_WORKERS": "5",
+  "APPROACHES": "sequential,multi_session,multi_process"
+}
+```
+
+実行結果例:
+
+```json
+{
+  "statusCode": 200,
+  "body": "{\"results\": [{\"approach\": \"sequential\", \"elapsed_seconds\": 65.321, \"success_count\": 20, \"total_requests\": 20}, {\"approach\": \"multi_session\", \"elapsed_seconds\": 8.134, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 5}, {\"approach\": \"multi_process\", \"elapsed_seconds\": 9.887, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 2}]}"
+}
 ```
 
 ## テスト手順
