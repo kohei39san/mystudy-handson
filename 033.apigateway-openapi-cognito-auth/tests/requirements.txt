@@ -1,4 +1,0 @@
-# テスト用Pythonパッケージ
-# HTTPリクエストは標準ライブラリ urllib.request を使用するため requests は不要
-boto3>=1.26.0
-pytest>=7.0.0
