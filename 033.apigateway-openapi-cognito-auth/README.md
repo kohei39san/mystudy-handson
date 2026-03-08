@@ -68,6 +68,14 @@
 │   ├── requirements.txt         # Python依存関係
 │   ├── test-api-simple.py       # 簡易APIテスト
 │   └── test-cognito-auth.py     # Cognito認証テスト
+├── tests/
+│   ├── requirements.txt         # テスト用依存パッケージ
+│   ├── test-api.py              # APIテストスクリプト（スタンドアロン）
+│   ├── test-login.py            # ログインテストスクリプト（スタンドアロン）
+│   ├── test-login-user.sh       # ログインシェルスクリプト
+│   ├── test-revoke-api.py       # トークン無効化テストスクリプト（スタンドアロン）
+│   └── test_parallel_api.py     # 並列アクセス性能比較テスト（pytest）
+├── pytest.ini                   # pytest設定ファイル
 └── .github/
     └── workflows/
         └── merge-openapi.yml    # 自動マージワークフロー
@@ -356,6 +364,62 @@ adminuser,api-admins
 
 ```powershell
 aws cloudformation delete-stack --stack-name openapi-cognito-auth-dev
+```
+
+## 並列アクセス性能比較テスト
+
+`tests/test_parallel_api.py` は、以下の3つのアプローチでAPI Gatewayに大量アクセスし、各アプローチの終了時刻と所要時間を比較します。
+
+| アプローチ | 説明 |
+|---|---|
+| **並列処理なし** | シーケンシャルにリクエストを1件ずつ送信 |
+| **マルチセッション** | `ThreadPoolExecutor` を使用したマルチスレッド処理。スレッドごとに独立した `requests.Session` を生成 |
+| **マルチプロセス** | `multiprocessing.Pool` を使用したマルチプロセス処理。GILの制約を受けずに並列実行 |
+
+### 環境変数
+
+`.env` ファイルまたはシステム環境変数に以下を設定してください。
+
+```
+API_ENDPOINT=https://<API_ID>.execute-api.<REGION>.amazonaws.com/<STAGE>
+USER_POOL_ID=<REGION>_<POOL_ID>
+CLIENT_ID=<CLIENT_ID>
+USERNAME=<TEST_USERNAME>
+PASSWORD=<TEST_PASSWORD>
+AWS_REGION=ap-northeast-1       # デフォルト: ap-northeast-1
+NUM_REQUESTS=50                  # 各アプローチのリクエスト数（デフォルト: 50）
+NUM_WORKERS=10                   # スレッド/プロセスの並列数（デフォルト: 10）
+```
+
+### 実行方法
+
+```bash
+cd 033.apigateway-openapi-cognito-auth
+
+# 依存パッケージのインストール
+pip install -r tests/requirements.txt
+
+# テスト実行
+pytest
+```
+
+### 出力例
+
+```
+tests/test_parallel_api.py::TestParallelAPIAccess::test_sequential PASSED
+============================================================
+[並列処理なし] 50件のリクエスト開始
+[並列処理なし] 終了時刻: 2024-01-01 12:01:05.321 | 所要時間: 65.32秒 | 成功: 50/50
+
+tests/test_parallel_api.py::TestParallelAPIAccess::test_multi_session PASSED
+============================================================
+[マルチセッション] 50件のリクエスト開始 (スレッド数: 10)
+[マルチセッション] 終了時刻: 2024-01-01 12:01:13.455 | 所要時間: 8.14秒 | 成功: 50/50
+
+tests/test_parallel_api.py::TestParallelAPIAccess::test_multi_process PASSED
+============================================================
+[マルチプロセス] 50件のリクエスト開始 (プロセス数: 4)
+[マルチプロセス] 終了時刻: 2024-01-01 12:01:23.342 | 所要時間: 9.87秒 | 成功: 50/50
 ```
 
 ## テスト手順
