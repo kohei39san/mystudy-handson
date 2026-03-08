@@ -60,11 +60,12 @@
 │   └── users.csv                # ユーザーインポート用CSV
 ├── scripts/
 │   ├── lambda/
-│   │   ├── login.py                 # ログインLambda関数
-│   │   ├── refresh.py               # リフレッシュLambda関数
-│   │   └── test_parallel_api.py     # 並列アクセス性能比較Lambda関数（レイヤー不要）
+│   │   ├── login.py                    # ログインLambda関数
+│   │   ├── refresh.py                  # リフレッシュLambda関数
+│   │   ├── test_parallel_api.py        # 並列アクセス性能比較Lambda関数（sequential/multi_session/multi_process）
+│   │   └── test_multi_thread_api.py    # マルチスレッド専用Lambda関数（レイヤー不要）
 │   ├── deploy.ps1               # デプロイスクリプト（PowerShell）
-│   ├── update-lambda-code.ps1   # Lambda更新スクリプト
+│   ├── deploy-test-lambda.sh    # テスト用Lambda関数デプロイスクリプト（Bash）
 │   ├── merge-openapi.py         # OpenAPIマージスクリプト
 │   ├── requirements.txt         # Python依存関係
 │   ├── test-api-simple.py       # 簡易APIテスト
@@ -366,23 +367,55 @@ aws cloudformation delete-stack --stack-name openapi-cognito-auth-dev
 
 ## 並列アクセス性能比較テスト
 
-`scripts/lambda/test_parallel_api.py` を使用すると、並列アクセス性能比較テストを Lambda 関数として実行できます。
-標準ライブラリ（`urllib.request`, `concurrent.futures`, `multiprocessing`）と Lambda ランタイム組み込みの `boto3` のみを使用しているため、**Lambdaレイヤーは不要です**。
+2つのテスト用 Lambda 関数を用意しています。
+いずれも標準ライブラリ（`urllib.request`, `concurrent.futures`, `multiprocessing`）と
+Lambda ランタイム組み込みの `boto3` のみを使用しているため、**Lambdaレイヤーは不要です**。
 
-以下の3つのアプローチでAPI Gatewayに大量アクセスし、各アプローチの終了時刻と所要時間を比較します。
+| Lambda 関数ファイル | ハンドラ | 説明 |
+|---|---|---|
+| `scripts/lambda/test_parallel_api.py` | `test_parallel_api.lambda_handler` | sequential / multi_session / multi_process の3アプローチを一括実行 |
+| `scripts/lambda/test_multi_thread_api.py` | `test_multi_thread_api.lambda_handler` | `ThreadPoolExecutor` によるマルチスレッドに特化した単機能Lambda |
 
-| アプローチ | 説明 |
-|---|---|
-| **並列処理なし** | シーケンシャルにリクエストを1件ずつ送信 |
-| **マルチセッション** | `ThreadPoolExecutor` を使用したマルチスレッド処理。スレッドごとに独立した `urllib.request.OpenerDirector` を生成 |
-| **マルチプロセス** | `multiprocessing.Pool` を使用したマルチプロセス処理。GILの制約を受けずに並列実行 |
+### テスト用Lambda関数のデプロイ
 
-### Lambda 関数の設定
+`scripts/deploy-test-lambda.sh` を使用すると、上記2つのLambda関数を AWS に作成または更新できます。
 
-| 設定項目 | 推奨値 |
+```bash
+cd 033.apigateway-openapi-cognito-auth
+
+# 基本実行（デフォルト: リージョン ap-northeast-1、スタック openapi-cognito-auth-dev）
+bash scripts/deploy-test-lambda.sh
+
+# オプション指定例
+bash scripts/deploy-test-lambda.sh \
+    --region ap-northeast-1 \
+    --stack-name openapi-cognito-auth-dev \
+    --env dev
+```
+
+スクリプトが実行する処理:
+1. CloudFormation スタックから Lambda 実行ロール ARN を自動取得
+2. 各 `.py` ファイルを zip に圧縮
+3. Lambda 関数が未作成の場合 → `create-function`（Python 3.12、タイムアウト 300 秒、メモリ 256 MB）
+4. Lambda 関数が既存の場合 → `update-function-code` + `update-function-configuration`
+
+スクリプトのオプション:
+
+| オプション | デフォルト | 説明 |
+|---|---|---|
+| `--region` | `ap-northeast-1` | AWSリージョン |
+| `--stack-name` | `openapi-cognito-auth-dev` | CloudFormationスタック名 |
+| `--project-name` | `openapi-cognito-auth` | Lambda関数名のプレフィックス |
+| `--env` | `dev` | 環境名（関数名のサフィックス） |
+| `--role-arn` | （スタックから自動取得） | Lambda実行ロールARN |
+
+### Lambda 関数の共通設定
+
+`deploy-test-lambda.sh` が新規作成時に設定する値です（更新時は変更されません）。
+
+| 設定項目 | デフォルト値 |
 |---|---|
 | ランタイム | Python 3.12 |
-| ハンドラー | `test_parallel_api.lambda_handler` |
 | タイムアウト | 300 秒（リクエスト数に応じて調整） |
 | メモリ | 256 MB 以上 |
 
@@ -402,7 +435,7 @@ NUM_REQUESTS   = 20
 NUM_WORKERS    = 5
 ```
 
-### テストイベント例
+### test_parallel_api — テストイベント例
 
 ```json
 {
@@ -417,12 +450,35 @@ NUM_WORKERS    = 5
 }
 ```
 
-### 実行結果例
+実行結果例:
 
 ```json
 {
   "statusCode": 200,
-  "body": "{\"results\": [{\"approach\": \"sequential\", \"end_timestamp\": \"2024-01-01 12:01:05.321\", \"elapsed_seconds\": 65.321, \"success_count\": 20, \"total_requests\": 20}, {\"approach\": \"multi_session\", \"end_timestamp\": \"2024-01-01 12:01:13.455\", \"elapsed_seconds\": 8.134, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 5}, {\"approach\": \"multi_process\", \"end_timestamp\": \"2024-01-01 12:01:23.342\", \"elapsed_seconds\": 9.887, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 2}]}"
+  "body": "{\"results\": [{\"approach\": \"sequential\", \"elapsed_seconds\": 65.321, \"success_count\": 20, \"total_requests\": 20}, {\"approach\": \"multi_session\", \"elapsed_seconds\": 8.134, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 5}, {\"approach\": \"multi_process\", \"elapsed_seconds\": 9.887, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 2}]}"
+}
+```
+
+### test_multi_thread_api — テストイベント例
+
+```json
+{
+  "API_ENDPOINT": "https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev",
+  "USER_POOL_ID": "ap-northeast-1_XXXXXXXXX",
+  "CLIENT_ID": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "USERNAME": "testuser",
+  "PASSWORD": "TempPass123!",
+  "NUM_REQUESTS": "20",
+  "NUM_WORKERS": "5"
+}
+```
+
+実行結果例:
+
+```json
+{
+  "statusCode": 200,
+  "body": "{\"approach\": \"multi_thread\", \"end_timestamp\": \"2024-01-01 12:01:13.455\", \"elapsed_seconds\": 8.134, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 5}"
 }
 ```
 
