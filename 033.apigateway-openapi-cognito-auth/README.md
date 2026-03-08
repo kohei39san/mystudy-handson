@@ -66,6 +66,7 @@
 │   │   └── test_multi_thread_api.py    # マルチスレッド専用Lambda関数（レイヤー不要）
 │   ├── deploy.ps1               # デプロイスクリプト（PowerShell）
 │   ├── deploy-test-lambda.sh    # テスト用Lambda関数デプロイスクリプト（Bash）
+│   ├── invoke-test-lambda.sh    # テスト用Lambda関数実行スクリプト（Bash）
 │   ├── merge-openapi.py         # OpenAPIマージスクリプト
 │   ├── requirements.txt         # Python依存関係
 │   ├── test-api-simple.py       # 簡易APIテスト
@@ -408,6 +409,70 @@ bash scripts/deploy-test-lambda.sh \
 | `--project-name` | `openapi-cognito-auth` | Lambda関数名のプレフィックス |
 | `--env` | `dev` | 環境名（関数名のサフィックス） |
 | `--role-arn` | （スタックから自動取得） | Lambda実行ロールARN |
+
+### テスト用Lambda関数の実行
+
+`scripts/invoke-test-lambda.sh` を使用すると、デプロイ済みの Lambda 関数を AWS CLI で呼び出せます。
+
+```bash
+cd 033.apigateway-openapi-cognito-auth
+
+# 両方の関数を実行（デフォルト）
+bash scripts/invoke-test-lambda.sh \
+    --endpoint      https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev \
+    --user-pool-id  ap-northeast-1_XXXXXXXXX \
+    --client-id     <CLIENT_ID> \
+    --username      testuser \
+    --password      'TempPass123!'
+
+# マルチスレッド関数のみ実行
+bash scripts/invoke-test-lambda.sh \
+    --function multi_thread \
+    --endpoint https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev \
+    --user-pool-id ap-northeast-1_XXXXXXXXX \
+    --client-id <CLIENT_ID> \
+    --username testuser \
+    --password 'TempPass123!'
+
+# 非同期実行（レスポンスを待たない）
+bash scripts/invoke-test-lambda.sh \
+    --async \
+    --endpoint https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev \
+    --user-pool-id ap-northeast-1_XXXXXXXXX \
+    --client-id <CLIENT_ID> \
+    --username testuser \
+    --password 'TempPass123!'
+```
+
+パラメータは環境変数で渡すこともできます:
+
+```bash
+export API_ENDPOINT="https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev"
+export USER_POOL_ID="ap-northeast-1_XXXXXXXXX"
+export CLIENT_ID="<CLIENT_ID>"
+export LAMBDA_USERNAME="testuser"
+export LAMBDA_PASSWORD="TempPass123!"
+
+bash scripts/invoke-test-lambda.sh
+```
+
+スクリプトのオプション:
+
+| オプション | デフォルト | 説明 |
+|---|---|---|
+| `--function` | `both` | 実行する関数: `parallel` / `multi_thread` / `both` |
+| `--region` | `ap-northeast-1` | AWSリージョン |
+| `--project-name` | `openapi-cognito-auth` | Lambda関数名のプレフィックス |
+| `--env` | `dev` | 環境名（関数名のサフィックス） |
+| `--endpoint` | `$API_ENDPOINT` | API GatewayエンドポイントURL |
+| `--user-pool-id` | `$USER_POOL_ID` | Cognito User Pool ID |
+| `--client-id` | `$CLIENT_ID` | Cognito クライアントID |
+| `--username` | `$LAMBDA_USERNAME` | テストユーザー名 |
+| `--password` | `$LAMBDA_PASSWORD` | テストユーザーパスワード |
+| `--num-requests` | `20` | リクエスト数 |
+| `--num-workers` | `5` | スレッド/プロセス数 |
+| `--approaches` | `sequential,multi_session,multi_process` | parallel 関数で実行するアプローチ |
+| `--async` | （同期） | Event 呼び出し（非同期）に切り替え |
 
 ### Lambda 関数の共通設定
 
