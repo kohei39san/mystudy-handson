@@ -63,9 +63,7 @@
 │   │   ├── login.py                    # ログインLambda関数
 │   │   ├── refresh.py                  # リフレッシュLambda関数
 │   │   ├── test_parallel_api.py        # 並列アクセス性能比較Lambda関数（sequential/multi_session/multi_process）
-│   │   └── test_multi_thread_api.py    # マルチスレッド専用Lambda関数（レイヤー不要）
 │   ├── deploy.ps1               # デプロイスクリプト（PowerShell）
-│   ├── deploy-test-lambda.sh    # テスト用Lambda関数デプロイスクリプト（Bash）
 │   ├── invoke-test-lambda.sh    # テスト用Lambda関数実行スクリプト（Bash）
 │   ├── merge-openapi.py         # OpenAPIマージスクリプト
 │   ├── requirements.txt         # Python依存関係
@@ -368,47 +366,45 @@ aws cloudformation delete-stack --stack-name openapi-cognito-auth-dev
 
 ## 並列アクセス性能比較テスト
 
-2つのテスト用 Lambda 関数を用意しています。
-いずれも標準ライブラリ（`urllib.request`, `concurrent.futures`, `multiprocessing`）と
+テスト用 Lambda 関数を用意しています。
+標準ライブラリ（`urllib.request`, `concurrent.futures`, `multiprocessing`）と
 Lambda ランタイム組み込みの `boto3` のみを使用しているため、**Lambdaレイヤーは不要です**。
 
 | Lambda 関数ファイル | ハンドラ | 説明 |
 |---|---|---|
 | `scripts/lambda/test_parallel_api.py` | `test_parallel_api.lambda_handler` | sequential / multi_session / multi_process の3アプローチを一括実行 |
-| `scripts/lambda/test_multi_thread_api.py` | `test_multi_thread_api.lambda_handler` | `ThreadPoolExecutor` によるマルチスレッドに特化した単機能Lambda |
 
 ### テスト用Lambda関数のデプロイ
 
-`scripts/deploy-test-lambda.sh` を使用すると、上記2つのLambda関数を AWS に作成または更新できます。
+`cfn/infrastructure.yaml` にテスト用 Lambda（`test_parallel_api`）を定義しています。
+`scripts/deploy.ps1` を実行すると、CloudFormation デプロイ後に `scripts/lambda/test_parallel_api.py` のコードが更新されます。
 
-```bash
+```powershell
 cd 033.apigateway-openapi-cognito-auth
 
 # 基本実行（デフォルト: リージョン ap-northeast-1、スタック openapi-cognito-auth-dev）
-bash scripts/deploy-test-lambda.sh
+powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1
 
 # オプション指定例
-bash scripts/deploy-test-lambda.sh \
-    --region ap-northeast-1 \
-    --stack-name openapi-cognito-auth-dev \
-    --env dev
+powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1 \
+  -Region ap-northeast-1 \
+  -StackName openapi-cognito-auth-dev \
+  -Environment dev
 ```
 
-スクリプトが実行する処理:
-1. CloudFormation スタックから Lambda 実行ロール ARN を自動取得
-2. 各 `.py` ファイルを zip に圧縮
-3. Lambda 関数が未作成の場合 → `create-function`（Python 3.12、タイムアウト 300 秒、メモリ 256 MB）
-4. Lambda 関数が既存の場合 → `update-function-code` + `update-function-configuration`
+`deploy.ps1` が実行する処理（関連部分）:
+1. CloudFormation スタックをデプロイしてテスト用 Lambda リソースを作成/更新
+2. `scripts/lambda/test_parallel_api.py` を zip 化
+3. `update-function-code` で `test-parallel` Lambda のコードを更新
 
-スクリプトのオプション:
+主要パラメータ:
 
 | オプション | デフォルト | 説明 |
 |---|---|---|
-| `--region` | `ap-northeast-1` | AWSリージョン |
-| `--stack-name` | `openapi-cognito-auth-dev` | CloudFormationスタック名 |
-| `--project-name` | `openapi-cognito-auth` | Lambda関数名のプレフィックス |
-| `--env` | `dev` | 環境名（関数名のサフィックス） |
-| `--role-arn` | （スタックから自動取得） | Lambda実行ロールARN |
+| `-Region` | `ap-northeast-1` | AWSリージョン |
+| `-StackName` | `openapi-cognito-auth-dev` | CloudFormationスタック名 |
+| `-ProjectName` | `openapi-cognito-auth` | リソース名プレフィックス |
+| `-Environment` | `dev` | 環境名（リソース名サフィックス） |
 
 ### テスト用Lambda関数の実行
 
@@ -417,22 +413,13 @@ bash scripts/deploy-test-lambda.sh \
 ```bash
 cd 033.apigateway-openapi-cognito-auth
 
-# 両方の関数を実行（デフォルト）
+# parallel 関数を実行（デフォルト）
 bash scripts/invoke-test-lambda.sh \
     --endpoint      https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev \
     --user-pool-id  ap-northeast-1_XXXXXXXXX \
     --client-id     <CLIENT_ID> \
     --username      testuser \
     --password      'TempPass123!'
-
-# マルチスレッド関数のみ実行
-bash scripts/invoke-test-lambda.sh \
-    --function multi_thread \
-    --endpoint https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev \
-    --user-pool-id ap-northeast-1_XXXXXXXXX \
-    --client-id <CLIENT_ID> \
-    --username testuser \
-    --password 'TempPass123!'
 
 # 非同期実行（レスポンスを待たない）
 bash scripts/invoke-test-lambda.sh \
@@ -460,7 +447,7 @@ bash scripts/invoke-test-lambda.sh
 
 | オプション | デフォルト | 説明 |
 |---|---|---|
-| `--function` | `both` | 実行する関数: `parallel` / `multi_thread` / `both` |
+| `--function` | `parallel` | 実行する関数: `parallel` |
 | `--region` | `ap-northeast-1` | AWSリージョン |
 | `--project-name` | `openapi-cognito-auth` | Lambda関数名のプレフィックス |
 | `--env` | `dev` | 環境名（関数名のサフィックス） |
@@ -476,7 +463,7 @@ bash scripts/invoke-test-lambda.sh
 
 ### Lambda 関数の共通設定
 
-`deploy-test-lambda.sh` が新規作成時に設定する値です（更新時は変更されません）。
+`cfn/infrastructure.yaml` で定義している値です。
 
 | 設定項目 | デフォルト値 |
 |---|---|
@@ -521,29 +508,6 @@ NUM_WORKERS    = 5
 {
   "statusCode": 200,
   "body": "{\"results\": [{\"approach\": \"sequential\", \"elapsed_seconds\": 65.321, \"success_count\": 20, \"total_requests\": 20}, {\"approach\": \"multi_session\", \"elapsed_seconds\": 8.134, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 5}, {\"approach\": \"multi_process\", \"elapsed_seconds\": 9.887, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 2}]}"
-}
-```
-
-### test_multi_thread_api — テストイベント例
-
-```json
-{
-  "API_ENDPOINT": "https://<API_ID>.execute-api.ap-northeast-1.amazonaws.com/dev",
-  "USER_POOL_ID": "ap-northeast-1_XXXXXXXXX",
-  "CLIENT_ID": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
-  "USERNAME": "testuser",
-  "PASSWORD": "TempPass123!",
-  "NUM_REQUESTS": "20",
-  "NUM_WORKERS": "5"
-}
-```
-
-実行結果例:
-
-```json
-{
-  "statusCode": 200,
-  "body": "{\"approach\": \"multi_thread\", \"end_timestamp\": \"2024-01-01 12:01:13.455\", \"elapsed_seconds\": 8.134, \"success_count\": 20, \"total_requests\": 20, \"num_workers\": 5}"
 }
 ```
 

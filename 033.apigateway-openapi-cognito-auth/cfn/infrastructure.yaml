@@ -372,6 +372,27 @@ Resources:
         - Key: Project
           Value: !Ref ProjectName
 
+  # Test Parallel API Lambda Function
+  TestParallelApiLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-test-parallel-${Environment}"
+      Runtime: python3.12
+      Handler: index.lambda_handler
+      Role: !GetAtt LoginLambdaRole.Arn
+      Timeout: 300
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          # Placeholder code - will be replaced by scripts/lambda/test_parallel_api.py during deployment
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': 'Placeholder'}
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Project
+          Value: !Ref ProjectName
+
 
   # ===== Lambda Permissions =====
   
@@ -618,6 +639,12 @@ Outputs:
     Value: !GetAtt RefreshTokenLambda.Arn
     Export:
       Name: !Sub "${AWS::StackName}-RefreshTokenLambdaArn"
+
+  TestParallelApiLambdaArn:
+    Description: Test Parallel API Lambda Function ARN
+    Value: !GetAtt TestParallelApiLambda.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-TestParallelApiLambdaArn"
 
   AvpPolicyStoreId:
     Condition: UseAvp

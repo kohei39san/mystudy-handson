@@ -279,6 +279,12 @@ $RefreshTokenLambdaArn = aws cloudformation describe-stacks `
     --query 'Stacks[0].Outputs[?OutputKey==`RefreshTokenLambdaArn`].OutputValue' `
     --output text 2>$null
 
+$TestParallelApiLambdaArn = aws cloudformation describe-stacks `
+    --stack-name $StackName `
+    --region $Region `
+    --query 'Stacks[0].Outputs[?OutputKey==`TestParallelApiLambdaArn`].OutputValue' `
+    --output text 2>$null
+
 $AvpPolicyStoreId = aws cloudformation describe-stacks `
     --stack-name $StackName `
     --region $Region `
@@ -571,6 +577,25 @@ aws lambda update-function-code `
 
 Write-Host "[OK] Backend Lambda code updated" -ForegroundColor Green
 
+# Update Test Parallel API Lambda (optional output for backward compatibility)
+if (-not [string]::IsNullOrWhiteSpace($TestParallelApiLambdaArn) -and $TestParallelApiLambdaArn -ne "None") {
+    $TestParallelApiLambdaName = $TestParallelApiLambdaArn.Split(':')[-1]
+    $TestParallelTempDir = Join-Path $TempDir "test-parallel"
+    New-Item -ItemType Directory -Path $TestParallelTempDir | Out-Null
+    Copy-Item (Join-Path $ProjectDir "scripts\lambda\test_parallel_api.py") -Destination (Join-Path $TestParallelTempDir "index.py")
+    $TestParallelZip = Join-Path $TempDir "test-parallel.zip"
+    Compress-Archive -Path (Join-Path $TestParallelTempDir "index.py") -DestinationPath $TestParallelZip -Force
+
+    aws lambda update-function-code `
+        --function-name $TestParallelApiLambdaName `
+        --zip-file "fileb://$TestParallelZip" `
+        --region $Region | Out-Null
+
+    Write-Host "[OK] Test Parallel API Lambda code updated" -ForegroundColor Green
+} else {
+    Write-Host "[WARNING] TestParallelApiLambdaArn is empty. Skip test_parallel_api.py update." -ForegroundColor Yellow
+}
+
 # Cleanup
 Remove-Item $TempDir -Recurse -Force
 
@@ -599,6 +624,7 @@ Write-Host "API Gateway ID: $ApiGatewayId" -ForegroundColor Yellow
 Write-Host "API Endpoint: $ApiEndpoint" -ForegroundColor Yellow
 Write-Host "Backend Lambda ARN: $BackendLambdaArn" -ForegroundColor Yellow
 Write-Host "Authorizer Lambda ARN: $AuthorizerLambdaArn" -ForegroundColor Yellow
+Write-Host "Test Parallel API Lambda ARN: $TestParallelApiLambdaArn" -ForegroundColor Yellow
 if ($AvpPolicyStoreId -and $AvpPolicyStoreId -ne "None") {
     Write-Host "AVP Policy Store ID: $AvpPolicyStoreId" -ForegroundColor Yellow
 }

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # invoke-test-lambda.sh
-# テスト用Lambda関数（test_parallel_api / test_multi_thread_api）を
+# テスト用Lambda関数（test_parallel_api）を
 # AWS CLI で非同期または同期実行するスクリプト
 #
 # 使用方法:
 #   bash scripts/invoke-test-lambda.sh [オプション]
 #
 # オプション:
-#   --function      実行する関数を選択: parallel | multi_thread | both（デフォルト: both）
+#   --function      実行する関数を選択: parallel（デフォルト: parallel）
 #   --region        AWSリージョン（デフォルト: ap-northeast-1）
 #   --project-name  プロジェクト名（デフォルト: openapi-cognito-auth）
 #   --env           環境名（デフォルト: dev）
@@ -30,7 +30,7 @@ set -euo pipefail
 # ─────────────────────────────────────────────
 # デフォルト値
 # ─────────────────────────────────────────────
-FUNCTION="both"
+FUNCTION="parallel"
 REGION="ap-northeast-1"
 PROJECT_NAME="openapi-cognito-auth"
 ENV="dev"
@@ -186,41 +186,14 @@ print(json.dumps({
 }
 
 # ─────────────────────────────────────────────
-# マルチスレッド専用 Lambda（test_multi_thread_api）
-# ─────────────────────────────────────────────
-invoke_multi_thread() {
-    local func_name="${PROJECT_NAME}-test-multi-thread-${ENV}"
-    local payload
-    payload="$(python3 -c "
-import json
-print(json.dumps({
-    'API_ENDPOINT':  '${ENDPOINT}',
-    'USER_POOL_ID':  '${USER_POOL_ID}',
-    'CLIENT_ID':     '${CLIENT_ID}',
-    'USERNAME':      '${USERNAME}',
-    'PASSWORD':      '${PASSWORD}',
-    'NUM_REQUESTS':  '${NUM_REQUESTS}',
-    'NUM_WORKERS':   '${NUM_WORKERS}',
-}))")"
-    invoke_lambda "${func_name}" "${payload}"
-}
-
-# ─────────────────────────────────────────────
 # 実行
 # ─────────────────────────────────────────────
 case "${FUNCTION}" in
     parallel)
         invoke_parallel
         ;;
-    multi_thread)
-        invoke_multi_thread
-        ;;
-    both)
-        invoke_parallel
-        invoke_multi_thread
-        ;;
     *)
-        echo "エラー: --function には parallel / multi_thread / both を指定してください。" >&2
+        echo "エラー: --function には parallel を指定してください。" >&2
         exit 1
         ;;
 esac

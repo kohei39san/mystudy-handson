@@ -154,18 +154,53 @@ def _run_multi_session(url: str, token: str, num_requests: int, num_workers: int
 def _run_multi_process(url: str, token: str, num_requests: int, num_workers: int) -> Dict:
     """マルチプロセスでのAPIアクセス
 
-    multiprocessing.Pool を使用してリクエストを並列実行します。
-    Lambda ランタイム（Amazon Linux）は Linux 環境のため、
-    デフォルトの start method は 'fork' です。
-    なお、Python 3.12 以降ではプラットフォームによって異なる場合があります。
+    multiprocessing.Pool は Lambda 環境で SemLock 関連エラーになる場合があるため、
+    Process + Pipe を使って子プロセスに処理を分割します。
     """
-    args = [(url, token)] * num_requests
-    actual_workers = min(num_workers, multiprocessing.cpu_count())
+    actual_workers = max(1, min(num_workers, num_requests, multiprocessing.cpu_count()))
     print(f"[マルチプロセス] {num_requests}件のリクエスト開始 (プロセス数: {actual_workers})")
 
+    def _worker(worker_url: str, worker_token: str, worker_requests: int, conn: Any) -> None:
+        statuses: List[int] = []
+        try:
+            for _ in range(worker_requests):
+                statuses.append(_fetch((worker_url, worker_token)))
+            conn.send({"statuses": statuses})
+        except Exception as e:
+            conn.send({"error": str(e)})
+        finally:
+            conn.close()
+
+    base, remainder = divmod(num_requests, actual_workers)
+    request_counts = [base + (1 if i < remainder else 0) for i in range(actual_workers)]
+
     start_time = time.perf_counter()
-    with multiprocessing.Pool(processes=actual_workers) as pool:
-        results: List[int] = pool.map(_fetch, args)
+
+    processes: List[multiprocessing.Process] = []
+    parent_conns: List[Any] = []
+    for req_count in request_counts:
+        parent_conn, child_conn = multiprocessing.Pipe(duplex=False)
+        proc = multiprocessing.Process(target=_worker, args=(url, token, req_count, child_conn))
+        processes.append(proc)
+        parent_conns.append(parent_conn)
+
+    for proc in processes:
+        proc.start()
+
+    results: List[int] = []
+    for parent_conn in parent_conns:
+        msg = parent_conn.recv()
+        if "error" in msg:
+            raise RuntimeError(msg["error"])
+        results.extend(msg.get("statuses", []))
+
+    for proc in processes:
+        proc.join(timeout=60)
+        if proc.is_alive():
+            proc.terminate()
+            proc.join()
+            raise RuntimeError("子プロセスの終了待機がタイムアウトしました")
+
     elapsed = time.perf_counter() - start_time
     end_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
@@ -247,7 +282,15 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict:
     results = []
     for approach in approaches:
         if approach in approach_map:
-            results.append(approach_map[approach]())
+            try:
+                results.append(approach_map[approach]())
+            except Exception as e:
+                results.append(
+                    {
+                        "approach": approach,
+                        "error": str(e),
+                    }
+                )
 
     return {
         "statusCode": 200,
