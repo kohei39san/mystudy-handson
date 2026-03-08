@@ -157,7 +157,9 @@ def _run_multi_process(url: str, token: str, num_requests: int, num_workers: int
     multiprocessing.Pool は Lambda 環境で SemLock 関連エラーになる場合があるため、
     Process + Pipe を使って子プロセスに処理を分割します。
     """
-    actual_workers = max(1, min(num_workers, num_requests, multiprocessing.cpu_count()))
+    # Lambda では cpu_count() が小さく固定されることがあるため、
+    # ベンチマーク用途ではユーザー指定の並列数を優先する。
+    actual_workers = max(1, min(num_workers, num_requests))
     print(f"[マルチプロセス] {num_requests}件のリクエスト開始 (プロセス数: {actual_workers})")
 
     def _worker(worker_url: str, worker_token: str, worker_requests: int, conn: Any) -> None:
