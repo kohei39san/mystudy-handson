@@ -5,6 +5,8 @@ API Gatewayへの並列アクセス性能比較テスト
 マルチセッション（マルチスレッド）、マルチプロセス、並列処理なし（シーケンシャル）の
 3つのアプローチでAPI Gatewayに大量アクセスし、終了時刻を比較します。
 
+標準ライブラリのみ使用（urllib.request）のため、追加パッケージのインストールは不要です。
+
 使用方法:
   pytest tests/test_parallel_api.py -v -s
 
@@ -23,12 +25,13 @@ import concurrent.futures
 import multiprocessing
 import os
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime
 from typing import Dict, List, Tuple
 
 import boto3
 import pytest
-import requests
 
 try:
     from dotenv import load_dotenv
@@ -44,28 +47,34 @@ except ImportError:
 
 
 def _request_without_session(args: Tuple[str, str]) -> int:
-    """セッションを使用せずAPIへの1リクエストを実行する（並列処理なし用）"""
+    """urllib.requestを使用してAPIへの1リクエストを実行する（並列処理なし用）"""
     endpoint, token = args
-    headers = {"Authorization": f"Bearer {token}"}
+    req = urllib.request.Request(
+        f"{endpoint}/public",
+        headers={"Authorization": f"Bearer {token}"},
+    )
     try:
-        response = requests.get(
-            f"{endpoint}/public", headers=headers, timeout=30
-        )
-        return response.status_code
+        with urllib.request.urlopen(req, timeout=30) as response:
+            return response.status
+    except urllib.error.HTTPError as e:
+        return e.code
     except Exception:
         return 0
 
 
 def _request_with_new_session(args: Tuple[str, str]) -> int:
-    """新しいセッションを生成してAPIへの1リクエストを実行する（マルチセッション用）"""
+    """urllib.request.OpenerDirectorを使用してAPIへの1リクエストを実行する（マルチスレッド用）"""
     endpoint, token = args
-    headers = {"Authorization": f"Bearer {token}"}
+    req = urllib.request.Request(
+        f"{endpoint}/public",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    opener = urllib.request.build_opener()
     try:
-        with requests.Session() as session:
-            response = session.get(
-                f"{endpoint}/public", headers=headers, timeout=30
-            )
-            return response.status_code
+        with opener.open(req, timeout=30) as response:
+            return response.status
+    except urllib.error.HTTPError as e:
+        return e.code
     except Exception:
         return 0
 
@@ -123,7 +132,7 @@ class TestParallelAPIAccess:
     アプローチ:
         - 並列処理なし  : シーケンシャルにリクエストを送信
         - マルチセッション: ThreadPoolExecutor を使用したマルチスレッド処理
-                         スレッドごとに独立した requests.Session を生成
+                         スレッドごとに独立した urllib.request.OpenerDirector を生成
         - マルチプロセス  : multiprocessing.Pool を使用したマルチプロセス処理
     """
 
@@ -157,8 +166,8 @@ class TestParallelAPIAccess:
         """マルチセッション（マルチスレッド）でのAPIアクセス
 
         ThreadPoolExecutor を使用してリクエストを並列実行します。
-        各スレッドが独立した requests.Session を生成するため、
-        セッション（TCP接続）レベルで並列化されます。
+        各スレッドが独立した urllib.request.OpenerDirector を生成するため、
+        スレッドレベルで並列化されます。
         """
         endpoint = api_config["endpoint"]
         token = api_config["token"]
