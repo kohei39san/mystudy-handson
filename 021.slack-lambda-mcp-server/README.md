@@ -4,6 +4,8 @@
 
 このプロジェクトは、AWS Lambda を使用して OpenRouter、AWS Documentation MCP Server、Amazon Bedrock Knowledge Bases Retrieval MCP Server を統合した Slack チャットボットを実装します。
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## システム構成
 
 - **Slack アプリ**: チャンネルメンバーからのメッセージを受け取ります
