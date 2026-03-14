@@ -77,3 +77,6 @@ htmlcov/
 coverage.*
 
 .amazonq/
+
+# Super-linter output
+super-linter-output/
