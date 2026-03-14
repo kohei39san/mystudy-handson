@@ -22,6 +22,7 @@ tools:
 
 Objective:
 - Analyze the pull request context and automatically apply the most relevant labels.
+- Target pull request: #${{ github.event.pull_request.number }}
 
 Repository policy:
 - Use only labels listed in `safe-outputs.add-labels.allow-only`.
@@ -36,7 +37,7 @@ Decision rules:
 4. Use `bug` for fixes of user-visible and reproducible defects.
 
 Execution steps:
-1. Read PR metadata (title, body, author, base/head).
+1. Read PR metadata (number, title, body, author, base/head).
 2. Read changed file list.
 3. Inspect patch summaries to infer intent.
 4. Choose labels from allow-list.
