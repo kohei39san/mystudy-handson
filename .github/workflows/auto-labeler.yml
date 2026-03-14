@@ -1,0 +1,24 @@
+name: Auto Labeler
+
+on:
+  pull_request:
+    # Only following types are handled by the action, but one can default to all as well
+    types: [opened, reopened, synchronize]
+  # pull_request_target event is required for autolabeler to support PRs from forks
+  # pull_request_target:
+  #   types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  autolabeler:
+    permissions:
+      # write permission is required for autolabeler
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      # Automatically labels pull requests based on the autolabeler configuration
+      - uses: release-drafter/release-drafter/autolabeler@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
