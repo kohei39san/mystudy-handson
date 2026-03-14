@@ -1,6 +1,5 @@
 name-template: 'v$RESOLVED_VERSION 🌈'
 tag-template: 'v$RESOLVED_VERSION'
-commitish: refs/heads/main
 filter-by-commitish: true
 categories:
   - title: '🚀 Features'
