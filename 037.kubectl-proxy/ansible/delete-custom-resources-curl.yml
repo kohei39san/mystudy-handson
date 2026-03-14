@@ -1,5 +1,5 @@
 ---
-- name: Delete Custom Resources via kubectl-proxy using curl command
+- name: Delete Custom Resources via kubectl-proxy
   hosts: localhost
   gather_facts: false
   vars:
@@ -9,52 +9,56 @@
     proxy_protocol: "{{ 'https' if enable_https == 'true' else lookup('env', 'PROXY_PROTOCOL') | default('http', true) }}"
     proxy_port: "{{ https_port if enable_https == 'true' else http_port }}"
     proxy_url: "{{ lookup('env', 'PROXY_URL') | default(proxy_protocol + '://kubectl-proxy:' + proxy_port, true) }}"
-    namespace: "{{ lookup('env', 'RESOURCE_NAMESPACE') | default('hoge', true) }}"
+    # k8s_namespace replaces the reserved variable name 'namespace'
+    k8s_namespace: "{{ lookup('env', 'RESOURCE_NAMESPACE') | default('hoge', true) }}"
     resource_name: "{{ lookup('env', 'RESOURCE_NAME') | default('ansible-website', true) }}"
     crd_group: "{{ lookup('env', 'CRD_GROUP') | default('example.com', true) }}"
     crd_version: "{{ lookup('env', 'CRD_VERSION') | default('v1', true) }}"
     crd_plural: "{{ lookup('env', 'CRD_PLURAL') | default('websites', true) }}"
     validate_certs: "{{ lookup('env', 'VALIDATE_CERTS') | default('no', true) }}"
-    curl_insecure: "{{ '-k' if validate_certs == 'no' else '' }}"
 
   tasks:
     - name: Check if custom resource exists
-      ansible.builtin.shell: |
-        curl {{ curl_insecure }} -s -o /dev/null -w "%{http_code}" \
-          {{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name }}
+      ansible.builtin.uri:
+        url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}/{{ resource_name }}"
+        method: GET
+        status_code: [200, 404]
+        validate_certs: "{{ validate_certs }}"
       register: resource_check
-      changed_when: false
       failed_when: false
 
     - name: Display resource check result
       ansible.builtin.debug:
-        msg: "Custom resource '{{ resource_name }}' {{ 'exists' if resource_check.stdout == '200' else 'does not exist' }}"
+        msg: "Custom resource '{{ resource_name }}' {{ 'exists' if resource_check.status == 200 else 'does not exist' }}"
 
     - name: Delete custom resource if exists
-      ansible.builtin.shell: |
-        curl {{ curl_insecure }} -s -X DELETE \
-          {{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name }}
-      when: resource_check.stdout == "200"
+      ansible.builtin.uri:
+        url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}/{{ resource_name }}"
+        method: DELETE
+        status_code: [200, 404]
+        validate_certs: "{{ validate_certs }}"
+      when: resource_check.status == 200
       register: resource_delete
-      changed_when: resource_delete.rc == 0
 
     - name: Display deletion result
       ansible.builtin.debug:
-        msg: "Custom resource '{{ resource_name }}' {{ 'deleted successfully' if resource_check.stdout == '200' else 'does not exist' }}"
+        msg: "Custom resource '{{ resource_name }}' {{ 'deleted successfully' if resource_check.status == 200 else 'does not exist' }}"
 
     - name: Wait for resource deletion to complete
-      ansible.builtin.shell: |
-        curl {{ curl_insecure }} -s -o /dev/null -w "%{http_code}" \
-          {{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name }}
+      ansible.builtin.uri:
+        url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}/{{ resource_name }}"
+        method: GET
+        status_code: [200, 404]
+        validate_certs: "{{ validate_certs }}"
       register: deletion_check
-      until: deletion_check.stdout == "404"
+      until: deletion_check.status == 404
       retries: 10
       delay: 2
       changed_when: false
       failed_when: false
-      when: resource_check.stdout == "200"
+      when: resource_check.status == 200
 
     - name: Confirm deletion
       ansible.builtin.debug:
         msg: "Custom resource '{{ resource_name }}' has been completely removed from the cluster"
-      when: resource_check.stdout == "200"
+      when: resource_check.status == 200
