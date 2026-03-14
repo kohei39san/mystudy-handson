@@ -290,7 +290,7 @@ Resources:
         Destinations:
           - CloudWatchLogsLogGroup:
               LogGroupArn: !GetAtt ChildStateMachineLogGroup.Arn
-      DefinitionString: !Sub |
+      DefinitionString: |
         {
           "Comment": "Placeholder definition rendered by deploy script",
           "StartAt": "Pass",
@@ -317,7 +317,7 @@ Resources:
         Destinations:
           - CloudWatchLogsLogGroup:
               LogGroupArn: !GetAtt ParentStateMachineLogGroup.Arn
-      DefinitionString: !Sub |
+      DefinitionString: |
         {
           "Comment": "Placeholder definition rendered by deploy script",
           "StartAt": "Pass",
