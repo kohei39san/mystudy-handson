@@ -2,6 +2,10 @@
 
 Oracle Cloud Infrastructure (OCI) でTerraformのstateファイルを保存するためのObject Storage Bucketを作成するTerraform構成です。
 
+## アーキテクチャ図
+
+![Architecture Diagram](src/architecture.svg)
+
 ## リソース構成
 
 このTerraform構成では以下のリソースを作成します：

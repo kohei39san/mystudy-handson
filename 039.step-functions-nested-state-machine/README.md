@@ -6,6 +6,10 @@
 
 さらに、子ステートマシンにおいて **ステートマシン外のLambdaを非同期で呼び出し、完了確認ループを実装する** 機能を追加しています。ループ待機時間 (`wait_seconds`) とループ上限回数 (`max_loop_count`) は入力から設定できます。
 
+## アーキテクチャ図
+
+![Architecture Diagram](src/architecture.svg)
+
 ## アーキテクチャ
 
 ```
