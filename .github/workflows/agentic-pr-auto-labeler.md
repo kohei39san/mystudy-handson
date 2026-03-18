@@ -17,6 +17,9 @@ safe-outputs:
 
 tools:
   github:
+    lockdown: true
+    toolsets:
+      - pull_requests
 ---
 # Agentic PR Auto Labeler
 
