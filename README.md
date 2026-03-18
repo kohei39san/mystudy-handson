@@ -41,6 +41,7 @@
     - **023.bedrock-rag-agent-in-slack**: Bedrock RAGエージェント Slack連携
     - **030.apigateway-cognito-lambda-payload**: API Gateway + Cognito + Lambda構成
     - **035.aurora-mock-testing**: Aurora モックテスト環境
+    - **040.cloudwatch-logs-keyword-search**: CloudWatch Logs キーワード検索スクリプト
   * **OCI Terraform構成**:
     - **028.oci-bucket-tfstate**: Object Storage（Terraformステート管理用）
     - **029.oci-cost-alert**: Budget（コストアラート）
