@@ -86,7 +86,7 @@
         validate_certs: "{{ validate_certs }}"
       register: resource_check
 
-    - name: Create custom resource (Website) via curl
+    - name: Create custom resource (Website)
       ansible.builtin.uri:
         url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}"
         method: POST
