@@ -117,6 +117,7 @@
       ansible.builtin.uri:
         url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}/{{ resource_name }}"
         method: GET
+        return_content: yes
         validate_certs: "{{ validate_certs }}"
       register: resource_details
 
@@ -124,9 +125,9 @@
       ansible.builtin.debug:
         msg: >-
           Resource Details:
-          Name={{ resource_details.json.metadata.name }},
-          URL={{ resource_details.json.spec.url }},
-          Replicas={{ resource_details.json.spec.replicas }}
+          Name={{ (resource_details.content | from_json).metadata.name }},
+          URL={{ (resource_details.content | from_json).spec.url }},
+          Replicas={{ (resource_details.content | from_json).spec.replicas }}
 
     - name: List all custom resources in namespace
       ansible.builtin.uri:
