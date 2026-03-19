@@ -33,6 +33,7 @@
         url: "{{ proxy_url }}/version"
         method: GET
         validate_certs: "{{ validate_certs }}"
+        return_content: yes
       register: proxy_version
       changed_when: false
 
