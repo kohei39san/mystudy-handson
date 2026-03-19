@@ -33,7 +33,7 @@
         url: "{{ proxy_url }}/version"
         method: GET
         validate_certs: "{{ validate_certs }}"
-        return_content: yes
+        return_content: true
       register: proxy_version
       changed_when: false
 
@@ -131,7 +131,7 @@
         url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}/{{ resource_name }}"
         method: GET
         validate_certs: "{{ validate_certs }}"
-        return_content: yes
+        return_content: true
       register: resource_details
       changed_when: false
 
@@ -148,7 +148,7 @@
         url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}"
         method: GET
         validate_certs: "{{ validate_certs }}"
-        return_content: yes
+        return_content: true
       register: all_resources
       changed_when: false
 
