@@ -133,6 +133,7 @@
         url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}"
         method: GET
         validate_certs: "{{ validate_certs }}"
+        return_content: yes
       register: all_resources
 
     - name: Display all custom resources
