@@ -17,6 +17,14 @@ safe-outputs:
 
 tools:
   github:
+    lockdown: true
+    github-token: ${{ secrets.CUSTOM_TOKEN }}
+    mode: remote
+    toolsets:
+      - pull_requests
+      - repos
+      - issues
+      - labels
 ---
 # Agentic PR Auto Labeler
 
