@@ -23,6 +23,8 @@ services:
       # kubeconfigディレクトリを一時ファイルシステムに作成（書き込み可能）
     #  - ${KUBECONFIG_DIR:-/tmp/.kube}:size=10m,uid=0,gid=0
     environment:
+      - HOME=/home/kubectl
+      - ENV=/home/kubectl/.shrc
       - KUBECONFIG_DIR=${KUBECONFIG_DIR:-/tmp/.kube}
       - KUBECONFIG=${KUBECONFIG_DIR:-/tmp/.kube}/config
       # kubectl proxy設定
