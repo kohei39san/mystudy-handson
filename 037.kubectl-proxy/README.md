@@ -69,15 +69,22 @@ docker compose build --no-cache
 ### 3. Docker Composeでサービスを開始
 
 ```bash
-# 基本的な起動（HTTPのみ）
+# kubectl-proxy のみ起動（既定）
 docker compose up -d
 
-# HTTPSを有効化して起動（統合モード）
+# HTTPSを有効化して kubectl-proxy を起動
 ENABLE_HTTPS=true docker compose up -d
 
 # または、.envファイルでENABLE_HTTPS=trueを設定してから起動
 docker compose up -d
+
+# ansible コンテナも使う場合だけ明示的に起動
+docker compose --profile ansible up -d
 ```
+
+`ansible` サービスには Compose プロファイル `ansible` を設定しているため、通常の `docker compose up -d` では `kubectl-proxy` コンテナだけが起動します。
+
+Windows で `scripts/*.sh` が CRLF 改行でも起動できるように、コンテナ起動時に LF に正規化してから実行します。加えて、リポジトリの `.sh` ファイルは `.gitattributes` で LF 固定にしています。
 
 ### 4. プロキシの動作確認（kubectl-proxyコンテナ内での実行）
 
@@ -98,7 +105,7 @@ curl http://localhost:8001/api/v1/namespaces/default/pods
 ### 5. サービスの停止
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ## CRD（Custom Resource Definition）テスト
