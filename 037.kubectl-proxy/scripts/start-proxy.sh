@@ -11,6 +11,7 @@ if [ -f "/.env" ]; then
 fi
 
 # 環境変数のデフォルト値設定
+HOME=${HOME:-"/tmp"}
 PROXY_ADDRESS=${PROXY_ADDRESS:-"0.0.0.0"}
 PROXY_PORT=${PROXY_PORT:-"8001"}
 ACCEPT_HOSTS=${ACCEPT_HOSTS:-".*"}
@@ -20,8 +21,27 @@ K8S_TARGET_SERVER=${K8S_TARGET_SERVER:-"https://host.docker.internal:55420"}
 INSECURE_SKIP_TLS=${INSECURE_SKIP_TLS:-"true"}
 KUBECONFIG_DIR=${KUBECONFIG_DIR:-"/tmp/.kube"}
 
+setup_shell_helpers() {
+    if ! command -v bash >/dev/null 2>&1; then
+        echo "bash is not available. Skipping shell helper setup."
+        return
+    fi
+
+    mkdir -p "${HOME}"
+    cat > "${HOME}/.bashrc" <<'EOF'
+alias k='kubectl'
+source <(kubectl completion bash)
+complete -o default -F __start_kubectl k
+EOF
+
+    echo "Shell helpers configured in ${HOME}/.bashrc"
+    echo "  alias: k=kubectl"
+    echo "  completion: kubectl completion bash"
+}
+
 echo "=== kubectl proxy startup script ==="
 echo "Configuration:"
+echo "  HOME: $HOME"
 echo "  PROXY_ADDRESS: $PROXY_ADDRESS"
 echo "  PROXY_PORT: $PROXY_PORT"
 echo "  ACCEPT_HOSTS: $ACCEPT_HOSTS"
@@ -30,6 +50,8 @@ echo "  K8S_ORIGINAL_SERVER: $K8S_ORIGINAL_SERVER"
 echo "  K8S_TARGET_SERVER: $K8S_TARGET_SERVER"
 echo "  INSECURE_SKIP_TLS: $INSECURE_SKIP_TLS"
 echo "  KUBECONFIG_DIR: $KUBECONFIG_DIR"
+echo "0. Setting up interactive shell helpers..."
+setup_shell_helpers
 echo "1. Creating .kube directory..."
 mkdir -p ${KUBECONFIG_DIR}
 #chmod 755 ${KUBECONFIG_DIR}
