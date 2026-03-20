@@ -5,15 +5,15 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
   issues: read
 
 # Agentic workflow runs with constrained tools and explicit safe outputs.
 # Keep write operations limited and reviewable.
 safe-outputs:
   add-labels:
-    max: 3
-    allowed: [ feature, fix, bug ]
+    max: 2
+    allowed: [ feature, fix, bug, major, minor, patch ]
 
 tools:
   github:
@@ -33,30 +33,42 @@ Objective:
 - Target pull request: #${{ github.event.pull_request.number }}
 
 Repository policy:
-- Use only labels listed in `safe-outputs.add-labels.allow-only`.
-- Apply 0 to 3 labels.
+- Use only labels listed in `safe-outputs.add-labels.allowed`.
+- Apply at most 1 label per category (影響範囲, バージョン). Total maximum is 2 labels.
 - Prioritize precision over recall.
 - Do not create new labels.
 
+Label categories:
+
+影響範囲 (Impact Scope) — choose at most one:
+- `feature`: New capability additions.
+- `fix`: Corrective changes, including specification adjustments and minor defect fixes.
+- `bug`: Fixes of user-visible and reproducible defects.
+
+バージョン (Version) — choose at most one:
+- `major`: Breaking changes that are incompatible with previous versions.
+- `minor`: Backward-compatible new features.
+- `patch`: Backward-compatible bug fixes or small corrections.
+
 Decision rules:
 1. Use PR title and body first, then changed file paths and diff summary.
-2. Use `feature` for new capability additions.
-3. Use `fix` for corrective changes, including specification adjustments and minor defect fixes.
-4. Use `bug` for fixes of user-visible and reproducible defects.
+2. Select at most one label from 影響範囲 if the change is classifiable; otherwise skip.
+3. Select at most one label from バージョン if the change affects versioning; otherwise skip.
 
 Execution steps:
 1. Read PR metadata (number, title, body, author, base/head).
 2. Read changed file list.
 3. Inspect patch summaries to infer intent.
-4. Choose labels from allow-list.
+4. Choose at most one label from 影響範囲 and at most one from バージョン.
 5. Emit safe output to add labels.
-6. Add a short reasoning note in the workflow log.
+6. If at least one label was applied, post a comment in Japanese on the pull request explaining the reason for each label applied. Use the GitHub pull_requests tool to create the comment on PR #${{ github.event.pull_request.number }}. The comment must be in Japanese and include which label was chosen and why.
 
 Output contract:
 - Return strict JSON-compatible structure:
   - labels: string[]
   - reason: string
 - `labels` must contain only allowed labels.
+- Maximum 1 label from 影響範囲, maximum 1 label from バージョン.
 
 Failure handling:
 - If confidence is low, apply no labels.
