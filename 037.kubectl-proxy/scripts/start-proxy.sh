@@ -22,21 +22,76 @@ INSECURE_SKIP_TLS=${INSECURE_SKIP_TLS:-"true"}
 KUBECONFIG_DIR=${KUBECONFIG_DIR:-"/tmp/.kube"}
 
 setup_shell_helpers() {
-    if ! command -v bash >/dev/null 2>&1; then
-        echo "bash is not available. Skipping shell helper setup."
-        return
-    fi
-
     mkdir -p "${HOME}"
-    cat > "${HOME}/.bashrc" <<'EOF'
+
+    cat > "${HOME}/.shrc" <<'EOF'
 alias k='kubectl'
-source <(kubectl completion bash)
-complete -o default -F __start_kubectl k
+
+# For plain interactive `sh`, hand off to bash to get reliable programmable
+# completion behavior while keeping `sh -c` semantics untouched.
+if [ -n "${PS1:-}" ] && [ -z "${BASH_EXECUTION_STRING:-}" ] && [ "${0##*/}" = "sh" ] && [ -z "${KUBECTL_SH_BASH_HANDOFF:-}" ]; then
+    export KUBECTL_SH_BASH_HANDOFF=1
+    exec bash -i
+fi
+
+# Show candidate list on double-tab when completion is ambiguous.
+bind 'set show-all-if-ambiguous on' 2>/dev/null || true
+
+if command -v kubectl >/dev/null 2>&1; then
+    if command -v complete >/dev/null 2>&1; then
+        # kubectl completion expects this helper from bash-completion.
+        # Define a minimal compatible version for sh sessions.
+        if ! command -v _get_comp_words_by_ref >/dev/null 2>&1; then
+            _get_comp_words_by_ref() {
+                local __cur __prev __cword
+                local -a __words
+
+                if [ "$1" = "-n" ]; then
+                    shift 2
+                fi
+
+                __words=("${COMP_WORDS[@]}")
+                __cword=${COMP_CWORD:-0}
+                __cur=${COMP_WORDS[__cword]}
+                __prev=""
+                if [ "${__cword}" -gt 0 ]; then
+                    __prev=${COMP_WORDS[$((__cword - 1))]}
+                fi
+
+                while [ "$#" -gt 0 ]; do
+                    case "$1" in
+                        cur)
+                            cur=${__cur}
+                            ;;
+                        prev)
+                            prev=${__prev}
+                            ;;
+                        words)
+                            words=("${__words[@]}")
+                            ;;
+                        cword)
+                            cword=${__cword}
+                            ;;
+                    esac
+                    shift
+                done
+            }
+        fi
+
+        KUBECTL_COMPLETION_FILE="/tmp/.kubectl-completion.sh"
+        if kubectl completion bash > "${KUBECTL_COMPLETION_FILE}" 2>/dev/null; then
+            . "${KUBECTL_COMPLETION_FILE}"
+            complete -o default -F __start_kubectl k
+        fi
+    fi
+fi
 EOF
 
-    echo "Shell helpers configured in ${HOME}/.bashrc"
+    cp "${HOME}/.shrc" "${HOME}/.bashrc"
+
+    echo "Shell helpers configured in ${HOME}/.shrc"
     echo "  alias: k=kubectl"
-    echo "  completion: kubectl completion bash"
+    echo "  completion: enabled when shell supports 'complete' builtin"
 }
 
 echo "=== kubectl proxy startup script ==="
