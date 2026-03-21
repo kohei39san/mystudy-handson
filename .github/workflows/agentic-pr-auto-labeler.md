@@ -5,7 +5,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
   issues: read
 
 # Agentic workflow runs with constrained tools and explicit safe outputs.
