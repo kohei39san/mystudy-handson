@@ -19,7 +19,7 @@
 # Route Table削除（パブリックサブネット用）
 - name: Delete public route table
   amazon.aws.ec2_vpc_route_table:
-    vpc_id: "{{ vpc_ec2_vpc_net.vpc.id }}"
+    vpc_id: "{{ ec2_vpc_net.vpc.id }}"
     region: "{{ aws.common.region }}"
     tags:
       Name: "{{ aws.ec2.route_table.public.name }}"
@@ -29,7 +29,7 @@
 # Internet Gateway削除
 - name: Delete Internet Gateway
   amazon.aws.ec2_vpc_igw:
-    vpc_id: "{{ vpc_ec2_vpc_net.vpc.id }}"
+    vpc_id: "{{ ec2_vpc_net.vpc.id }}"
     region: "{{ aws.common.region }}"
     state: absent
   failed_when: false
