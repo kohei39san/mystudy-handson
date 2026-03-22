@@ -119,6 +119,9 @@ kubectl proxy経由でCRDのAPIアクセスをテストできます：
 # コンテナに接続
 docker compose exec kubectl-proxy sh
 
+# このコンテナでは sh で k エイリアスと kubectl 補完が使えます
+k get pods -A
+
 # 1. テンプレートからYAMLファイルを生成（必須）
 ./scripts/manage-crd.sh generate
 
