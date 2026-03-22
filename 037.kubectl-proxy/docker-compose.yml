@@ -1,3 +1,5 @@
+version: '3.9'
+
 # Windows + Docker Desktop Kubernetes用kubectl proxy
 services:
   kubectl-proxy:
