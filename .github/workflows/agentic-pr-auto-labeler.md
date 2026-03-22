@@ -23,6 +23,7 @@ safe-outputs:
 tools:
   github:
     lockdown: true
+    min-integrity: approved
     github-token: ${{ secrets.PAT }}
     mode: remote
     toolsets:
