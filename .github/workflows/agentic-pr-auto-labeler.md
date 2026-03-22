@@ -12,8 +12,12 @@ permissions:
 # Keep write operations limited and reviewable.
 safe-outputs:
   add-labels:
-    max: 3
-    allowed: [ feature, fix, bug ]
+    max: 2
+    allowed: [ feature, fix, bug, major, minor, patch ]
+  remove-labels:
+    max: 2
+  add-comment:
+    max: 1
 
 tools:
   github:
@@ -33,30 +37,43 @@ Objective:
 - Target pull request: #${{ github.event.pull_request.number }}
 
 Repository policy:
-- Use only labels listed in `safe-outputs.add-labels.allow-only`.
-- Apply 0 to 3 labels.
+- Use only labels listed in `safe-outputs.add-labels.allowed`.
+- Apply at most 1 label from the impact scope category and at most 1 label from the version category (2 labels maximum in total).
 - Prioritize precision over recall.
 - Do not create new labels.
+- After applying labels, post a comment in Japanese on the pull request explaining the reason for the label selection.
+
+Label categories:
+
+Impact scope (影響範囲) — choose at most 1:
+- `feature`: new capability additions.
+- `fix`: corrective changes, including specification adjustments and minor defect fixes.
+- `bug`: fixes of user-visible and reproducible defects.
+
+Version (バージョン) — choose at most 1:
+- `major`: breaking changes that are incompatible with previous versions.
+- `minor`: new backward-compatible features.
+- `patch`: backward-compatible bug fixes.
 
 Decision rules:
 1. Use PR title and body first, then changed file paths and diff summary.
-2. Use `feature` for new capability additions.
-3. Use `fix` for corrective changes, including specification adjustments and minor defect fixes.
-4. Use `bug` for fixes of user-visible and reproducible defects.
+2. Select at most 1 label from the impact scope category (feature / fix / bug).
+3. Select at most 1 label from the version category (major / minor / patch).
 
 Execution steps:
 1. Read PR metadata (number, title, body, author, base/head).
 2. Read changed file list.
 3. Inspect patch summaries to infer intent.
-4. Choose labels from allow-list.
+4. Choose at most 1 impact scope label and at most 1 version label from the allow-list.
 5. Emit safe output to add labels.
-6. Add a short reasoning note in the workflow log.
+6. Post a comment in Japanese on the pull request summarising which labels were applied and why.
 
 Output contract:
 - Return strict JSON-compatible structure:
   - labels: string[]
-  - reason: string
+  - reason: string (Japanese, posted as a PR comment)
 - `labels` must contain only allowed labels.
+- Maximum 1 label per category.
 
 Failure handling:
 - If confidence is low, apply no labels.
