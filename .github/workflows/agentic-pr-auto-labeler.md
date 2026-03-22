@@ -16,6 +16,7 @@ safe-outputs:
     allowed: [ feature, fix, bug, major, minor, patch ]
   remove-labels:
     max: 2
+    allowed: [ feature, fix, bug, major, minor, patch ]
   add-comment:
     max: 1
 
