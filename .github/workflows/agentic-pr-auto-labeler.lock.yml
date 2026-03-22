@@ -21,7 +21,7 @@
 # For more information: https://github.github.com/gh-aw/introduction/overview/
 #
 #
-# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"ac0fcc1b6b2fc34e0f2212db91efac55eb49ad40d17c5de5a5773865f6ad56e7","compiler_version":"v0.62.5","strict":true,"agent_id":"copilot"}
+# gh-aw-metadata: {"schema_version":"v3","frontmatter_hash":"bdd5d7145d848abb1c3f01235a0db137d653de7bc8e0d8e14660b1947bdfd8e3","compiler_version":"v0.62.5","strict":true,"agent_id":"copilot"}
 
 name: "Agentic PR Auto Labeler"
 "on":
@@ -344,7 +344,7 @@ jobs:
           mkdir -p /tmp/gh-aw/safeoutputs
           mkdir -p /tmp/gh-aw/mcp-logs/safeoutputs
           cat > ${RUNNER_TEMP}/gh-aw/safeoutputs/config.json << 'GH_AW_SAFE_OUTPUTS_CONFIG_EOF'
-          {"add_comment":{"max":1},"add_labels":{"allowed":["feature","fix","bug","major","minor","patch"],"max":2},"missing_data":{},"missing_tool":{},"noop":{"max":1},"remove_labels":{"max":2}}
+          {"add_comment":{"max":1},"add_labels":{"allowed":["feature","fix","bug","major","minor","patch"],"max":2},"missing_data":{},"missing_tool":{},"noop":{"max":1},"remove_labels":{"allowed":["feature","fix","bug","major","minor","patch"],"max":2}}
           GH_AW_SAFE_OUTPUTS_CONFIG_EOF
       - name: Write Safe Outputs Tools
         run: |
@@ -353,7 +353,7 @@ jobs:
             "description_suffixes": {
               "add_comment": " CONSTRAINTS: Maximum 1 comment(s) can be added.",
               "add_labels": " CONSTRAINTS: Maximum 2 label(s) can be added. Only these labels are allowed: [\"feature\" \"fix\" \"bug\" \"major\" \"minor\" \"patch\"].",
-              "remove_labels": " CONSTRAINTS: Maximum 2 label(s) can be removed."
+              "remove_labels": " CONSTRAINTS: Maximum 2 label(s) can be removed. Only these labels can be removed: [feature fix bug major minor patch]."
             },
             "repo_params": {},
             "dynamic_tools": []
@@ -1077,7 +1077,7 @@ jobs:
           GH_AW_ALLOWED_DOMAINS: "api.business.githubcopilot.com,api.enterprise.githubcopilot.com,api.github.com,api.githubcopilot.com,api.individual.githubcopilot.com,api.snapcraft.io,archive.ubuntu.com,azure.archive.ubuntu.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,github.com,host.docker.internal,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,ppa.launchpad.net,raw.githubusercontent.com,registry.npmjs.org,s.symcb.com,s.symcd.com,security.ubuntu.com,telemetry.enterprise.githubcopilot.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com,www.googleapis.com"
           GITHUB_SERVER_URL: ${{ github.server_url }}
           GITHUB_API_URL: ${{ github.api_url }}
-          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"add_comment\":{\"max\":1},\"add_labels\":{\"allowed\":[\"feature\",\"fix\",\"bug\",\"major\",\"minor\",\"patch\"],\"max\":2},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"true\"},\"remove_labels\":{\"max\":2}}"
+          GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"add_comment\":{\"max\":1},\"add_labels\":{\"allowed\":[\"feature\",\"fix\",\"bug\",\"major\",\"minor\",\"patch\"],\"max\":2},\"missing_data\":{},\"missing_tool\":{},\"noop\":{\"max\":1,\"report-as-issue\":\"true\"},\"remove_labels\":{\"allowed\":[\"feature\",\"fix\",\"bug\",\"major\",\"minor\",\"patch\"],\"max\":2}}"
         with:
           github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
