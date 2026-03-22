@@ -14,7 +14,8 @@ safe-outputs:
   add-labels:
     max: 2
     allowed: [ feature, fix, bug, major, minor, patch ]
-  add-comment: {}
+  add-comment:
+    max: 1
 
 tools:
   github:
