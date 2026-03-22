@@ -17,12 +17,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Create Issue
         uses: actions/github-script@v8
         env:
           README_UPDATE_PROMPT: ${{ vars.README_UPDATE_PROMPT }}
         with:
-          github-token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             // Use environment variable if defined, otherwise use default prompt
             const prompt = process.env.README_UPDATE_PROMPT || `

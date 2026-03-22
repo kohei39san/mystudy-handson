@@ -92,10 +92,18 @@ jobs:
           echo "::add-mask::$TARGET_REPO_OWNER"
           echo "::add-mask::$TARGET_REPO_NAME"
 
+      - name: Generate GitHub App token for target repository
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ steps.set_target_details.outputs.target_repo_owner }}
+
       - name: Clone target repository
         run: |
-          # Clone the target repository using TARGET_REPO_PAT
-          git clone "https://x-access-token:${{ secrets.TARGET_REPO_PAT }}@github.com/$TARGET_REPO.git" target_repo
+          # Clone the target repository using GitHub App token
+          git clone "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/$TARGET_REPO.git" target_repo
 
           # Create and checkout a new branch in the target repository
           cd target_repo
@@ -140,7 +148,7 @@ jobs:
         if: env.HAS_CHANGES == 'true'
         uses: actions/github-script@v8
         with:
-          github-token: ${{ secrets.TARGET_REPO_PAT }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const targetRepoOwner = process.env.TARGET_REPO_OWNER;
             const targetRepoName = process.env.TARGET_REPO_NAME;

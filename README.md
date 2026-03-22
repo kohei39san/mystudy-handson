@@ -235,7 +235,8 @@ output = json
 ### 必要な設定
 
 1. GitHub Secretsに以下の値を設定してください：
-   - `TARGET_REPO_PAT`: プッシュ先リポジトリにアクセスするためのPersonal Access Token
+   - `APP_ID`: プッシュ先リポジトリにアクセスするためのGitHub App ID
+   - `APP_PRIVATE_KEY`: GitHub Appのプライベートキー
    - `TARGET_REPO`: プッシュ先リポジトリ名（例: `owner/repo-name`）
 
 ### 使用方法
@@ -251,7 +252,7 @@ output = json
 ### 注意事項
 
 - プッシュ先リポジトリは同じGitHubアカウント/組織が所有している必要があります
-- 適切な権限を持つPersonal Access Tokenが必要です（repo権限を推奨）
+- GitHub AppがプッシュするリポジトリにインストールされていることとGitHub Appに適切な権限（contents: write, pull-requests: write）が必要です
 - ワークフローは手動実行のみ可能です
 
 ## 前提条件
@@ -283,7 +284,7 @@ scripts\setup-repository-for-github-actions.ps1
 ```
 このスクリプトは以下の設定を行います：
 * GitHub Actionsの権限設定
-* 必要なSecrets（GEMINI_API_KEY, LLM_API_KEY, LLM_BASE_URL, PAT_TOKEN, PAT_USERNAME）の設定
+* 必要なSecrets（GEMINI_API_KEY, LLM_API_KEY, LLM_BASE_URL, APP_ID, APP_PRIVATE_KEY）の設定
 * 必要なVariables（LLM_MODEL）の設定
 
 ## 実行手順

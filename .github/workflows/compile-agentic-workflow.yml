@@ -14,22 +14,29 @@ jobs:
     name: Compile Agentic Workflow Markdown files
     runs-on: ubuntu-latest
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.PAT }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Install gh aw extension
         run: gh extension install github/gh-aw
         env:
-          GH_TOKEN: ${{ secrets.PAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Compile Agentic Workflows
         run: gh aw compile
         working-directory: .github/workflows
         env:
-          GH_TOKEN: ${{ secrets.PAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Check for changes
         if: ${{ !cancelled() }}
@@ -48,7 +55,7 @@ jobs:
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           base: ${{ steps.get_branch.outputs.branch_name }}
           branch: compile-agentic-workflow-pr-${{ steps.get_branch.outputs.branch_name }}
           title: "Changes by compile-agentic-workflow action"

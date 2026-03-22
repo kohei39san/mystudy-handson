@@ -54,11 +54,19 @@ jobs:
         run: |
           echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
 
+      - name: Generate GitHub App token
+        if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           base: ${{ steps.get_branch.outputs.branch_name }}
           branch: githubactions-lint-pr-${{ steps.get_branch.outputs.branch_name }}
           title: "Changes by githubactions-lint-pr actions"
