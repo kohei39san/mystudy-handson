@@ -40,6 +40,14 @@ services:
       - ENABLE_HTTPS=${ENABLE_HTTPS:-false}
       - HTTPS_PORT=${HTTPS_PORT:-8443}
       - CERT_DIR=${CERT_DIR:-/tmp/certs}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
     restart: unless-stopped
     # Docker Desktop環境でのホスト接続を可能にする
     extra_hosts:
@@ -86,4 +94,12 @@ services:
              tail -f /dev/null"
     depends_on:
       - kubectl-proxy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
     restart: unless-stopped
