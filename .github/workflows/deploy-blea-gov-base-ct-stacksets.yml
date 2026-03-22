@@ -1,0 +1,256 @@
+name: Deploy BLEA Gov Base CT StackSets
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: "Comment target issue number"
+        required: true
+        type: string
+      aws_region:
+        description: "AWS region for deployment"
+        required: true
+        default: "ap-northeast-1"
+        type: string
+      stack_name:
+        description: "CloudFormation stack name created by CDK"
+        required: true
+        default: "Dev-BLEAGovBaseCtStackSetManager"
+        type: string
+      stackset_name:
+        description: "StackSet name to inspect"
+        required: true
+        default: "BLEA-Governance-Base-ControlTower"
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      WORK_DIR: 039.blea-gov-base-ct-stacksets
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ github.event.inputs.aws_region }}
+          mask-aws-account-id: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: 039.blea-gov-base-ct-stacksets/package-lock.json
+
+      - name: Validate required StackSet secrets
+        env:
+          STACK_SET_ACCOUNT: ${{ secrets.STACK_SET_ACCOUNT }}
+          STACK_SET_TARGET_ACCOUNTS: ${{ secrets.STACK_SET_TARGET_ACCOUNTS }}
+          STACK_SET_TARGET_REGIONS: ${{ secrets.STACK_SET_TARGET_REGIONS }}
+        run: |
+          set -euo pipefail
+          required=(STACK_SET_ACCOUNT STACK_SET_TARGET_ACCOUNTS STACK_SET_TARGET_REGIONS)
+          for key in "${required[@]}"; do
+            if [ -z "${!key:-}" ]; then
+              echo "Required secret $key is not set"
+              exit 1
+            fi
+          done
+
+      - name: Install dependencies
+        working-directory: ${{ env.WORK_DIR }}
+        run: npm ci
+
+      - name: Deploy CDK StackSet manager
+        id: deploy_cdk
+        continue-on-error: true
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          STACK_SET_ACCOUNT: ${{ secrets.STACK_SET_ACCOUNT }}
+          STACK_SET_REGION: ${{ github.event.inputs.aws_region }}
+          STACK_SET_ENV_NAME: ${{ vars.STACK_SET_ENV_NAME || 'Production' }}
+          STACK_SET_NOTIFICATION_MODE: ${{ vars.STACK_SET_NOTIFICATION_MODE || 'centralized' }}
+          STACK_SET_NOTIFY_EMAIL: ${{ secrets.STACK_SET_NOTIFY_EMAIL || 'security-ops@example.com' }}
+          STACK_SET_SLACK_WORKSPACE_ID: ${{ secrets.STACK_SET_SLACK_WORKSPACE_ID }}
+          STACK_SET_SLACK_CHANNEL_ID: ${{ secrets.STACK_SET_SLACK_CHANNEL_ID }}
+          STACK_SET_S3_EXPIRATION_DAYS: ${{ vars.STACK_SET_S3_EXPIRATION_DAYS || '366' }}
+          STACK_SET_S3_EXPIRED_DELETE_DAYS: ${{ vars.STACK_SET_S3_EXPIRED_DELETE_DAYS || '30' }}
+          STACK_SET_TARGET_ACCOUNTS: ${{ secrets.STACK_SET_TARGET_ACCOUNTS }}
+          STACK_SET_TARGET_REGIONS: ${{ secrets.STACK_SET_TARGET_REGIONS }}
+          STACK_SET_TARGET_OUS: ${{ secrets.STACK_SET_TARGET_OUS }}
+          STACK_SET_PERMISSION_MODEL: ${{ vars.STACK_SET_PERMISSION_MODEL || 'SELF_MANAGED' }}
+          STACK_SET_CALL_AS: ${{ vars.STACK_SET_CALL_AS || 'SELF' }}
+          STACK_SET_ADMIN_ROLE_ARN: ${{ secrets.STACK_SET_ADMIN_ROLE_ARN }}
+          STACK_SET_EXECUTION_ROLE_NAME: ${{ vars.STACK_SET_EXECUTION_ROLE_NAME || 'AWSCloudFormationStackSetExecutionRole' }}
+        run: |
+          set -euo pipefail
+          npx cdk deploy "${{ github.event.inputs.stack_name }}" --require-approval never --verbose \
+            2>&1 | tee /tmp/cdk-deploy.log
+          # tee masks the exit code; restore it
+          exit ${PIPESTATUS[0]}
+
+      - name: Collect CloudFormation error logs
+        id: collect_errors
+        if: always()
+        env:
+          STACK_NAME: ${{ github.event.inputs.stack_name }}
+          STACKSET_NAME: ${{ github.event.inputs.stackset_name }}
+        run: |
+          set -euo pipefail
+
+          log_file="cfn-error-log.txt"
+          : > "$log_file"
+
+          if [ -s /tmp/cdk-deploy.log ]; then
+            echo "## CDK deploy output" >> "$log_file"
+            cat /tmp/cdk-deploy.log >> "$log_file"
+            echo "" >> "$log_file"
+          fi
+
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+            echo "## Stack events with failures" >> "$log_file"
+            aws cloudformation describe-stack-events \
+              --stack-name "$STACK_NAME" \
+              --query "StackEvents[?contains(ResourceStatus, 'FAILED') || contains(ResourceStatus, 'ROLLBACK')].[Timestamp,LogicalResourceId,ResourceType,ResourceStatus,ResourceStatusReason]" \
+              --output table >> "$log_file" || true
+          else
+            echo "Stack '$STACK_NAME' was not found." >> "$log_file"
+          fi
+
+          if aws cloudformation describe-stack-set --stack-set-name "$STACKSET_NAME" >/dev/null 2>&1; then
+            echo "" >> "$log_file"
+            echo "## StackSet operation summary" >> "$log_file"
+            aws cloudformation list-stack-set-operations \
+              --stack-set-name "$STACKSET_NAME" \
+              --max-results 5 \
+              --query "Summaries[].[OperationId,Action,Status,StatusReason,CreationTimestamp]" \
+              --output table >> "$log_file" || true
+
+            echo "" >> "$log_file"
+            echo "## StackSet instances not CURRENT" >> "$log_file"
+            aws cloudformation list-stack-instances \
+              --stack-set-name "$STACKSET_NAME" \
+              --query "Summaries[?Status!='CURRENT'].[Account,Region,Status,StatusReason]" \
+              --output table >> "$log_file" || true
+          fi
+
+          if grep -Eq "FAILED|ROLLBACK|INOPERABLE|OUTDATED|Stack '.*' was not found" "$log_file"; then
+            {
+              echo "has_errors=true"
+              echo "error_log<<EOF"
+              cat "$log_file"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "has_errors=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Destroy CDK stack after log collection
+        id: destroy_cdk
+        if: always()
+        continue-on-error: true
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          STACK_SET_ACCOUNT: ${{ secrets.STACK_SET_ACCOUNT }}
+          STACK_SET_REGION: ${{ github.event.inputs.aws_region }}
+          STACK_SET_ENV_NAME: ${{ vars.STACK_SET_ENV_NAME || 'Production' }}
+          STACK_SET_NOTIFICATION_MODE: ${{ vars.STACK_SET_NOTIFICATION_MODE || 'centralized' }}
+          STACK_SET_NOTIFY_EMAIL: ${{ secrets.STACK_SET_NOTIFY_EMAIL || 'security-ops@example.com' }}
+          STACK_SET_SLACK_WORKSPACE_ID: ${{ secrets.STACK_SET_SLACK_WORKSPACE_ID }}
+          STACK_SET_SLACK_CHANNEL_ID: ${{ secrets.STACK_SET_SLACK_CHANNEL_ID }}
+          STACK_SET_S3_EXPIRATION_DAYS: ${{ vars.STACK_SET_S3_EXPIRATION_DAYS || '366' }}
+          STACK_SET_S3_EXPIRED_DELETE_DAYS: ${{ vars.STACK_SET_S3_EXPIRED_DELETE_DAYS || '30' }}
+          STACK_SET_TARGET_ACCOUNTS: ${{ secrets.STACK_SET_TARGET_ACCOUNTS }}
+          STACK_SET_TARGET_REGIONS: ${{ secrets.STACK_SET_TARGET_REGIONS }}
+          STACK_SET_TARGET_OUS: ${{ secrets.STACK_SET_TARGET_OUS }}
+          STACK_SET_PERMISSION_MODEL: ${{ vars.STACK_SET_PERMISSION_MODEL || 'SELF_MANAGED' }}
+          STACK_SET_CALL_AS: ${{ vars.STACK_SET_CALL_AS || 'SELF' }}
+          STACK_SET_ADMIN_ROLE_ARN: ${{ secrets.STACK_SET_ADMIN_ROLE_ARN }}
+          STACK_SET_EXECUTION_ROLE_NAME: ${{ vars.STACK_SET_EXECUTION_ROLE_NAME || 'AWSCloudFormationStackSetExecutionRole' }}
+          STACK_NAME: ${{ github.event.inputs.stack_name }}
+        run: |
+          set -euo pipefail
+          if aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+            npx cdk destroy "$STACK_NAME" --force --verbose \
+              2>&1 | tee /tmp/cdk-destroy.log
+            exit ${PIPESTATUS[0]}
+          else
+            echo "Skip destroy: stack '$STACK_NAME' was not found."
+          fi
+
+      - name: Comment issue when errors detected
+        if: always() && (steps.collect_errors.outputs.has_errors == 'true' || steps.deploy_cdk.outcome == 'failure' || steps.destroy_cdk.outcome == 'failure')
+        uses: actions/github-script@v8
+        env:
+          ISSUE_NUMBER: ${{ github.event.inputs.issue_number }}
+          ERROR_LOG: ${{ steps.collect_errors.outputs.error_log }}
+          DEPLOY_RESULT: ${{ steps.deploy_cdk.outcome }}
+          DESTROY_RESULT: ${{ steps.destroy_cdk.outcome }}
+          STACK_NAME: ${{ github.event.inputs.stack_name }}
+          STACKSET_NAME: ${{ github.event.inputs.stackset_name }}
+        with:
+          github-token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = Number(process.env.ISSUE_NUMBER);
+            if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
+              core.setFailed(`Invalid issue number: ${process.env.ISSUE_NUMBER}`);
+              return;
+            }
+
+            const fs = require('fs');
+            const deployResult = process.env.DEPLOY_RESULT || 'unknown';
+            const destroyResult = process.env.DESTROY_RESULT || 'unknown';
+            const stackName = process.env.STACK_NAME;
+            const stacksetName = process.env.STACKSET_NAME;
+            const maxLen = 60000;
+
+            const deployLog = process.env.ERROR_LOG || '';
+            const destroyLog = fs.existsSync('/tmp/cdk-destroy.log')
+              ? fs.readFileSync('/tmp/cdk-destroy.log', 'utf8')
+              : '';
+
+            const sections = [];
+            if (deployLog) {
+              const truncated = deployLog.length > maxLen ? `${deployLog.slice(0, maxLen)}\n... (truncated)` : deployLog;
+              sections.push('### Deploy / CloudFormation log', '```text', truncated, '```');
+            }
+            if (destroyResult === 'failure' && destroyLog) {
+              const truncated = destroyLog.length > maxLen ? `${destroyLog.slice(0, maxLen)}\n... (truncated)` : destroyLog;
+              sections.push('', '### Destroy log', '```text', truncated, '```');
+            }
+
+            const body = [
+              'Deployment or cleanup reported errors.',
+              '',
+              `- Workflow: ${context.workflow}`,
+              `- Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              `- CDK deploy result: ${deployResult}`,
+              `- CDK destroy result: ${destroyResult}`,
+              `- Stack: ${stackName}`,
+              `- StackSet: ${stacksetName}`,
+              '',
+              ...sections
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body
+            });
+
+      - name: Fail workflow when deployment failed
+        if: steps.deploy_cdk.outcome != 'success'
+        run: |
+          echo "CDK deployment failed. See logs and issue comment for details."
+          exit 1
