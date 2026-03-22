@@ -8,6 +8,8 @@ on:
   push:
     paths:
       - ".github/workflows/**"
+      - "!.github/workflows/*.md"
+      - "!.github/workflows/*.lock.yml"
 
 jobs:
   lint:
@@ -33,8 +35,9 @@ jobs:
           # Only validate YAML and GitHub Actions files
           VALIDATE_YAML_PRETTIER: true
           VALIDATE_GITHUB_ACTIONS: true
-          # Filter for only GitHub Actions workflow files
+          # Filter for only GitHub Actions workflow files, excluding agentic workflow files
           FILTER_REGEX_INCLUDE: .*github/workflows/.*
+          FILTER_REGEX_EXCLUDE: .*\.github/workflows/.*\.(md|lock\.yml)$
           # Fix issues automatically where possible
           FIX_YAML_PRETTIER: true
 
