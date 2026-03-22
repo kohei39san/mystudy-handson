@@ -22,7 +22,7 @@ safe-outputs:
 tools:
   github:
     lockdown: true
-    github-token: ${{ secrets.CUSTOM_TOKEN }}
+    github-token: ${{ secrets.PAT }}
     mode: remote
     toolsets:
       - pull_requests
