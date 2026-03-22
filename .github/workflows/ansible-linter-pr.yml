@@ -20,6 +20,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install -r .github/requirements.yml -p ./collections --force
+
       - name: Run ansible-lint
         uses: ansible/ansible-lint@v26.3.0
         # optional (see below):

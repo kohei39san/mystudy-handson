@@ -9,7 +9,7 @@
     proxy_protocol: "{{ 'https' if enable_https == 'true' else lookup('env', 'PROXY_PROTOCOL') | default('http', true) }}"
     proxy_port: "{{ https_port if enable_https == 'true' else http_port }}"
     proxy_url: "{{ lookup('env', 'PROXY_URL') | default(proxy_protocol + '://kubectl-proxy:' + proxy_port, true) }}"
-    namespace: "{{ lookup('env', 'RESOURCE_NAMESPACE') | default('hoge', true) }}"
+    k8s_namespace: "{{ lookup('env', 'RESOURCE_NAMESPACE') | default('hoge', true) }}"
     resource_name: "{{ lookup('env', 'RESOURCE_NAME') | default('ansible-website', true) }}"
     crd_group: "{{ lookup('env', 'CRD_GROUP') | default('example.com', true) }}"
     crd_version: "{{ lookup('env', 'CRD_VERSION') | default('v1', true) }}"
@@ -33,7 +33,7 @@
 
     - name: Check if namespace exists
       ansible.builtin.uri:
-        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/api/v1/namespaces/{{ namespace }}"
+        url: "{{ proxy_url }}/api/v1/namespaces/{{ k8s_namespace }}"
         method: GET
         status_code: [200, 404]
         validate_certs: "{{ validate_certs }}"
@@ -41,14 +41,14 @@
 
     - name: Create namespace if not exists
       ansible.builtin.uri:
-        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/api/v1/namespaces"
+        url: "{{ proxy_url }}/api/v1/namespaces"
         method: POST
         body_format: json
         body:
           apiVersion: v1
           kind: Namespace
           metadata:
-            name: "{{ namespace }}"
+            name: "{{ k8s_namespace }}"
         status_code: [201, 409]
         validate_certs: "{{ validate_certs }}"
       when: namespace_check.status == 404
@@ -56,11 +56,11 @@
 
     - name: Display namespace creation result
       ansible.builtin.debug:
-        msg: "Namespace '{{ namespace }}' {{ 'created' if namespace_create.changed else 'already exists' }}"
+        msg: "Namespace '{{ k8s_namespace }}' {{ 'created' if namespace_create.changed else 'already exists' }}"
 
     - name: Check if CRD exists
       ansible.builtin.uri:
-        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/{{ crd_plural }}.{{ crd_group }}"
+        url: "{{ proxy_url }}/apis/apiextensions.k8s.io/v1/customresourcedefinitions/{{ crd_plural }}.{{ crd_group }}"
         method: GET
         status_code: [200, 404]
         validate_certs: "{{ validate_certs }}"
@@ -72,22 +72,23 @@
 
     - name: Fail if CRD does not exist
       ansible.builtin.fail:
-        msg: "CRD '{{ crd_plural }}.{{ crd_group }}' must be installed before creating custom resources. Please run './scripts/manage-crd.sh generate && ./scripts/manage-crd.sh
-          install' first."
+        msg: >-
+          CRD '{{ crd_plural }}.{{ crd_group }}' must be installed before creating
+          custom resources. Please run './scripts/manage-crd.sh generate &&
+          ./scripts/manage-crd.sh install' first.
       when: crd_check.status == 404
 
     - name: Check if custom resource already exists
       ansible.builtin.uri:
-        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name
-          }}"
+        url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}/{{ resource_name }}"
         method: GET
         status_code: [200, 404]
         validate_certs: "{{ validate_certs }}"
       register: resource_check
 
-    - name: Create custom resource (Website) via curl
+    - name: Create custom resource (Website)
       ansible.builtin.uri:
-        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}"
+        url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}"
         method: POST
         body_format: json
         body:
@@ -95,7 +96,7 @@
           kind: Website
           metadata:
             name: "{{ resource_name }}"
-            namespace: "{{ namespace }}"
+            namespace: "{{ k8s_namespace }}"
           spec:
             url: "https://ansible-managed.example.com"
             replicas: 2
@@ -114,24 +115,28 @@
 
     - name: Get created custom resource details
       ansible.builtin.uri:
-        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}/{{ resource_name
-          }}"
+        url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}/{{ resource_name }}"
         method: GET
+        return_content: true
         validate_certs: "{{ validate_certs }}"
       register: resource_details
 
     - name: Display custom resource details
       ansible.builtin.debug:
-        msg: "Resource Details: Name={{ resource_details.json.metadata.name }}, URL={{ resource_details.json.spec.url }}, Replicas={{ resource_details.json.spec.replicas
-          }}"
+        msg: >-
+          Resource Details:
+          Name={{ (resource_details.content | from_json).metadata.name }},
+          URL={{ (resource_details.content | from_json).spec.url }},
+          Replicas={{ (resource_details.content | from_json).spec.replicas }}
 
     - name: List all custom resources in namespace
       ansible.builtin.uri:
-        url: "{{ proxy_protocol }}://kubectl-proxy:{{ proxy_port }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ namespace }}/{{ crd_plural }}"
+        url: "{{ proxy_url }}/apis/{{ crd_group }}/{{ crd_version }}/namespaces/{{ k8s_namespace }}/{{ crd_plural }}"
         method: GET
         validate_certs: "{{ validate_certs }}"
+        return_content: true
       register: all_resources
 
     - name: Display all custom resources
       ansible.builtin.debug:
-        msg: "Found {{ all_resources.json.items | length }} Website resource(s) in namespace '{{ namespace }}'"
+        msg: "Found {{ all_resources.json.items | length }} Website resource(s) in namespace '{{ k8s_namespace }}'"

@@ -10,7 +10,7 @@
 
 - name: Set VPC fact for deletion
   ansible.builtin.set_fact:
-    vpc_ec2_vpc_net:
+    ec2_vpc_net:
       vpc:
         id: "{{ ec2_vpc_info.vpcs[0].vpc_id }}"
   when: aws_resource_state == "absent" and ec2_vpc_info.vpcs | length > 0
@@ -27,7 +27,7 @@
     # Internet Gateway作成
     - name: Create Internet Gateway
       amazon.aws.ec2_vpc_igw:
-        vpc_id: "{{ vpc_ec2_vpc_net.vpc.id }}"
+        vpc_id: "{{ ec2_vpc_net.vpc.id }}"
         region: "{{ aws.common.region }}"
         state: "{{ aws_resource_state }}"
         tags:
@@ -37,7 +37,7 @@
     # Route Table作成（パブリックサブネット用）
     - name: Create public route table
       amazon.aws.ec2_vpc_route_table:
-        vpc_id: "{{ vpc_ec2_vpc_net.vpc.id }}"
+        vpc_id: "{{ ec2_vpc_net.vpc.id }}"
         region: "{{ aws.common.region }}"
         tags:
           Name: "{{ aws.ec2.route_table.public.name }}"
@@ -50,7 +50,7 @@
     # パブリックサブネットをルートテーブルに関連付け
     - name: Associate public subnets with route table
       amazon.aws.ec2_vpc_route_table:
-        vpc_id: "{{ vpc_ec2_vpc_net.vpc.id }}"
+        vpc_id: "{{ ec2_vpc_net.vpc.id }}"
         region: "{{ aws.common.region }}"
         route_table_id: "{{ ec2_public_rt.route_table.id }}"
         lookup: id
@@ -64,7 +64,7 @@
       amazon.aws.ec2_security_group:
         name: "{{ aws.ec2.security_group.name }}"
         description: "{{ aws.ec2.security_group.description }}"
-        vpc_id: "{{ vpc_ec2_vpc_net.vpc.id }}"
+        vpc_id: "{{ ec2_vpc_net.vpc.id }}"
         region: "{{ aws.common.region }}"
         rules:
           - proto: tcp

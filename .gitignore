@@ -78,3 +78,6 @@ coverage.*
 
 .amazonq/
 super-linter-output/
+
+# Ansible collections installed locally (not committed)
+collections/
