@@ -14,18 +14,6 @@ categories:
   - title: '🧰 Maintenance'
     labels:
       - 'dependencies'
-autolabeler:
-  - label: 'feature'
-    branch:
-      - '/^feature\/.+/'
-  - label: 'fix'
-    branch:
-      - '/^fix\/.+/'
-  - label: 'bug'
-    title:
-      - '/(^|\s)(bug|バグ)(\s|$)/i'
-    body:
-      - '/(^|\s)(bug|バグ)(\s|$)/i'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 change-title-escapes: '\<*_&' # You can add # and @ to disable mentions, and add ` to disable code blocks.
 version-resolver:
@@ -34,12 +22,10 @@ version-resolver:
       - 'major'
   minor:
     labels:
-      - 'feature'
+      - 'minor'
   patch:
     labels:
-      - 'dependencies'
-      - 'bug'
-      - 'fix'
+      - 'patch'
   default: patch
 template: |
   ## Changes
