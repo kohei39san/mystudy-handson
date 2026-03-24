@@ -24,7 +24,9 @@ tools:
   github:
     lockdown: true
     min-integrity: approved
-    github-token: ${{ secrets.GITHUB_TOKEN }}
+    github-app:
+      app-id: ${{ secrets.APP_ID }}
+      private-key: ${{ secrets.APP_PRIVATE_KEY }}
     mode: remote
     toolsets:
       - pull_requests
