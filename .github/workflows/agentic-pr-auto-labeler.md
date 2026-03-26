@@ -1,7 +1,9 @@
 ---
 on:
   pull_request:
-    types: [opened, reopened, synchronize]
+    types: [closed]
+
+if: ${{ github.event.pull_request.merged == true }}
 
 permissions:
   contents: read
@@ -14,17 +16,12 @@ safe-outputs:
   add-labels:
     max: 2
     allowed: [ feature, fix, bug, major, minor, patch ]
-  remove-labels:
-    max: 2
-    allowed: [ feature, fix, bug, major, minor, patch ]
   add-comment:
     max: 1
 
 tools:
   github:
-    lockdown: true
-    min-integrity: approved
-    github-token: ${{ secrets.GITHUB_TOKEN }}
+    min-integrity: merged
     mode: remote
     toolsets:
       - pull_requests
@@ -34,56 +31,63 @@ tools:
 ---
 # Agentic PR Auto Labeler
 
-Objective:
-- Analyze the pull request context and automatically apply the most relevant labels.
-- Target pull request: #${{ github.event.pull_request.number }}
+目的:
+- Pull Request の文脈を分析し、最も適切なラベルを自動で付与する。
+- 対象 Pull Request: #${{ github.event.pull_request.number }}
 
-Repository policy:
-- Use only labels listed in `safe-outputs.add-labels.allowed`.
-- Apply at most 1 label from the impact scope category and at most 1 label from the version category (2 labels maximum in total).
-- Exception: for dependabot PRs, apply only version category labels (no impact scope labels).
-- Prioritize precision over recall.
-- Do not create new labels.
-- After applying labels, post a comment in Japanese on the pull request explaining the reason for the label selection.
+リポジトリポリシー:
+- `safe-outputs.add-labels.allowed` に定義されたラベルのみを追加する。
+- 影響範囲カテゴリから最大1つ、バージョンカテゴリから最大1つを付与する（合計最大2ラベル）。
+- 例外として、dependabot の PR ではバージョンカテゴリのラベルのみを付与する（影響範囲カテゴリは付与しない）。
+- 再現率より適合率を優先する。
+- 新しいラベルは作成しない。
+- すでにカテゴリ内の管理対象ラベルが付与されている場合、そのカテゴリには新規ラベルを追加しない。
+- ラベル適用後、選定理由を日本語で Pull Request にコメントする。
 
-Label categories:
+ラベルカテゴリ:
 
-Impact scope (影響範囲) — choose at most 1:
-- `feature`: new capability additions.
-- `fix`: corrective changes, including specification adjustments and minor defect fixes.
-- `bug`: fixes of user-visible and reproducible defects.
+影響範囲 (Impact scope) - 最大1つ選択:
+- `feature`: 新しい機能や能力の追加。
+- `fix`: 仕様調整や軽微な不具合修正を含む、是正のための変更。
+- `bug`: ユーザー影響があり再現可能な不具合の修正。
 
-Version (バージョン) — choose at most 1:
-- `major`: breaking changes that are incompatible with previous versions.
-- `minor`: new backward-compatible features.
-- `patch`: backward-compatible bug fixes.
+バージョン (Version) - 最大1つ選択:
+- `major`: 互換性を壊す破壊的変更。
+- `minor`: 後方互換を保った新機能追加。
+- `patch`: 後方互換を保った不具合修正。
 
-Dependabot rule:
-- If the PR author is `dependabot[bot]`, apply **only** version category labels (major / minor / patch). Do not apply any impact scope labels (feature / fix / bug).
+Dependabot ルール:
+- PR 作成者が `dependabot[bot]` の場合、バージョンカテゴリ（major / minor / patch）のみを付与する。影響範囲カテゴリ（feature / fix / bug）は付与しない。
 
-Decision rules:
-1. Use PR title and body first, then changed file paths and diff summary.
-2. If the PR author is `dependabot[bot]`, skip impact scope label selection entirely and select at most 1 label from the version category only.
-3. Otherwise, select at most 1 label from the impact scope category (feature / fix / bug).
-4. Select at most 1 label from the version category (major / minor / patch).
+判定ルール:
+1. まず PR タイトルと本文を確認し、その後に変更ファイルパスと差分サマリーを参照する。
+2. 現在の PR ラベルを読み取り、管理対象セット `feature`, `fix`, `bug`, `major`, `minor`, `patch` に含まれる既存ラベルを特定する。
+3. PR 作成者が `dependabot[bot]` の場合、影響範囲カテゴリの選定は行わず、バージョンカテゴリから最大1つのみ選定する。
+4. それ以外の場合は、影響範囲カテゴリ（feature / fix / bug）から最大1つ選定する。
+5. バージョンカテゴリ（major / minor / patch）から最大1つ選定する。
+6. 影響範囲カテゴリに既存の管理対象ラベルがある場合、影響範囲カテゴリへの追加は行わない。
+7. バージョンカテゴリに既存の管理対象ラベルがある場合、バージョンカテゴリへの追加は行わない。
+8. 確信度が低い場合は、ラベル追加を行わない。
 
-Execution steps:
-1. Read PR metadata (number, title, body, author, base/head).
-2. If the PR author is `dependabot[bot]`, skip to step 5 (version label selection only).
-3. Read changed file list and inspect patch summaries to infer intent.
-4. Choose at most 1 impact scope label from the allow-list (skip this step for dependabot PRs).
-5. Choose at most 1 version label from the allow-list.
-6. Emit safe output to add labels.
-7. Post a comment in Japanese on the pull request summarising which labels were applied and why.
+実行手順:
+1. PR メタデータ（番号、タイトル、本文、作成者、base/head）を取得する。
+2. PR に現在付与されているラベルを取得する。
+3. PR 作成者が `dependabot[bot]` の場合は手順6へ進む（バージョンラベル選定のみ）。
+4. 変更ファイル一覧を取得し、パッチサマリーを確認して意図を推定する。
+5. 影響範囲カテゴリから許可リスト内のラベルを最大1つ選定する（dependabot PR ではこの手順をスキップ）。
+6. バージョンカテゴリから許可リスト内のラベルを最大1つ選定する。
+7. 各カテゴリで既存の管理対象ラベルがある場合、そのカテゴリの `labels_to_add` には何も入れない。
+8. ラベル追加の safe output を出力する。
+9. どのラベルを追加したか（または追加しなかったか）とその理由を日本語で PR コメントとして投稿する。
 
-Output contract:
-- Return strict JSON-compatible structure:
-  - labels: string[]
-  - reason: string (Japanese, posted as a PR comment)
-- `labels` must contain only allowed labels.
-- Maximum 1 label per category.
-- For dependabot PRs: `labels` must contain only version category labels.
+出力契約:
+- 厳密に JSON 互換の構造で返すこと:
+  - labels_to_add: string[]
+  - reason: string（日本語。PR コメントとして投稿）
+- `labels_to_add` は `safe-outputs.add-labels.allowed` に含まれるラベルのみとする。
+- 各カテゴリで最大1ラベルとする。
+- dependabot PR の場合、`labels_to_add` はバージョンカテゴリのラベルのみを含める。
 
-Failure handling:
-- If confidence is low, apply no labels.
-- Never apply labels outside the allow-list.
+失敗時の扱い:
+- 確信度が低い場合はラベル追加を行わない。
+- 許可リスト外のラベルは絶対に操作しない。
