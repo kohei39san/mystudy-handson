@@ -11,6 +11,9 @@ permissions:
 # Agentic workflow runs with constrained tools and explicit safe outputs.
 # Keep write operations limited and reviewable.
 safe-outputs:
+  github-app:
+    app-id: ${{ secrets.APP_ID }}
+    private-key: ${{ secrets.APP_PRIVATE_KEY }}
   add-labels:
     max: 2
     allowed: [ feature, fix, bug, major, minor, patch ]
