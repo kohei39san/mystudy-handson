@@ -67,10 +67,18 @@ jobs:
           echo "UPSTREAM_OWNER=${{ steps.upstream.outputs.upstream_owner }}" >> $GITHUB_ENV
           echo "UPSTREAM_REPO_NAME=${{ steps.upstream.outputs.upstream_repo }}" >> $GITHUB_ENV
 
+      - name: Generate GitHub App token for upstream repository
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ steps.upstream.outputs.upstream_owner }}
+
       - name: Create pull request to upstream
         uses: actions/github-script@v8
         with:
-          github-token: ${{ secrets.TARGET_REPO_PAT || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const upstreamOwner = process.env.UPSTREAM_OWNER;
             const upstreamRepo = process.env.UPSTREAM_REPO_NAME;
@@ -85,10 +93,6 @@ jobs:
             const head = `${forkOwner}:${currentBranch}`;
 
             console.log(`Creating PR from ${head} to ${upstreamOwner}/${upstreamRepo}:main`);
-
-            // Debug: Check token permissions
-            const tokenType = '${{ secrets.TARGET_REPO_PAT && 'TARGET_REPO_PAT' || 'GITHUB_TOKEN' }}';
-            console.log(`Using token: ${tokenType}`);
 
             try {
               // First, verify access to upstream repository
@@ -142,13 +146,9 @@ jobs:
               });
               
               if (error.status === 404) {
-                if (tokenType === 'GITHUB_TOKEN') {
-                  core.setFailed(`Cannot access private upstream repository with GITHUB_TOKEN. Please set TARGET_REPO_PAT secret with access to ${upstreamOwner}/${upstreamRepo}`);
-                } else {
-                  core.setFailed(`TARGET_REPO_PAT cannot access ${upstreamOwner}/${upstreamRepo}. Please check:\n1. Token has 'pull_requests: write' permission\n2. Token has access to the upstream repository\n3. Repository exists and is accessible`);
-                }
+                core.setFailed(`Cannot access upstream repository ${upstreamOwner}/${upstreamRepo}. Please ensure the GitHub App is installed on the upstream repository.`);
               } else if (error.status === 403) {
-                core.setFailed(`Permission denied. TARGET_REPO_PAT needs 'pull_requests: write' permission for ${upstreamOwner}/${upstreamRepo}`);
+                core.setFailed(`Permission denied. GitHub App needs 'pull_requests: write' permission for ${upstreamOwner}/${upstreamRepo}`);
               } else if (error.status === 422) {
                 console.log('Note: A pull request may already exist or no changes were detected');
               } else {
