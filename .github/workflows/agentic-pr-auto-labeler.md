@@ -25,7 +25,7 @@ safe-outputs:
 
 tools:
   github:
-    lockdown: true
+    lockdown: false
     min-integrity: approved
     github-app:
       app-id: ${{ secrets.APP_ID }}
