@@ -29,6 +29,42 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      aws-cdk:
+        patterns:
+          - "aws-cdk"
+          - "aws-cdk-lib"
+          - "constructs"
+        update-types:
+          - "minor"
+          - "patch"
+      other-npm:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@aws-sdk/*"
+          - "aws-cdk"
+          - "aws-cdk-lib"
+          - "constructs"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "pip"
+    directories:
+      - "**/*"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "18:00"
+      timezone: "Asia/Tokyo"
+    target-branch: main
+    open-pull-requests-limit: 1000
+    groups:
+      all-pip:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: terraform
     directories: 
       - "**/*"
