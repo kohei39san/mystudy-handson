@@ -32,7 +32,7 @@
   "dependencies": {
     "@aws-sdk/client-ssm": "^3.980.0",
     "aws-cdk-lib": "^2.243.0",
-    "constructs": "^10.4.5"
+    "constructs": "^10.6.0"
   },
   "overrides": {
     "fast-xml-parser": "^5.5.6",
