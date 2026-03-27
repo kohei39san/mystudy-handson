@@ -7,6 +7,8 @@ updates:
     schedule:
       # Check for updates to GitHub Actions every week
       interval: "weekly"
+      day: "monday"
+      time: "18:00"
     target-branch: main
     open-pull-requests-limit: 1000
   - package-ecosystem: "npm"
@@ -14,6 +16,8 @@ updates:
       - "**/*"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "18:00"
     target-branch: main
     open-pull-requests-limit: 10
     groups:
@@ -28,6 +32,8 @@ updates:
       - "**/*"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "18:00"
     target-branch: main
     open-pull-requests-limit: 1000
     ignore:
