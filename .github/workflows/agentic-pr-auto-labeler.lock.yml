@@ -33,7 +33,7 @@ permissions: {}
 
 concurrency:
   group: "gh-aw-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref || github.run_id }}"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 run-name: "Agentic PR Auto Labeler"
 
@@ -41,7 +41,7 @@ jobs:
   activation:
     needs: pre_activation
     if: >
-      needs.pre_activation.outputs.activated == 'true' && ((${{ github.event.pull_request.merged == true }}) &&
+      needs.pre_activation.outputs.activated == 'true' && ((!endsWith(github.actor, '[bot]')) && (${{ github.event.pull_request.merged == true }}) &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.id == github.repository_id))
     runs-on: ubuntu-slim
     permissions:
@@ -1004,7 +1004,7 @@ jobs:
 
   pre_activation:
     if: >
-      (${{ github.event.pull_request.merged == true }}) && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.id == github.repository_id)
+      (!endsWith(github.actor, '[bot]')) && (${{ github.event.pull_request.merged == true }}) && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.id == github.repository_id)
     runs-on: ubuntu-slim
     outputs:
       activated: ${{ steps.check_membership.outputs.is_team_member == 'true' }}

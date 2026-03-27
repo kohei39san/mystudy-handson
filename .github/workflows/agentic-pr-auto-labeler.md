@@ -3,7 +3,11 @@ on:
   pull_request:
     types: [closed]
 
-if: ${{ github.event.pull_request.merged == true }}
+if: ${{ github.event.pull_request.merged == true && !endsWith(github.actor, '[bot]') }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 engine: copilot
 
