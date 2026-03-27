@@ -3,7 +3,7 @@ on:
   pull_request:
     types: [closed]
 
-if: ${{ github.event.pull_request.merged == true && !endsWith(github.actor, '[bot]') }}
+if: ${{ github.event.pull_request.merged == true && github.actor != 'dependabot[bot]' }}
 
 concurrency:
   group: agentic-workflows
