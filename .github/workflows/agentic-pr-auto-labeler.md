@@ -8,7 +8,7 @@ if: ${{ github.event.pull_request.merged == true }}
 engine: copilot
 
 checkout:
-  fetch-depth: 1
+  fetch-depth: ${{ github.event.pull_request.commits }}
 
 permissions:
   contents: read
