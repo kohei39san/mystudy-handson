@@ -8,7 +8,6 @@ if: ${{ github.event.pull_request.merged == true }}
 engine: copilot
 
 checkout:
-  ref: main
   fetch-depth: 1
 
 permissions:
