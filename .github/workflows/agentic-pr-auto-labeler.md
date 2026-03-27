@@ -3,8 +3,13 @@ on:
   pull_request:
     types: [closed]
 
-engine: copilot
 if: ${{ github.event.pull_request.merged == true }}
+
+engine: copilot
+
+checkout:
+  ref: main
+  fetch-depth: 1
 
 permissions:
   contents: read
