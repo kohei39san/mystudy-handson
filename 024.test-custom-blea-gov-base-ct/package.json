@@ -30,7 +30,7 @@
     "typescript": "~6.0.2"
   },
   "dependencies": {
-    "@aws-sdk/client-ssm": "^3.1018.0",
+    "@aws-sdk/client-ssm": "^3.1019.0",
     "aws-cdk-lib": "^2.244.0",
     "constructs": "^10.6.0"
   },
