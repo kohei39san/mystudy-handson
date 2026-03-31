@@ -17,7 +17,7 @@
 
 各番号付きディレクトリには、特定のインフラストラクチャ構成が含まれています：
 
-* **001-038**: 各種インフラストラクチャのサンプル構成
+* **001-039**: 各種インフラストラクチャのサンプル構成
   * **AWS Terraform構成**:
     - **001.ec2-ec2,ec2**: EC2踏み台サーバーとプライベートサーバー構成
     - **002.ec2windows**: Windows EC2インスタンス構成
@@ -41,6 +41,7 @@
     - **023.bedrock-rag-agent-in-slack**: Bedrock RAGエージェント Slack連携
     - **030.apigateway-cognito-lambda-payload**: API Gateway + Cognito + Lambda構成
     - **035.aurora-mock-testing**: Aurora モックテスト環境
+    - **039.step-functions-nested-state-machine**: Step Functions ネストされたステートマシン
   * **OCI Terraform構成**:
     - **028.oci-bucket-tfstate**: Object Storage（Terraformステート管理用）
     - **029.oci-cost-alert**: Budget（コストアラート）
@@ -87,7 +88,7 @@
 * **001-010**: 基本的なEC2、RDS構成
 * **011-020**: CloudFormation、特殊構成
 * **021-030**: Lambda、API Gateway、高度な構成
-* **031-038**: 特殊用途、テスト構成
+* **031-039**: 特殊用途、テスト構成
 
 ### 各ディレクトリの共通構造
 
