@@ -7,6 +7,9 @@ updates:
     schedule:
       # Check for updates to GitHub Actions every week
       interval: "weekly"
+      day: "monday"
+      time: "18:00"
+      timezone: "Asia/Tokyo"
     target-branch: main
     open-pull-requests-limit: 1000
   - package-ecosystem: "npm"
@@ -14,6 +17,9 @@ updates:
       - "**/*"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "18:00"
+      timezone: "Asia/Tokyo"
     target-branch: main
     open-pull-requests-limit: 10
     groups:
@@ -23,11 +29,50 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      aws-cdk:
+        patterns:
+          - "aws-cdk"
+          - "aws-cdk-lib"
+          - "constructs"
+        update-types:
+          - "minor"
+          - "patch"
+      other-npm:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@aws-sdk/*"
+          - "aws-cdk"
+          - "aws-cdk-lib"
+          - "constructs"
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "pip"
+    directories:
+      - "**/*"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "18:00"
+      timezone: "Asia/Tokyo"
+    target-branch: main
+    open-pull-requests-limit: 1000
+    groups:
+      all-pip:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: terraform
     directories: 
       - "**/*"
     schedule:
       interval: "weekly"
+      day: "monday"
+      time: "18:00"
+      timezone: "Asia/Tokyo"
     target-branch: main
     open-pull-requests-limit: 1000
     ignore:
