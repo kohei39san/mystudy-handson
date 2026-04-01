@@ -3,7 +3,16 @@ on:
   pull_request:
     types: [closed]
 
-if: ${{ github.event.pull_request.merged == true }}
+if: github.event.pull_request.merged == true && github.event.pull_request.user.name != 'dependabot[bot]'
+
+concurrency:
+  group: agentic-workflows
+  cancel-in-progress: false
+
+engine: copilot
+
+checkout:
+  ref: main
 
 permissions:
   contents: read
