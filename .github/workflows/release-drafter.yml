@@ -5,6 +5,7 @@ on:
     workflows: ["Agentic PR Auto Labeler"]
     types:
       - completed
+  workflow_dispatch:
 
 permissions:
   contents: read
