@@ -1,17 +1,17 @@
 name: Release Drafter
 
 on:
-  push:
-    # branches to consider in the event; optional, defaults to all
-    branches:
-      - main
-      - master
+  workflow_run:
+    workflows: ["Agentic PR Auto Labeler"]
+    types:
+      - completed
 
 permissions:
   contents: read
 
 jobs:
   update_release_draft:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
       # write permission is required to create a github release
       contents: write
