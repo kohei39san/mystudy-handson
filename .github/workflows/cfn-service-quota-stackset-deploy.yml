@@ -1,0 +1,264 @@
+name: CloudFormation Service Quota Monitoring Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'デプロイ結果をコメントするIssue番号'
+        required: true
+        type: string
+      deploy_type:
+        description: 'デプロイ種別'
+        required: true
+        type: choice
+        options:
+          - stack
+          - stackset
+        default: stack
+      region:
+        description: 'デプロイ先AWSリージョン'
+        required: true
+        type: string
+        default: 'ap-northeast-1'
+      stack_name:
+        description: 'スタック名またはStackSet名'
+        required: true
+        type: string
+        default: 'service-quota-monitoring'
+      threshold_percent:
+        description: 'クォータ使用率アラームしきい値 (%)'
+        required: true
+        type: string
+        default: '80'
+      notification_email:
+        description: '通知先メールアドレス (任意)'
+        required: false
+        type: string
+        default: ''
+      ec2_vcpu_quota:
+        description: 'EC2 On-Demand 標準 vCPU クォータ上限'
+        required: false
+        type: string
+        default: '32'
+      lambda_concurrency_quota:
+        description: 'Lambda 同時実行数クォータ上限'
+        required: false
+        type: string
+        default: '1000'
+      ou_ids:
+        description: 'StackSet デプロイ対象 OU ID (カンマ区切り, stackset のみ)'
+        required: false
+        type: string
+        default: ''
+      account_ids:
+        description: 'StackSet デプロイ対象 アカウント ID (カンマ区切り, stackset のみ)'
+        required: false
+        type: string
+        default: ''
+      stackset_regions:
+        description: 'StackSet インスタンス作成リージョン (カンマ区切り, stackset のみ)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  deploy:
+    name: Deploy Service Quota Monitoring
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ github.event.inputs.region }}
+          mask-aws-account-id: true
+
+      - name: Set working directory
+        run: |
+          DIRECTORY=$(find . -maxdepth 1 -type d -name "040*" -printf "%f\n" | head -1)
+          if [ -z "$DIRECTORY" ]; then
+            echo "Error: 040.cloudwatch-service-quota-monitoring directory not found"
+            exit 1
+          fi
+          echo "WORKING_DIRECTORY=${DIRECTORY}" >> "$GITHUB_ENV"
+
+      - name: Validate CloudFormation template
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          aws cloudformation validate-template \
+            --template-body file://cfn/stackset-template.yaml \
+            --region ${{ github.event.inputs.region }}
+          echo "テンプレートの検証に成功しました"
+
+      - name: Build parameter overrides
+        id: params
+        run: |
+          PARAMS="ParameterKey=ThresholdPercent,ParameterValue=${{ github.event.inputs.threshold_percent }}"
+          PARAMS="${PARAMS} ParameterKey=EC2StandardVCPUQuota,ParameterValue=${{ github.event.inputs.ec2_vcpu_quota }}"
+          PARAMS="${PARAMS} ParameterKey=LambdaConcurrentExecutionsQuota,ParameterValue=${{ github.event.inputs.lambda_concurrency_quota }}"
+          if [ -n "${{ github.event.inputs.notification_email }}" ]; then
+            PARAMS="${PARAMS} ParameterKey=NotificationEmail,ParameterValue=${{ github.event.inputs.notification_email }}"
+          fi
+          echo "params=${PARAMS}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy CloudFormation Stack
+        if: github.event.inputs.deploy_type == 'stack'
+        id: deploy_stack
+        env:
+          STACK_NAME: ${{ github.event.inputs.stack_name }}
+          REGION: ${{ github.event.inputs.region }}
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          aws cloudformation deploy \
+            --template-file cfn/stackset-template.yaml \
+            --stack-name "${STACK_NAME}" \
+            --parameter-overrides ${{ steps.params.outputs.params }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --region "${REGION}" \
+            --no-fail-on-empty-changeset
+
+          echo "stack_status=success" >> "$GITHUB_OUTPUT"
+
+          OUTPUTS=$(aws cloudformation describe-stacks \
+            --stack-name "${STACK_NAME}" \
+            --region "${REGION}" \
+            --query 'Stacks[0].Outputs[*].[OutputKey,OutputValue]' \
+            --output text)
+          echo "stack_outputs<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${OUTPUTS}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create or Update CloudFormation StackSet
+        if: github.event.inputs.deploy_type == 'stackset'
+        id: deploy_stackset
+        env:
+          STACKSET_NAME: ${{ github.event.inputs.stack_name }}
+          REGION: ${{ github.event.inputs.region }}
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          if aws cloudformation describe-stack-set \
+              --stack-set-name "${STACKSET_NAME}" \
+              --region "${REGION}" &>/dev/null; then
+            echo "StackSet '${STACKSET_NAME}' は既に存在します。更新中..."
+            aws cloudformation update-stack-set \
+              --stack-set-name "${STACKSET_NAME}" \
+              --template-body file://cfn/stackset-template.yaml \
+              --parameter-overrides ${{ steps.params.outputs.params }} \
+              --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+              --region "${REGION}"
+            echo "stackset_action=updated" >> "$GITHUB_OUTPUT"
+          else
+            echo "StackSet '${STACKSET_NAME}' を作成中..."
+            aws cloudformation create-stack-set \
+              --stack-set-name "${STACKSET_NAME}" \
+              --template-body file://cfn/stackset-template.yaml \
+              --parameter-overrides ${{ steps.params.outputs.params }} \
+              --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+              --region "${REGION}"
+            echo "stackset_action=created" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Add StackSet Instances
+        if: >
+          github.event.inputs.deploy_type == 'stackset' &&
+          (github.event.inputs.ou_ids != '' || github.event.inputs.account_ids != '')
+        id: add_instances
+        env:
+          STACKSET_NAME: ${{ github.event.inputs.stack_name }}
+          REGION: ${{ github.event.inputs.region }}
+          STACKSET_REGIONS: ${{ github.event.inputs.stackset_regions }}
+          OU_IDS: ${{ github.event.inputs.ou_ids }}
+          ACCOUNT_IDS: ${{ github.event.inputs.account_ids }}
+        run: |
+          if [ -z "${STACKSET_REGIONS}" ]; then
+            STACKSET_REGIONS="${REGION}"
+          fi
+
+          if [ -n "${OU_IDS}" ]; then
+            echo "OU へ StackSet インスタンスを追加中: ${OU_IDS}"
+            # Convert comma-separated OU IDs to JSON array
+            IFS=',' read -ra OU_ARRAY <<< "${OU_IDS}"
+            OU_JSON=$(printf '"%s",' "${OU_ARRAY[@]}" | sed 's/,$//')
+            aws cloudformation create-stack-instances \
+              --stack-set-name "${STACKSET_NAME}" \
+              --regions ${STACKSET_REGIONS//,/ } \
+              --deployment-targets "{\"OrganizationalUnitIds\":[${OU_JSON}]}" \
+              --operation-preferences "FailureToleranceCount=0,MaxConcurrentCount=5" \
+              --region "${REGION}"
+          elif [ -n "${ACCOUNT_IDS}" ]; then
+            echo "アカウントへ StackSet インスタンスを追加中: ${ACCOUNT_IDS}"
+            aws cloudformation create-stack-instances \
+              --stack-set-name "${STACKSET_NAME}" \
+              --accounts ${ACCOUNT_IDS//,/ } \
+              --regions ${STACKSET_REGIONS//,/ } \
+              --operation-preferences "FailureToleranceCount=0,MaxConcurrentCount=5" \
+              --region "${REGION}"
+          fi
+          echo "instances_added=true" >> "$GITHUB_OUTPUT"
+
+      - name: Post deployment result to Issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_TYPE: ${{ github.event.inputs.deploy_type }}
+          STACK_NAME: ${{ github.event.inputs.stack_name }}
+          REGION: ${{ github.event.inputs.region }}
+          THRESHOLD: ${{ github.event.inputs.threshold_percent }}
+          ISSUE_NUMBER: ${{ github.event.inputs.issue_number }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STACK_OUTPUTS: ${{ steps.deploy_stack.outputs.stack_outputs }}
+        run: |
+          if [ "${JOB_STATUS}" = "success" ]; then
+            STATUS_ICON="✅"
+            STATUS_TEXT="成功"
+          else
+            STATUS_ICON="❌"
+            STATUS_TEXT="失敗"
+          fi
+
+          if [ "${DEPLOY_TYPE}" = "stack" ]; then
+            DEPLOY_TYPE_TEXT="CloudFormation スタック"
+          else
+            DEPLOY_TYPE_TEXT="CloudFormation StackSet"
+          fi
+
+          {
+            echo "${STATUS_ICON} **サービスクォータ監視のデプロイが${STATUS_TEXT}しました**"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|------|-----|"
+            echo "| デプロイ種別 | ${DEPLOY_TYPE_TEXT} |"
+            echo "| スタック/StackSet 名 | \`${STACK_NAME}\` |"
+            echo "| リージョン | \`${REGION}\` |"
+            echo "| アラームしきい値 | ${THRESHOLD}% |"
+            echo "| ワークフロー実行 | [#${RUN_NUMBER}](${RUN_URL}) |"
+            echo ""
+            echo "**監視対象クォータ:**"
+            echo "- VPCs per Region"
+            echo "- EC2-VPC Elastic IPs"
+            echo "- RDS DB instances"
+            echo "- EC2 On-Demand Standard vCPU (AWS/Usage メトリクス)"
+            echo "- Lambda Concurrent Executions (AWS/Lambda メトリクス)"
+            if [ "${DEPLOY_TYPE}" = "stack" ] && [ -n "${STACK_OUTPUTS}" ]; then
+              echo ""
+              echo "**スタック出力:**"
+              echo "\`\`\`"
+              echo "${STACK_OUTPUTS}"
+              echo "\`\`\`"
+            fi
+          } > /tmp/comment_body.txt
+
+          gh issue comment "${ISSUE_NUMBER}" \
+            --repo "${{ github.repository }}" \
+            --body-file /tmp/comment_body.txt

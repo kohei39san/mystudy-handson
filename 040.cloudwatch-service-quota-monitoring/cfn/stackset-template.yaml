@@ -1,0 +1,384 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudWatch StackSet for monitoring AWS Service Quotas'
+
+Parameters:
+  ThresholdPercent:
+    Type: Number
+    Default: 80
+    MinValue: 1
+    MaxValue: 100
+    Description: 'Percentage of service quota to trigger alarm (1-100)'
+
+  MonitoringSchedule:
+    Type: String
+    Default: 'rate(1 hour)'
+    Description: 'EventBridge schedule expression for monitoring Lambda (e.g., rate(1 hour), cron(0 * * * ? *))'
+
+  NotificationEmail:
+    Type: String
+    Default: ''
+    Description: 'Email address for alarm notifications. Leave empty to skip email subscription.'
+
+  ExistingTopicArn:
+    Type: String
+    Default: ''
+    Description: 'Existing SNS Topic ARN for notifications. If empty, a new topic will be created.'
+
+  EC2StandardVCPUQuota:
+    Type: Number
+    Default: 32
+    Description: 'EC2 On-Demand Standard (A, C, D, H, I, M, R, T, Z) vCPU quota limit for this account/region'
+
+  LambdaConcurrentExecutionsQuota:
+    Type: Number
+    Default: 1000
+    Description: 'Lambda concurrent executions quota limit for this account/region'
+
+Conditions:
+  CreateTopic: !Equals [!Ref ExistingTopicArn, '']
+  HasEmail: !Not [!Equals [!Ref NotificationEmail, '']]
+
+Resources:
+  # SNS Topic for notifications
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Condition: CreateTopic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-service-quota-alerts'
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+
+  # Email subscription for alert topic
+  AlertTopicEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasEmail
+    Properties:
+      TopicArn: !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
+  # IAM Role for Lambda
+  QuotaMonitorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-quota-monitor-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: QuotaMonitorPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - servicequotas:GetServiceQuota
+                  - ec2:DescribeVpcs
+                  - ec2:DescribeAddresses
+                  - rds:DescribeDBInstances
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+
+  # Lambda function to collect quota usage metrics
+  QuotaMonitorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-quota-monitor'
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt QuotaMonitorRole.Arn
+      Timeout: 300
+      MemorySize: 128
+      Environment:
+        Variables:
+          METRIC_NAMESPACE: !Sub '${AWS::StackName}/ServiceQuotas'
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          from datetime import datetime, timezone
+
+          QUOTAS = [
+              {
+                  'service_code': 'vpc',
+                  'quota_code': 'L-F678F1CE',
+                  'quota_name': 'VPCs per Region',
+                  'resource_type': 'vpcs',
+              },
+              {
+                  'service_code': 'ec2',
+                  'quota_code': 'L-0263D0A3',
+                  'quota_name': 'EC2-VPC Elastic IPs',
+                  'resource_type': 'eips',
+              },
+              {
+                  'service_code': 'rds',
+                  'quota_code': 'L-7B6409FD',
+                  'quota_name': 'DB instances',
+                  'resource_type': 'rds-instances',
+              },
+          ]
+
+
+          def get_resource_count(resource_type, ec2_client, rds_client):
+              if resource_type == 'vpcs':
+                  total = 0
+                  paginator = ec2_client.get_paginator('describe_vpcs')
+                  for page in paginator.paginate():
+                      total += len(page['Vpcs'])
+                  return total
+              if resource_type == 'eips':
+                  return len(ec2_client.describe_addresses()['Addresses'])
+              if resource_type == 'rds-instances':
+                  instances = []
+                  paginator = rds_client.get_paginator('describe_db_instances')
+                  for page in paginator.paginate():
+                      instances.extend(page['DBInstances'])
+                  return len(instances)
+              return 0
+
+
+          def handler(event, context):
+              namespace = os.environ['METRIC_NAMESPACE']
+              ec2 = boto3.client('ec2')
+              rds = boto3.client('rds')
+              sq = boto3.client('service-quotas')
+              cw = boto3.client('cloudwatch')
+              results = []
+              timestamp = datetime.now(timezone.utc)
+
+              for q in QUOTAS:
+                  try:
+                      resp = sq.get_service_quota(
+                          ServiceCode=q['service_code'],
+                          QuotaCode=q['quota_code'],
+                      )
+                      limit = resp['Quota']['Value']
+                      usage = get_resource_count(q['resource_type'], ec2, rds)
+                      pct = round((usage / limit) * 100, 2) if limit > 0 else 0
+
+                      cw.put_metric_data(
+                          Namespace=namespace,
+                          MetricData=[
+                              {
+                                  'MetricName': 'UsagePercentage',
+                                  'Dimensions': [
+                                      {'Name': 'ServiceCode', 'Value': q['service_code']},
+                                      {'Name': 'QuotaCode', 'Value': q['quota_code']},
+                                      {'Name': 'QuotaName', 'Value': q['quota_name']},
+                                  ],
+                                  'Value': pct,
+                                  'Unit': 'Percent',
+                                  'Timestamp': timestamp,
+                              }
+                          ],
+                      )
+                      results.append(
+                          {'quota': q['quota_name'], 'usage': usage, 'limit': limit, 'percentage': pct}
+                      )
+                      print(f"{q['quota_name']}: {usage}/{int(limit)} ({pct}%)")
+
+                  except Exception as e:
+                      print(f"Error processing {q['quota_name']}: {e}")
+
+              return {'statusCode': 200, 'results': results}
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+
+  # EventBridge rule to schedule Lambda
+  MonitoringScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub '${AWS::StackName}-monitoring-schedule'
+      Description: 'Schedule for service quota monitoring Lambda'
+      ScheduleExpression: !Ref MonitoringSchedule
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt QuotaMonitorFunction.Arn
+          Id: QuotaMonitorTarget
+
+  # Lambda permission for EventBridge
+  LambdaEventBridgePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt QuotaMonitorFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt MonitoringScheduleRule.Arn
+
+  # CloudWatch Alarm: VPC quota usage (custom metric)
+  VPCQuotaAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-VPC-Quota-High'
+      AlarmDescription: !Sub 'VPC count exceeds ${ThresholdPercent}% of quota limit'
+      Namespace: !Sub '${AWS::StackName}/ServiceQuotas'
+      MetricName: UsagePercentage
+      Dimensions:
+        - Name: ServiceCode
+          Value: vpc
+        - Name: QuotaCode
+          Value: L-F678F1CE
+        - Name: QuotaName
+          Value: VPCs per Region
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: !Ref ThresholdPercent
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Statistic: Maximum
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+      OKActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+
+  # CloudWatch Alarm: Elastic IP quota usage (custom metric)
+  EIPQuotaAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-EIP-Quota-High'
+      AlarmDescription: !Sub 'Elastic IP count exceeds ${ThresholdPercent}% of quota limit'
+      Namespace: !Sub '${AWS::StackName}/ServiceQuotas'
+      MetricName: UsagePercentage
+      Dimensions:
+        - Name: ServiceCode
+          Value: ec2
+        - Name: QuotaCode
+          Value: L-0263D0A3
+        - Name: QuotaName
+          Value: EC2-VPC Elastic IPs
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: !Ref ThresholdPercent
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Statistic: Maximum
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+      OKActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+
+  # CloudWatch Alarm: RDS instance quota usage (custom metric)
+  RDSInstanceQuotaAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-RDS-Instance-Quota-High'
+      AlarmDescription: !Sub 'RDS instance count exceeds ${ThresholdPercent}% of quota limit'
+      Namespace: !Sub '${AWS::StackName}/ServiceQuotas'
+      MetricName: UsagePercentage
+      Dimensions:
+        - Name: ServiceCode
+          Value: rds
+        - Name: QuotaCode
+          Value: L-7B6409FD
+        - Name: QuotaName
+          Value: DB instances
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: !Ref ThresholdPercent
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Statistic: Maximum
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+      OKActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+
+  # CloudWatch Alarm: EC2 On-Demand Standard vCPU (native AWS/Usage metric with math expression)
+  EC2VCPUQuotaAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-EC2-OnDemand-vCPU-Quota-High'
+      AlarmDescription: !Sub 'EC2 On-Demand Standard vCPU usage exceeds ${ThresholdPercent}% of quota limit'
+      Metrics:
+        - Id: usage
+          MetricStat:
+            Metric:
+              Namespace: AWS/Usage
+              MetricName: ResourceCount
+              Dimensions:
+                - Name: Service
+                  Value: EC2
+                - Name: Resource
+                  Value: vCPU
+                - Name: Type
+                  Value: Resource
+                - Name: Class
+                  Value: Standard/On-Demand
+            Period: 3600
+            Stat: Maximum
+          ReturnData: false
+        - Id: quota
+          Expression: !Sub '${EC2StandardVCPUQuota}'
+          ReturnData: false
+        - Id: percentage
+          Expression: '(usage / quota) * 100'
+          ReturnData: true
+          Label: EC2 On-Demand vCPU Usage Percentage
+      EvaluationPeriods: 1
+      Threshold: !Ref ThresholdPercent
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+      OKActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+
+  # CloudWatch Alarm: Lambda concurrent executions (native AWS/Lambda metric with math expression)
+  LambdaConcurrencyQuotaAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub '${AWS::StackName}-Lambda-ConcurrentExecutions-Quota-High'
+      AlarmDescription: !Sub 'Lambda concurrent executions exceeds ${ThresholdPercent}% of quota limit'
+      Metrics:
+        - Id: usage
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: ConcurrentExecutions
+            Period: 300
+            Stat: Maximum
+          ReturnData: false
+        - Id: quota
+          Expression: !Sub '${LambdaConcurrentExecutionsQuota}'
+          ReturnData: false
+        - Id: percentage
+          Expression: '(usage / quota) * 100'
+          ReturnData: true
+          Label: Lambda Concurrent Executions Usage Percentage
+      EvaluationPeriods: 1
+      Threshold: !Ref ThresholdPercent
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+      OKActions:
+        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+
+Outputs:
+  AlertTopicArn:
+    Description: 'SNS Topic ARN for service quota alerts'
+    Value: !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+
+  QuotaMonitorFunctionArn:
+    Description: 'ARN of the quota monitoring Lambda function'
+    Value: !GetAtt QuotaMonitorFunction.Arn
+
+  MetricNamespace:
+    Description: 'CloudWatch namespace for custom quota metrics'
+    Value: !Sub '${AWS::StackName}/ServiceQuotas'
+
+  MonitoringScheduleRuleArn:
+    Description: 'ARN of the EventBridge rule for monitoring schedule'
+    Value: !GetAtt MonitoringScheduleRule.Arn
