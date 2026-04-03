@@ -1,7 +1,8 @@
 ---
 description: Weekly agentic workflow to detect outdated documentation, update files, and open a pull request.
 on:
-  schedule: weekly
+  schedule:
+    - cron: "0 9 * * 1"
   skip-if-match: 'is:pr is:open in:title "docs: weekly documentation refresh"'
 engine: copilot
 permissions:
