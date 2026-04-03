@@ -4,10 +4,6 @@ permissions:
   contents: read
 
 on:
-  push:
-    paths:
-      - ".github/workflows/**"
-      - "!.github/workflows/*.md"
   pull_request:
     paths:
       - ".github/workflows/**"
