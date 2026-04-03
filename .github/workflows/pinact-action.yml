@@ -8,12 +8,10 @@ on:
     paths:
       - ".github/workflows/**"
       - "!.github/workflows/*.md"
-      - "!.github/workflows/*.lock.yml"
   pull_request:
     paths:
       - ".github/workflows/**"
       - "!.github/workflows/*.md"
-      - "!.github/workflows/*.lock.yml"
 
 jobs:
   pinact:
@@ -28,4 +26,6 @@ jobs:
       - name: Check GitHub Actions are pinned
         uses: suzuki-shunsuke/pinact-action@cf51507d80d4d6522a07348e3d58790290eaf0b6 # v2.0.0
         with:
-          skip_push: "true"
+          skip_push: "false"
+          app_id: ${{secrets.APP_ID}}
+          app_private_key: ${{secrets.APP_PRIVATE_KEY}}
