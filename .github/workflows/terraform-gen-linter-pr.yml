@@ -18,23 +18,23 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
         with:
           terraform_version: latest
 
       - name: Format Terraform files
         run: terraform fmt -recursive
 
-      - uses: actions/cache@v5
+      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         name: Cache plugin dir for TFLint
         with:
           path: ~/.tflint.d/plugins
           key: ubuntu-latest-tflint-${{ hashFiles('.tflint.hcl') }}
 
-      - uses: terraform-linters/setup-tflint@v6
+      - uses: terraform-linters/setup-tflint@b480b8fcdaa6f2c577f8e4fa799e89e756bb7c93 # v6.2.2
         name: Setup TFLint
         with:
           tflint_version: "latest"
@@ -86,7 +86,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.git_diff.outputs.changes == 'changes'
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: main
