@@ -10,6 +10,8 @@
 - GitHub Actions 自動マージワークフロー
 
 ## アーキテクチャ
+![構成図](src/architecture.svg)
+
 
 ### 主要コンポーネント
 
