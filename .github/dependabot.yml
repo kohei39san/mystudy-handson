@@ -12,6 +12,10 @@ updates:
       timezone: "Asia/Tokyo"
     target-branch: main
     open-pull-requests-limit: 1000
+    cooldown:
+      semver-patch-days: 7
+      semver-minor-days: 14
+      semver-major-days: 30
   - package-ecosystem: "npm"
     directories:
       - "**/*"
@@ -22,6 +26,10 @@ updates:
       timezone: "Asia/Tokyo"
     target-branch: main
     open-pull-requests-limit: 10
+    cooldown:
+      semver-patch-days: 7
+      semver-minor-days: 14
+      semver-major-days: 30
     groups:
       aws-sdk:
         patterns:
@@ -58,6 +66,10 @@ updates:
       timezone: "Asia/Tokyo"
     target-branch: main
     open-pull-requests-limit: 1000
+    cooldown:
+      semver-patch-days: 7
+      semver-minor-days: 14
+      semver-major-days: 30
     groups:
       all-pip:
         patterns:
@@ -75,6 +87,10 @@ updates:
       timezone: "Asia/Tokyo"
     target-branch: main
     open-pull-requests-limit: 1000
+    cooldown:
+      semver-patch-days: 7
+      semver-minor-days: 14
+      semver-major-days: 30
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
