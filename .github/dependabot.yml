@@ -13,9 +13,7 @@ updates:
     target-branch: main
     open-pull-requests-limit: 1000
     cooldown:
-      semver-patch-days: 7
-      semver-minor-days: 14
-      semver-major-days: 30
+      default-days: 7
   - package-ecosystem: "npm"
     directories:
       - "**/*"
@@ -88,9 +86,7 @@ updates:
     target-branch: main
     open-pull-requests-limit: 1000
     cooldown:
-      semver-patch-days: 7
-      semver-minor-days: 14
-      semver-major-days: 30
+      default-days: 7
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
