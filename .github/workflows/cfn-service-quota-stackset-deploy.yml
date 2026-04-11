@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       issue_number:
-        description: 'デプロイ結果をコメントするIssue番号'
+        description: "デプロイ結果をコメントするIssue番号"
         required: true
         type: string
       deploy_type:
-        description: 'デプロイ種別'
+        description: "デプロイ種別"
         required: true
         type: choice
         options:
@@ -16,50 +16,50 @@ on:
           - stackset
         default: stack
       region:
-        description: 'デプロイ先AWSリージョン'
+        description: "デプロイ先AWSリージョン"
         required: true
         type: string
-        default: 'ap-northeast-1'
+        default: "ap-northeast-1"
       stack_name:
-        description: 'スタック名またはStackSet名'
+        description: "スタック名またはStackSet名"
         required: true
         type: string
-        default: 'service-quota-monitoring'
+        default: "service-quota-monitoring"
       threshold_percent:
-        description: 'クォータ使用率アラームしきい値 (%)'
+        description: "クォータ使用率アラームしきい値 (%)"
         required: true
         type: string
-        default: '80'
+        default: "80"
       notification_email:
-        description: '通知先メールアドレス (任意)'
+        description: "通知先メールアドレス (任意)"
         required: false
         type: string
-        default: ''
+        default: ""
       ec2_vcpu_quota:
-        description: 'EC2 On-Demand 標準 vCPU クォータ上限'
+        description: "EC2 On-Demand 標準 vCPU クォータ上限"
         required: false
         type: string
-        default: '32'
+        default: "32"
       lambda_concurrency_quota:
-        description: 'Lambda 同時実行数クォータ上限'
+        description: "Lambda 同時実行数クォータ上限"
         required: false
         type: string
-        default: '1000'
+        default: "1000"
       ou_ids:
-        description: 'StackSet デプロイ対象 OU ID (カンマ区切り, stackset のみ)'
+        description: "StackSet デプロイ対象 OU ID (カンマ区切り, stackset のみ)"
         required: false
         type: string
-        default: ''
+        default: ""
       account_ids:
-        description: 'StackSet デプロイ対象 アカウント ID (カンマ区切り, stackset のみ)'
+        description: "StackSet デプロイ対象 アカウント ID (カンマ区切り, stackset のみ)"
         required: false
         type: string
-        default: ''
+        default: ""
       stackset_regions:
-        description: 'StackSet インスタンス作成リージョン (カンマ区切り, stackset のみ)'
+        description: "StackSet インスタンス作成リージョン (カンマ区切り, stackset のみ)"
         required: false
         type: string
-        default: ''
+        default: ""
 
 permissions:
   id-token: write
