@@ -1,0 +1,17 @@
+{
+  "provider": "gcp",
+  "resource_type": "cloudrun",
+  "resource_id": "projects/my-project/locations/us-central1/services/my-service",
+  "internet_reachability": "reachable",
+  "private_reachability": "reachable",
+  "reasons": [
+    "ingress=all",
+    "allow_unauthenticated=true"
+  ],
+  "observed": {
+    "ingress": "all",
+    "allow_unauthenticated": true,
+    "url": "https://my-service-abcdef-uc.a.run.app",
+    "location": "us-central1"
+  }
+}

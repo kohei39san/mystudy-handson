@@ -1,0 +1,23 @@
+{
+  "provider": "gcp",
+  "resource_type": "cloudsql",
+  "resource_id": "projects/my-project/instances/my-db",
+  "internet_reachability": "reachable",
+  "private_reachability": "reachable",
+  "reasons": [
+    "db_state=RUNNABLE",
+    "has_public_ip=true",
+    "has_private_ip=true",
+    "authorized_networks=203.0.113.0/24",
+    "private_network=default"
+  ],
+  "observed": {
+    "db_state": "RUNNABLE",
+    "has_public_ip": true,
+    "has_private_ip": true,
+    "public_ip": "34.10.20.40",
+    "private_ip": "10.0.0.5",
+    "private_network": "projects/my-project/global/networks/default",
+    "authorized_networks": ["203.0.113.0/24"]
+  }
+}

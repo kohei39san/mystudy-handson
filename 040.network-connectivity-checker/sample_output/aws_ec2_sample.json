@@ -1,0 +1,32 @@
+{
+  "provider": "aws",
+  "resource_type": "ec2",
+  "resource_id": "i-0abc1234567890def",
+  "internet_reachability": "reachable",
+  "private_reachability": "reachable",
+  "reasons": [
+    "instance_state=running",
+    "public_subnet=true",
+    "nat_route=false",
+    "public_ip_assigned=true",
+    "sg_ingress_allows=0.0.0.0/0",
+    "sg_egress_allows=0.0.0.0/0"
+  ],
+  "observed": {
+    "instance_state": "running",
+    "subnet_id": "subnet-0aabbcc11223344",
+    "public_subnet": true,
+    "nat_route": false,
+    "private_ip": "10.0.1.10",
+    "public_ip": "203.0.113.10",
+    "public_ip_assigned": true,
+    "security_groups": [
+      {
+        "group_id": "sg-0abc1234567890def",
+        "group_name": "web-sg",
+        "ingress_cidrs": ["0.0.0.0/0"],
+        "egress_cidrs": ["0.0.0.0/0"]
+      }
+    ]
+  }
+}
