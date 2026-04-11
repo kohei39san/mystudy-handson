@@ -55,11 +55,17 @@ cd scripts
 # 基本的なデプロイ（メール通知あり）
 NOTIFICATION_EMAIL=admin@example.com ./deploy.sh deploy-stack
 
+# デプロイ後に Lambda コードを上書き
+./deploy.sh update-lambda-code
+
 # しきい値を変更してデプロイ
 THRESHOLD_PERCENT=70 NOTIFICATION_EMAIL=admin@example.com ./deploy.sh deploy-stack
 
 # スケジュールを変更してデプロイ（5分ごと）
 MONITORING_SCHEDULE="rate(5 minutes)" ./deploy.sh deploy-stack
+
+# デプロイとコード上書きを連続実行
+./deploy.sh deploy-and-update
 ```
 
 ### 2. AWS CLIを使用したデプロイ（単一アカウント）
@@ -133,7 +139,7 @@ aws cloudwatch describe-alarms \
 
 ### 監視するクォータの追加
 
-`cfn/stackset-template.yaml` の Lambda関数コード内 `QUOTAS` リストに追加します：
+`scripts/quota_monitor.py` の `QUOTAS` リストに追加します：
 
 ```python
 QUOTAS = [
@@ -148,6 +154,18 @@ QUOTAS = [
 ```
 
 対応するリソース数取得ロジックを `get_resource_count` 関数に追加します。
+
+## Lambdaコードの配置
+
+このテンプレートでは Lambda の Python コード本体を CloudFormation テンプレートへ埋め込まず、テンプレートデプロイ時はプレースホルダーコードで関数を作成します。その後、`scripts/deploy.sh update-lambda-code` により `aws lambda update-function-code` を使って `scripts/quota_monitor.py` を直接反映します。
+
+必須環境変数:
+
+- なし
+
+任意環境変数:
+
+- `LAMBDA_SOURCE_FILE`: Lambda ソースファイル（デフォルト: `scripts/quota_monitor.py`）
 
 ### クォータコードの確認方法
 

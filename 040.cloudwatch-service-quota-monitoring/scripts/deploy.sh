@@ -13,6 +13,7 @@ NOTIFICATION_EMAIL="${NOTIFICATION_EMAIL:-}"
 EXISTING_TOPIC_ARN="${EXISTING_TOPIC_ARN:-}"
 EC2_VCPU_QUOTA="${EC2_VCPU_QUOTA:-32}"
 LAMBDA_CONCURRENCY_QUOTA="${LAMBDA_CONCURRENCY_QUOTA:-1000}"
+LAMBDA_SOURCE_FILE="${LAMBDA_SOURCE_FILE:-$(dirname "$0")/quota_monitor.py}"
 
 usage() {
     cat <<EOF
@@ -22,6 +23,8 @@ usage() {
 コマンド:
   deploy-stack      CloudFormation スタックとしてデプロイ（単一アカウント）
   deploy-stackset   CloudFormation StackSet としてデプロイ（複数アカウント/リージョン）
+    update-lambda-code デプロイ済みスタックの Lambda コードを直接上書き
+    deploy-and-update  スタックをデプロイして Lambda コードを上書き
   add-instances     StackSet インスタンスを追加（deploy-stackset 実行後）
   delete-stack      スタックを削除
   delete-stackset   StackSet を削除
@@ -38,10 +41,17 @@ usage() {
   EXISTING_TOPIC_ARN      既存の SNS トピック ARN (任意)
   EC2_VCPU_QUOTA          EC2 On-Demand 標準 vCPU クォータ (デフォルト: 32)
   LAMBDA_CONCURRENCY_QUOTA Lambda 同時実行数クォータ (デフォルト: 1000)
+    LAMBDA_SOURCE_FILE      Lambda ソースファイル (デフォルト: scripts/quota_monitor.py)
 
 例:
-  # 単一アカウントへのデプロイ
-  NOTIFICATION_EMAIL=admin@example.com $0 deploy-stack
+    # 単一アカウントへのデプロイ
+    NOTIFICATION_EMAIL=admin@example.com $0 deploy-stack
+
+    # デプロイ後に Lambda コードを直接上書き
+    $0 update-lambda-code
+
+    # デプロイとコード上書きを連続実行
+    $0 deploy-and-update
 
   # StackSet の作成
   $0 deploy-stackset
@@ -67,6 +77,49 @@ build_parameter_overrides() {
         params="${params} ParameterKey=ExistingTopicArn,ParameterValue=${EXISTING_TOPIC_ARN}"
     fi
     echo "${params}"
+}
+
+package_lambda_code() {
+    if [ ! -f "${LAMBDA_SOURCE_FILE}" ]; then
+        echo "エラー: Lambda ソースファイルが見つかりません: ${LAMBDA_SOURCE_FILE}"
+        exit 1
+    fi
+
+    local tmp_dir
+    local zip_file
+    tmp_dir=$(mktemp -d)
+    zip_file="${tmp_dir}/quota_monitor.zip"
+
+    cp "${LAMBDA_SOURCE_FILE}" "${tmp_dir}/index.py"
+    (
+        cd "${tmp_dir}"
+        zip -q "${zip_file}" index.py
+    )
+
+    echo "${zip_file}"
+}
+
+update_lambda_code() {
+    local zip_file
+    local function_name
+
+    echo "Lambda コードを直接上書き中..."
+    zip_file=$(package_lambda_code)
+    function_name=$(aws cloudformation describe-stack-resource \
+        --stack-name "${STACK_NAME}" \
+        --logical-resource-id QuotaMonitorFunction \
+        --region "${REGION}" \
+        --query 'StackResourceDetail.PhysicalResourceId' \
+        --output text)
+
+    aws lambda update-function-code \
+        --function-name "${function_name}" \
+        --zip-file "fileb://${zip_file}" \
+        --region "${REGION}" >/dev/null
+
+    rm -f "${zip_file}"
+    rmdir "$(dirname "${zip_file}")"
+    echo "Lambda コードを更新しました: ${function_name}"
 }
 
 validate_template() {
@@ -135,6 +188,7 @@ deploy_stackset() {
     echo ""
     echo "StackSet の作成/更新が完了しました。"
     echo "インスタンスを追加するには: $0 add-instances"
+    echo "各インスタンスの Lambda コードは別途 update-function-code で上書きしてください。"
 }
 
 add_stackset_instances() {
@@ -215,6 +269,14 @@ case "$1" in
     deploy-stackset)
         validate_template
         deploy_stackset
+        ;;
+    update-lambda-code)
+        update_lambda_code
+        ;;
+    deploy-and-update)
+        validate_template
+        deploy_stack
+        update_lambda_code
         ;;
     add-instances)
         add_stackset_instances
