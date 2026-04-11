@@ -23,6 +23,12 @@
 ├── README.md
 ├── pytest.ini
 ├── requirements.txt
+├── terraform.tf          ← Terraform プロバイダ設定
+├── variables.tf          ← Terraform 変数定義
+├── aws.tf                ← AWS リソース (VPC / Subnet / SG / EC2 / RDS)
+├── azure.tf              ← Azure リソース (VNet / NSG / VM)
+├── gcp.tf                ← GCP リソース (VPC / Firewall / VM / Cloud Run)
+├── outputs.tf            ← Terraform 出力値（結合テスト用リソース ID）
 ├── sample_output/
 │   ├── aws_ec2_sample.json
 │   ├── aws_rds_sample.json
@@ -326,3 +332,358 @@ pytest
 - 実疎通テスト（TCP/ICMP 等のアクティブプローブ）は行いません
 - 制御プレーン API の設定状態に基づく判定のため、実際のパケット通信とは異なる場合があります
 - egress 方向の到達性（Cloud NAT 経由など）は本スクリプトの対象外です
+
+---
+
+## 結合テスト
+
+### 前提条件
+
+#### 必要なツール
+
+| ツール | バージョン | 用途 |
+|--------|-----------|------|
+| [Terraform](https://developer.hashicorp.com/terraform/downloads) | >= 1.5.0 | インフラリソース作成 |
+| [AWS CLI](https://aws.amazon.com/cli/) | >= 2.0 | AWS 認証 |
+| [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) | >= 2.0 | Azure 認証 |
+| [gcloud CLI](https://cloud.google.com/sdk/docs/install) | >= 450.0 | GCP 認証 |
+| Python | >= 3.9 | スクリプト実行 |
+
+#### 各クラウドの認証情報・権限
+
+**AWS**
+
+以下の IAM ポリシーを持つユーザー / ロールの認証情報を設定してください。
+
+- `AmazonEC2FullAccess`（または VPC / EC2 作成に必要な権限）
+- `AmazonRDSFullAccess`（または RDS 作成に必要な権限）
+
+*bash / zsh*
+
+```bash
+aws configure
+# または
+export AWS_ACCESS_KEY_ID=<your-key-id>
+export AWS_SECRET_ACCESS_KEY=<your-secret-key>
+export AWS_DEFAULT_REGION=ap-northeast-1
+```
+
+*PowerShell*
+
+```powershell
+aws configure
+# または
+$env:AWS_ACCESS_KEY_ID     = "<your-key-id>"
+$env:AWS_SECRET_ACCESS_KEY = "<your-secret-key>"
+$env:AWS_DEFAULT_REGION    = "ap-northeast-1"
+```
+
+**Azure**
+
+以下のロールをサブスクリプション / リソースグループスコープで付与してください。
+
+- `Contributor`（リソース作成・削除に必要）
+
+*bash / zsh*
+
+```bash
+az login
+export TF_VAR_azure_subscription_id=$(az account show --query id -o tsv)
+```
+
+*PowerShell*
+
+```powershell
+az login
+$env:TF_VAR_azure_subscription_id = $(az account show --query id -o tsv)
+```
+
+**GCP**
+
+以下の IAM ロールをプロジェクトスコープで付与してください。
+
+- `roles/compute.admin`
+- `roles/run.admin`
+- `roles/iam.serviceAccountUser`
+
+*bash / zsh*
+
+```bash
+gcloud auth application-default login
+export TF_VAR_gcp_project_id=<your-gcp-project-id>
+```
+
+*PowerShell*
+
+```powershell
+gcloud auth application-default login
+$env:TF_VAR_gcp_project_id = "<your-gcp-project-id>"
+```
+
+---
+
+### 作成されるリソース
+
+| クラウド | リソース種別 | 名前 | 用途 |
+|---------|------------|------|------|
+| AWS | VPC | `ncc-test-vpc` | テスト用ネットワーク |
+| AWS | Subnet (public) | `ncc-test-public-subnet` | EC2 用パブリックサブネット |
+| AWS | Subnet (private) | `ncc-test-private-subnet` | RDS 用プライベートサブネット |
+| AWS | Internet Gateway | `ncc-test-igw` | インターネット接続 |
+| AWS | Security Group (EC2) | `ncc-test-ec2-sg` | HTTP/HTTPS/SSH 許可 |
+| AWS | Security Group (RDS) | `ncc-test-rds-sg` | VPC 内 MySQL のみ許可 |
+| AWS | EC2 Instance | `ncc-test-ec2` | internet_reachability=reachable 確認用 |
+| AWS | RDS Instance | `ncc-test-rds` | internet_reachability=not_reachable 確認用 |
+| Azure | Resource Group | `ncc-test-rg` | リソースグループ |
+| Azure | VNet | `ncc-test-vnet` | テスト用ネットワーク |
+| Azure | NSG | `ncc-test-nsg` | HTTP/HTTPS/SSH 許可 + 8080 拒否ルール |
+| Azure | VM | `ncc-test-vm` | internet_reachability=reachable 確認用 |
+| GCP | VPC | `ncc-test-vpc` | テスト用ネットワーク |
+| GCP | Firewall (allow) | `ncc-test-allow-http-https-ssh` | HTTP/HTTPS/SSH 許可 |
+| GCP | Firewall (deny) | `ncc-test-deny-custom-port` | 8080 拒否ルール |
+| GCP | VM Instance | `ncc-test-vm` | internet_reachability=reachable 確認用 |
+| GCP | Cloud Run Service | `ncc-test-cloudrun` | internet_reachability=reachable 確認用 |
+
+---
+
+### 結合テスト手順
+
+#### 1. リソース作成
+
+> アクセス制御仕様: HTTP/HTTPS/SSH の許可元は Terraform 実行元のグローバル IP のみ（/32）です。  
+> Cloud Run は `cloudrun_invoker_principal` で指定した principal のみ呼び出し可能です。  
+> 実行環境がプロキシ/NAT 配下の場合、許可対象はその送信元グローバル IP になります。
+
+*bash / zsh*
+
+```bash
+cd 040.network-connectivity-checker
+
+# 変数ファイルを作成（機密情報はファイルまたは環境変数で渡す）
+cat > terraform.tfvars <<'EOF'
+aws_region              = "ap-northeast-1"
+azure_location          = "japaneast"
+gcp_region              = "asia-northeast1"
+gcp_zone                = "asia-northeast1-a"
+aws_rds_password        = "YourSecurePassword1!"
+azure_vm_admin_password = "YourSecurePassword1!"
+cloudrun_invoker_principal = "user:you@example.com"
+EOF
+
+# Terraform 初期化
+terraform init
+
+# 実行計画確認
+terraform plan
+
+# リソース作成（約 10〜15 分）
+terraform apply
+```
+
+*PowerShell*
+
+```powershell
+Set-Location 040.network-connectivity-checker
+
+# 変数ファイルを作成（機密情報はファイルまたは環境変数で渡す）
+@"
+aws_region              = "ap-northeast-1"
+azure_location          = "japaneast"
+gcp_region              = "asia-northeast1"
+gcp_zone                = "asia-northeast1-a"
+aws_rds_password        = "YourSecurePassword1!"
+azure_vm_admin_password = "YourSecurePassword1!"
+cloudrun_invoker_principal = "user:you@example.com"
+"@ | Set-Content terraform.tfvars -Encoding UTF8
+
+# Terraform 初期化
+terraform init
+
+# 実行計画確認
+terraform plan
+
+# リソース作成（約 10〜15 分）
+terraform apply
+```
+
+> **注意**: `terraform.tfvars` はルートの `.gitignore` により自動的に Git の追跡対象外になっています。  
+> パスワードを環境変数で渡す場合:  
+> - bash: `export TF_VAR_aws_rds_password=<password>`  
+> - PowerShell: `$env:TF_VAR_aws_rds_password = "<password>"`
+
+#### 2. リソース ID の取得
+
+*bash / zsh*
+
+```bash
+# すべての出力値を表示
+terraform output
+
+# 適用された許可 CIDR の確認
+terraform output -raw effective_allowed_cidr
+
+# 個別に取得
+EC2_ID=$(terraform output -raw aws_ec2_instance_id)
+RDS_ID=$(terraform output -raw aws_rds_identifier)
+AZURE_VM_ID=$(terraform output -raw azure_vm_resource_id)
+GCP_VM_ID=$(terraform output -raw gcp_vm_resource_id)
+GCP_CLOUDRUN_ID=$(terraform output -raw gcp_cloudrun_resource_id)
+GCP_CLOUDSQL_ID=$(terraform output -raw gcp_cloudsql_resource_id)
+```
+
+*PowerShell*
+
+```powershell
+# すべての出力値を表示
+terraform output
+
+# 適用された許可 CIDR の確認
+terraform output -raw effective_allowed_cidr
+
+# 個別に取得
+$EC2_ID         = terraform output -raw aws_ec2_instance_id
+$RDS_ID         = terraform output -raw aws_rds_identifier
+$AZURE_VM_ID    = terraform output -raw azure_vm_resource_id
+$GCP_VM_ID      = terraform output -raw gcp_vm_resource_id
+$GCP_CLOUDRUN_ID = terraform output -raw gcp_cloudrun_resource_id
+$GCP_CLOUDSQL_ID = terraform output -raw gcp_cloudsql_resource_id
+```
+
+#### 3. 結合テスト実行
+
+*bash / zsh*
+
+```bash
+cd 040.network-connectivity-checker
+pip install -r requirements.txt
+
+# AWS EC2（internet_reachability=reachable を確認）
+python scripts/check_network_connectivity.py \
+  --provider aws \
+  --resource-type ec2 \
+  --resource-id "${EC2_ID}" \
+  --region ap-northeast-1
+
+# AWS RDS（internet_reachability=not_reachable を確認）
+python scripts/check_network_connectivity.py \
+  --provider aws \
+  --resource-type rds \
+  --resource-id "${RDS_ID}" \
+  --region ap-northeast-1
+
+# Azure VM（internet_reachability=reachable を確認）
+python scripts/check_network_connectivity.py \
+  --provider azure \
+  --resource-type vm \
+  --resource-id "${AZURE_VM_ID}"
+
+# GCP Compute Engine（internet_reachability=reachable を確認）
+python scripts/check_network_connectivity.py \
+  --provider gcp \
+  --resource-type compute \
+  --resource-id "${GCP_VM_ID}"
+
+# GCP Cloud Run（internet_reachability=reachable を確認）
+python scripts/check_network_connectivity.py \
+  --provider gcp \
+  --resource-type cloudrun \
+  --resource-id "${GCP_CLOUDRUN_ID}"
+```
+
+*PowerShell*
+
+```powershell
+Set-Location 040.network-connectivity-checker
+pip install -r requirements.txt
+
+# AWS EC2（internet_reachability=reachable を確認）
+python scripts/check_network_connectivity.py `
+  --provider aws `
+  --resource-type ec2 `
+  --resource-id $EC2_ID `
+  --region ap-northeast-1
+
+# AWS RDS（internet_reachability=not_reachable を確認）
+python scripts/check_network_connectivity.py `
+  --provider aws `
+  --resource-type rds `
+  --resource-id $RDS_ID `
+  --region ap-northeast-1
+
+# Azure VM（internet_reachability=reachable を確認）
+python scripts/check_network_connectivity.py `
+  --provider azure `
+  --resource-type vm `
+  --resource-id $AZURE_VM_ID
+
+# GCP Compute Engine（internet_reachability=reachable を確認）
+python scripts/check_network_connectivity.py `
+  --provider gcp `
+  --resource-type compute `
+  --resource-id $GCP_VM_ID
+
+# GCP Cloud Run（internet_reachability=reachable を確認）
+python scripts/check_network_connectivity.py `
+  --provider gcp `
+  --resource-type cloudrun `
+  --resource-id $GCP_CLOUDRUN_ID
+```
+
+#### 期待する結合テスト結果
+
+| リソース | `internet_reachability` | `private_reachability` |
+|---------|------------------------|----------------------|
+| AWS EC2 | `reachable` | `reachable` |
+| AWS RDS | `not_reachable` | `reachable` |
+| Azure VM | `reachable` | `reachable` |
+| GCP VM | `reachable` | `reachable` |
+| GCP Cloud Run | `reachable` | `reachable` |
+
+#### 4. リソース削除
+
+**テスト完了後は必ずリソースを削除してコストを抑えてください。**
+
+*bash / zsh*
+
+```bash
+cd 040.network-connectivity-checker
+terraform destroy
+```
+
+*PowerShell*
+
+```powershell
+Set-Location 040.network-connectivity-checker
+terraform destroy
+```
+
+---
+
+### コスト見積もり
+
+> 以下は **東京リージョン（ap-northeast-1 / japaneast / asia-northeast1）** での概算です。  
+> 実際の料金は利用量・プラン・為替により異なります。
+
+| クラウド | リソース | 種別 | 概算コスト（時間） | 概算コスト（月） |
+|---------|---------|------|---------------|--------------|
+| AWS | EC2 (t3.micro) | コンピュート | $0.013 | ~$9.5 |
+| AWS | RDS MySQL (db.t3.micro) | データベース | $0.026 | ~$18.9 |
+| AWS | VPC / Subnet / SG | ネットワーク | $0.00 | $0.00 |
+| Azure | VM (Standard_B1s) | コンピュート | $0.012 | ~$8.8 |
+| Azure | VNet / NSG | ネットワーク | $0.00 | $0.00 |
+| Azure | Public IP (Static Standard) | ネットワーク | ~$0.005 | ~$3.6 |
+| GCP | VM (e2-micro) | コンピュート | $0.008 | ~$5.8 |
+| GCP | Cloud Run | サーバーレス | 従量課金（リクエスト時のみ） | ~$0〜 |
+| GCP | VPC / Firewall | ネットワーク | $0.00 | $0.00 |
+| **合計** | | | | **~$46.6 / 月** |
+
+> **推奨**: 結合テストは作成・実行・削除を 1〜2 時間以内に完了させることで、コストを **$2 未満** に抑えられます。
+
+---
+
+### 注意事項（結合テスト）
+
+- `terraform.tfvars` にパスワードを記載する場合は `.gitignore` に追加し、リポジトリにコミットしないこと
+- テスト完了後は `terraform destroy` で必ずリソースを削除すること
+- RDS の起動には約 5〜10 分かかります。`terraform apply` 完了後すぐにテストを実行してください
+- GCP Cloud Run の初回デプロイには約 2〜3 分かかる場合があります
