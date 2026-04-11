@@ -528,6 +528,7 @@ RDS_ID=$(terraform output -raw aws_rds_identifier)
 AZURE_VM_ID=$(terraform output -raw azure_vm_resource_id)
 GCP_VM_ID=$(terraform output -raw gcp_vm_resource_id)
 GCP_CLOUDRUN_ID=$(terraform output -raw gcp_cloudrun_resource_id)
+GCP_CLOUDSQL_ID=$(terraform output -raw gcp_cloudsql_resource_id)
 ```
 
 *PowerShell*
@@ -545,6 +546,7 @@ $RDS_ID         = terraform output -raw aws_rds_identifier
 $AZURE_VM_ID    = terraform output -raw azure_vm_resource_id
 $GCP_VM_ID      = terraform output -raw gcp_vm_resource_id
 $GCP_CLOUDRUN_ID = terraform output -raw gcp_cloudrun_resource_id
+$GCP_CLOUDSQL_ID = terraform output -raw gcp_cloudsql_resource_id
 ```
 
 #### 3. 結合テスト実行

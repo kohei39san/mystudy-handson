@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# GCP リソース: VPC / Firewall Rule / VM Instance / Cloud Run Service
+# GCP リソース: VPC / Firewall Rule / VM Instance / Cloud Run Service / Cloud SQL
 # ─────────────────────────────────────────────────────────────────────────────
 
 # --- VPC Network ---
@@ -123,4 +123,35 @@ resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
   name     = google_cloud_run_v2_service.test.name
   role     = "roles/run.invoker"
   member   = var.cloudrun_invoker_principal
+}
+
+# --- Cloud SQL Instance（結合テスト用）---
+
+resource "google_sql_database_instance" "test" {
+  name             = "${var.project_name}-cloudsql"
+  database_version = var.gcp_cloudsql_database_version
+  region           = var.gcp_region
+
+  settings {
+    tier              = var.gcp_cloudsql_tier
+    disk_size         = var.gcp_cloudsql_disk_size
+    availability_type = "ZONAL"
+
+    user_labels = {
+      project     = var.project_name
+      environment = var.environment
+      managed_by  = "terraform"
+    }
+
+    ip_configuration {
+      ipv4_enabled = true
+
+      authorized_networks {
+        name  = "terraform-caller"
+        value = local.allowed_cidr
+      }
+    }
+  }
+
+  deletion_protection = false
 }

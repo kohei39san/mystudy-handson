@@ -14,6 +14,12 @@ variable "environment" {
   default     = "integration-test"
 }
 
+variable "owner" {
+  description = "リソースの Owner タグ値"
+  type        = string
+  default     = "unknown"
+}
+
 variable "caller_ip_lookup_url" {
   description = "Terraform 実行元のグローバル IP を取得する URL"
   type        = string
@@ -119,7 +125,7 @@ variable "azure_subnet_prefix" {
 variable "azure_vm_size" {
   description = "Azure VM サイズ"
   type        = string
-  default     = "Standard_B1s"
+  default     = "Standard_B2pts_v2"
 }
 
 variable "azure_vm_admin_username" {
@@ -172,4 +178,22 @@ variable "gcp_cloudrun_image" {
   description = "Cloud Run コンテナイメージ"
   type        = string
   default     = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+
+variable "gcp_cloudsql_database_version" {
+  description = "Cloud SQL データベースバージョン"
+  type        = string
+  default     = "MYSQL_8_0"
+}
+
+variable "gcp_cloudsql_tier" {
+  description = "Cloud SQL インスタンス Tier"
+  type        = string
+  default     = "db-f1-micro"
+}
+
+variable "gcp_cloudsql_disk_size" {
+  description = "Cloud SQL ディスクサイズ (GB)"
+  type        = number
+  default     = 10
 }

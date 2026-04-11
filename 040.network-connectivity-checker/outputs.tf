@@ -78,6 +78,16 @@ output "gcp_cloudrun_uri" {
   value       = google_cloud_run_v2_service.test.uri
 }
 
+output "gcp_cloudsql_resource_id" {
+  description = "GCP Cloud SQL リソース ID（--resource-id に指定: projects/<project>/instances/<name> 形式）"
+  value       = "projects/${var.gcp_project_id}/instances/${google_sql_database_instance.test.name}"
+}
+
+output "gcp_cloudsql_public_ip" {
+  description = "GCP Cloud SQL パブリック IP アドレス"
+  value       = try(google_sql_database_instance.test.public_ip_address, null)
+}
+
 # --- Access Control ---
 
 output "effective_allowed_cidr" {
