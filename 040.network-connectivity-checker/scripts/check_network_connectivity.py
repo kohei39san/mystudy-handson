@@ -545,8 +545,17 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
     running = power_state.lower() == "running"
     has_public_ip = bool(public_ips)
 
-    internet_reachability = REACHABLE if running and has_public_ip else NOT_REACHABLE if not running else NOT_REACHABLE
-    private_reachability = REACHABLE if running and private_ips else NOT_REACHABLE if not running else UNKNOWN
+    if running and has_public_ip:
+        internet_reachability = REACHABLE
+    else:
+        internet_reachability = NOT_REACHABLE
+
+    if not running:
+        private_reachability = NOT_REACHABLE
+    elif private_ips:
+        private_reachability = REACHABLE
+    else:
+        private_reachability = UNKNOWN
 
     return _build_result(
         provider="azure",
@@ -740,8 +749,17 @@ def check_gcp_compute(resource_id: str) -> Dict[str, Any]:
     if ingress_cidrs:
         reasons.append(f"fw_ingress_allows={','.join(sorted(set(ingress_cidrs)))}")
 
-    internet_reachability = REACHABLE if running and has_external_ip else NOT_REACHABLE if not running else NOT_REACHABLE
-    private_reachability = REACHABLE if running and private_ips else NOT_REACHABLE if not running else UNKNOWN
+    if running and has_external_ip:
+        internet_reachability = REACHABLE
+    else:
+        internet_reachability = NOT_REACHABLE
+
+    if not running:
+        private_reachability = NOT_REACHABLE
+    elif private_ips:
+        private_reachability = REACHABLE
+    else:
+        private_reachability = UNKNOWN
 
     return _build_result(
         provider="gcp",
@@ -911,10 +929,16 @@ def check_gcp_cloudsql(resource_id: str) -> Dict[str, Any]:
     runnable = db_state == "RUNNABLE"
 
     # Internet reachability: RUNNABLE and public IP enabled
-    internet_reachability = REACHABLE if runnable and has_public_ip else NOT_REACHABLE if not runnable else NOT_REACHABLE
+    if runnable and has_public_ip:
+        internet_reachability = REACHABLE
+    else:
+        internet_reachability = NOT_REACHABLE
 
     # Private reachability: RUNNABLE and private IP configured
-    private_reachability = REACHABLE if runnable and has_private_ip else NOT_REACHABLE if not runnable else NOT_REACHABLE
+    if runnable and has_private_ip:
+        private_reachability = REACHABLE
+    else:
+        private_reachability = NOT_REACHABLE
 
     return _build_result(
         provider="gcp",
