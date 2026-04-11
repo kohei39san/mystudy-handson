@@ -77,3 +77,15 @@ output "gcp_cloudrun_uri" {
   description = "GCP Cloud Run サービス URI"
   value       = google_cloud_run_v2_service.test.uri
 }
+
+# --- Access Control ---
+
+output "effective_allowed_cidr" {
+  description = "実際に適用された許可元 CIDR（Terraform 実行元グローバル IP /32）"
+  value       = local.allowed_cidr
+}
+
+output "cloudrun_invoker_principal" {
+  description = "Cloud Run Invoker として許可した principal"
+  value       = var.cloudrun_invoker_principal
+}

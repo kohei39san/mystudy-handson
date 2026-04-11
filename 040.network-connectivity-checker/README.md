@@ -450,6 +450,10 @@ $env:TF_VAR_gcp_project_id = "<your-gcp-project-id>"
 
 #### 1. リソース作成
 
+> アクセス制御仕様: HTTP/HTTPS/SSH の許可元は Terraform 実行元のグローバル IP のみ（/32）です。  
+> Cloud Run は `cloudrun_invoker_principal` で指定した principal のみ呼び出し可能です。  
+> 実行環境がプロキシ/NAT 配下の場合、許可対象はその送信元グローバル IP になります。
+
 *bash / zsh*
 
 ```bash
@@ -463,6 +467,7 @@ gcp_region              = "asia-northeast1"
 gcp_zone                = "asia-northeast1-a"
 aws_rds_password        = "YourSecurePassword1!"
 azure_vm_admin_password = "YourSecurePassword1!"
+cloudrun_invoker_principal = "user:you@example.com"
 EOF
 
 # Terraform 初期化
@@ -488,6 +493,7 @@ gcp_region              = "asia-northeast1"
 gcp_zone                = "asia-northeast1-a"
 aws_rds_password        = "YourSecurePassword1!"
 azure_vm_admin_password = "YourSecurePassword1!"
+cloudrun_invoker_principal = "user:you@example.com"
 "@ | Set-Content terraform.tfvars -Encoding UTF8
 
 # Terraform 初期化
@@ -513,6 +519,9 @@ terraform apply
 # すべての出力値を表示
 terraform output
 
+# 適用された許可 CIDR の確認
+terraform output -raw effective_allowed_cidr
+
 # 個別に取得
 EC2_ID=$(terraform output -raw aws_ec2_instance_id)
 RDS_ID=$(terraform output -raw aws_rds_identifier)
@@ -526,6 +535,9 @@ GCP_CLOUDRUN_ID=$(terraform output -raw gcp_cloudrun_resource_id)
 ```powershell
 # すべての出力値を表示
 terraform output
+
+# 適用された許可 CIDR の確認
+terraform output -raw effective_allowed_cidr
 
 # 個別に取得
 $EC2_ID         = terraform output -raw aws_ec2_instance_id

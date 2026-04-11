@@ -14,6 +14,22 @@ variable "environment" {
   default     = "integration-test"
 }
 
+variable "caller_ip_lookup_url" {
+  description = "Terraform 実行元のグローバル IP を取得する URL"
+  type        = string
+  default     = "https://checkip.amazonaws.com"
+}
+
+variable "cloudrun_invoker_principal" {
+  description = "Cloud Run 呼び出しを許可する principal（例: user:alice@example.com, serviceAccount:sa@project.iam.gserviceaccount.com）"
+  type        = string
+
+  validation {
+    condition     = can(regex("^(user|serviceAccount|group|domain):.+", var.cloudrun_invoker_principal))
+    error_message = "cloudrun_invoker_principal は user:, serviceAccount:, group:, domain: のいずれかで始まる形式で指定してください。"
+  }
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # AWS
 # ─────────────────────────────────────────────────────────────────────────────

@@ -30,7 +30,7 @@ resource "google_compute_firewall" "allow_http_https_ssh" {
     ports    = ["22", "80", "443"]
   }
 
-  source_ranges = ["0.0.0.0/0"]
+  source_ranges = [local.allowed_cidr]
   target_tags   = ["allow-http-https-ssh"]
 
   description = "Allow HTTP/HTTPS/SSH from anywhere (integration test - allow pattern)"
@@ -115,12 +115,12 @@ resource "google_cloud_run_v2_service" "test" {
   }
 }
 
-# --- Cloud Run: 未認証呼び出しを許可（パブリックアクセス）---
+# --- Cloud Run: 指定 principal のみ呼び出し許可 ---
 
 resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
   project  = var.gcp_project_id
   location = var.gcp_region
   name     = google_cloud_run_v2_service.test.name
   role     = "roles/run.invoker"
-  member   = "allUsers"
+  member   = var.cloudrun_invoker_principal
 }
