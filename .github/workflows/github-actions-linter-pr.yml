@@ -17,13 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           # Full git history is needed to get a proper list of changed files
           fetch-depth: 0
 
       - name: Lint GitHub Actions YAML Files
-        uses: super-linter/super-linter@v8.5.0
+        uses: super-linter/super-linter@9e863354e3ff62e0727d37183162c4a88873df41 # v8.6.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SAVE_SUPER_LINTER_OUTPUT: false
@@ -56,7 +56,7 @@ jobs:
 
       - name: Create Pull Request
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
         with:
           token: ${{ secrets.PAT || secrets.GITHUB_TOKEN }}
           base: ${{ steps.get_branch.outputs.branch_name }}
