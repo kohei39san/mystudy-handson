@@ -1,0 +1,38 @@
+{
+  "provider": "azure",
+  "resource_type": "vm",
+  "resource_id": "/subscriptions/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/resourceGroups/my-rg/providers/Microsoft.Compute/virtualMachines/my-vm",
+  "internet_reachability": "reachable",
+  "private_reachability": "reachable",
+  "reasons": [
+    "power_state=running",
+    "public_ip_assigned=true",
+    "has_udr=false",
+    "nsg_rules_present=true"
+  ],
+  "observed": {
+    "power_state": "running",
+    "private_ips": ["10.0.0.4"],
+    "public_ips": ["20.0.0.1"],
+    "subnet_ids": [
+      "/subscriptions/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/resourceGroups/my-rg/providers/Microsoft.Network/virtualNetworks/my-vnet/subnets/default"
+    ],
+    "has_udr": false,
+    "nsg_rules": [
+      {
+        "nsg_name": "my-nsg",
+        "allow_rules": [
+          {
+            "name": "AllowHTTPS",
+            "direction": "Inbound",
+            "priority": 100,
+            "protocol": "Tcp",
+            "source_address_prefix": "0.0.0.0/0",
+            "destination_address_prefix": "*",
+            "destination_port_range": "443"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "provider": "aws",
+  "resource_type": "rds",
+  "resource_id": "mydbinstance",
+  "internet_reachability": "not_reachable",
+  "private_reachability": "reachable",
+  "reasons": [
+    "db_state=available",
+    "publicly_accessible=false",
+    "sg_ingress_allows=10.0.0.0/16",
+    "sg_egress_allows=0.0.0.0/0"
+  ],
+  "observed": {
+    "db_state": "available",
+    "publicly_accessible": false,
+    "vpc_id": "vpc-0abc1234567890def",
+    "db_subnet_group": "my-db-subnet-group",
+    "subnet_ids": ["subnet-aaa", "subnet-bbb"],
+    "endpoint": "mydbinstance.cluster.ap-northeast-1.rds.amazonaws.com",
+    "port": 5432,
+    "security_groups": [
+      {
+        "group_id": "sg-rds-0abc",
+        "group_name": "rds-sg",
+        "ingress_cidrs": ["10.0.0.0/16"],
+        "egress_cidrs": ["0.0.0.0/0"]
+      }
+    ]
+  }
+}
