@@ -46,12 +46,18 @@ def _make_sg(group_id="sg-111", ingress_cidrs=None, egress_cidrs=None):
         "GroupName": "test-sg",
         "IpPermissions": [
             {
+                "IpProtocol": "tcp",
+                "FromPort": 443,
+                "ToPort": 443,
                 "IpRanges": [{"CidrIp": cidr} for cidr in ingress_cidrs],
                 "Ipv6Ranges": [],
             }
         ],
         "IpPermissionsEgress": [
             {
+                "IpProtocol": "-1",
+                "FromPort": None,
+                "ToPort": None,
                 "IpRanges": [{"CidrIp": cidr} for cidr in egress_cidrs],
                 "Ipv6Ranges": [],
             }
@@ -102,12 +108,53 @@ class TestSgRulesSummary:
     def test_ipv6_included(self):
         sg = {
             "GroupId": "sg-v6",
-            "IpPermissions": [{"IpRanges": [], "Ipv6Ranges": [{"CidrIpv6": "::/0"}]}],
-            "IpPermissionsEgress": [{"IpRanges": [], "Ipv6Ranges": [{"CidrIpv6": "::/0"}]}],
+            "IpPermissions": [{"IpProtocol": "tcp", "FromPort": 443, "ToPort": 443, "IpRanges": [], "Ipv6Ranges": [{"CidrIpv6": "::/0"}]}],
+            "IpPermissionsEgress": [{"IpProtocol": "-1", "FromPort": None, "ToPort": None, "IpRanges": [], "Ipv6Ranges": [{"CidrIpv6": "::/0"}]}],
         }
         ing, eg = cnc._sg_rules_summary([sg])
         assert "::/0" in ing
         assert "::/0" in eg
+
+
+class TestSgRulesWithPorts:
+    """Tests for _sg_rules_with_ports helper."""
+
+    def test_extracts_ports_and_protocol_for_ipv4(self):
+        sg = _make_sg(ingress_cidrs=["10.0.0.0/16"], egress_cidrs=["0.0.0.0/0"])
+        ingress_rules, egress_rules = cnc._sg_rules_with_ports([sg])
+
+        assert ingress_rules[0]["cidr"] == "10.0.0.0/16"
+        assert ingress_rules[0]["protocol"] == "tcp"
+        assert ingress_rules[0]["from_port"] == 443
+        assert ingress_rules[0]["to_port"] == 443
+
+        assert egress_rules[0]["cidr"] == "0.0.0.0/0"
+        assert egress_rules[0]["protocol"] == "-1"
+        assert egress_rules[0]["from_port"] is None
+        assert egress_rules[0]["to_port"] is None
+
+    def test_extracts_ports_and_protocol_for_ipv6(self):
+        sg = {
+            "GroupId": "sg-v6",
+            "GroupName": "sg-v6",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 8443,
+                    "ToPort": 8443,
+                    "IpRanges": [],
+                    "Ipv6Ranges": [{"CidrIpv6": "::/0"}],
+                }
+            ],
+            "IpPermissionsEgress": [],
+        }
+
+        ingress_rules, egress_rules = cnc._sg_rules_with_ports([sg])
+        assert len(egress_rules) == 0
+        assert ingress_rules[0]["cidr"] == "::/0"
+        assert ingress_rules[0]["protocol"] == "tcp"
+        assert ingress_rules[0]["from_port"] == 8443
+        assert ingress_rules[0]["to_port"] == 8443
 
 
 class TestParseAzureResourceId:
@@ -271,6 +318,14 @@ class TestAwsEc2:
             assert key in result
         assert result["provider"] == "aws"
         assert result["resource_type"] == "ec2"
+        observed_sg = result["observed"]["security_groups"][0]
+        assert "ingress_rules" in observed_sg
+        assert "egress_rules" in observed_sg
+        assert "ingress_cidrs" not in observed_sg
+        assert "egress_cidrs" not in observed_sg
+        assert observed_sg["ingress_rules"][0]["protocol"] == "tcp"
+        assert observed_sg["ingress_rules"][0]["from_port"] == 443
+        assert observed_sg["ingress_rules"][0]["to_port"] == 443
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -392,6 +447,14 @@ class TestAwsRds:
         assert result["resource_type"] == "rds"
         assert result["observed"]["db_state"] == "available"
         assert result["observed"]["publicly_accessible"] is True
+        observed_sg = result["observed"]["security_groups"][0]
+        assert "ingress_rules" in observed_sg
+        assert "egress_rules" in observed_sg
+        assert "ingress_cidrs" not in observed_sg
+        assert "egress_cidrs" not in observed_sg
+        assert observed_sg["ingress_rules"][0]["protocol"] == "tcp"
+        assert observed_sg["ingress_rules"][0]["from_port"] == 443
+        assert observed_sg["ingress_rules"][0]["to_port"] == 443
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -527,6 +590,53 @@ class TestAzureVm:
 
         assert result["internet_reachability"] == cnc.NOT_REACHABLE
         assert result["private_reachability"] == cnc.NOT_REACHABLE
+
+    def test_subnet_nsg_is_collected(self):
+        vm = self._make_vm(power_state="running")
+        nic = self._make_nic(
+            private_ip="10.0.0.4",
+            subnet_id=(
+                "/subscriptions/sub-123/resourceGroups/rg1"
+                "/providers/Microsoft.Network/virtualNetworks/vnet1/subnets/subnet1"
+            ),
+        )
+
+        subnet_obj = MagicMock()
+        subnet_obj.route_table = None
+        subnet_nsg_ref = MagicMock()
+        subnet_nsg_ref.id = (
+            "/subscriptions/sub-123/resourceGroups/rg1"
+            "/providers/Microsoft.Network/networkSecurityGroups/subnet-nsg"
+        )
+        subnet_obj.network_security_group = subnet_nsg_ref
+
+        subnet_nsg = self._make_nsg()
+
+        mock_compute_cls = MagicMock()
+        mock_network_cls = MagicMock()
+        mock_cred = MagicMock()
+
+        compute_client = MagicMock()
+        compute_client.virtual_machines.get.return_value = vm
+        mock_compute_cls.return_value = compute_client
+
+        network_client = MagicMock()
+        network_client.network_interfaces.get.return_value = nic
+        network_client.subnets.get.return_value = subnet_obj
+        network_client.network_security_groups.get.return_value = subnet_nsg
+        mock_network_cls.return_value = network_client
+
+        with patch.dict("sys.modules", {
+            "azure.identity": MagicMock(DefaultAzureCredential=mock_cred),
+            "azure.mgmt.compute": MagicMock(ComputeManagementClient=mock_compute_cls),
+            "azure.mgmt.network": MagicMock(NetworkManagementClient=mock_network_cls),
+        }):
+            result = cnc.check_azure_vm(self.RESOURCE_ID)
+
+        assert result["observed"]["subnet_nsg_rules"]
+        assert result["observed"]["subnet_nsg_rules"][0]["nsg_name"] == "subnet-nsg"
+        assert "nsg_rules_present_subnet=true" in result["reasons"]
+        assert "nsg_rules_present_nic=false" in result["reasons"]
 
     def test_invalid_resource_id_raises(self):
         with pytest.raises(ValueError, match="resource_id must be a full Azure resource ID"):

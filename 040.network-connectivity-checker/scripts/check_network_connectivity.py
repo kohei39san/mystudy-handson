@@ -79,28 +79,91 @@ def _sg_rules_summary(sg_list: List[Dict]) -> Tuple[List[str], List[str]]:
     Returns (ingress_cidrs, egress_cidrs) – lists of allowed CIDR strings
     extracted from the provided security group dictionaries.
     """
-    ingress_cidrs: List[str] = []
-    egress_cidrs: List[str] = []
+    ingress_rules, egress_rules = _sg_rules_with_ports(sg_list)
+    ingress_cidrs = [r["cidr"] for r in ingress_rules if r.get("cidr")]
+    egress_cidrs = [r["cidr"] for r in egress_rules if r.get("cidr")]
+    return ingress_cidrs, egress_cidrs
+
+
+def _sg_rules_with_ports(sg_list: List[Dict]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Returns (ingress_rules, egress_rules) where each rule contains:
+      - cidr
+      - protocol
+      - from_port
+      - to_port
+    """
+    ingress_rules: List[Dict[str, Any]] = []
+    egress_rules: List[Dict[str, Any]] = []
+
     for sg in sg_list:
         for perm in sg.get("IpPermissions", []):
+            protocol = perm.get("IpProtocol", "")
+            from_port = perm.get("FromPort")
+            to_port = perm.get("ToPort")
+
             for r in perm.get("IpRanges", []):
                 cidr = r.get("CidrIp", "")
                 if cidr:
-                    ingress_cidrs.append(cidr)
+                    ingress_rules.append(
+                        {
+                            "cidr": cidr,
+                            "protocol": protocol,
+                            "from_port": from_port,
+                            "to_port": to_port,
+                        }
+                    )
             for r in perm.get("Ipv6Ranges", []):
                 cidr = r.get("CidrIpv6", "")
                 if cidr:
-                    ingress_cidrs.append(cidr)
+                    ingress_rules.append(
+                        {
+                            "cidr": cidr,
+                            "protocol": protocol,
+                            "from_port": from_port,
+                            "to_port": to_port,
+                        }
+                    )
+
         for perm in sg.get("IpPermissionsEgress", []):
+            protocol = perm.get("IpProtocol", "")
+            from_port = perm.get("FromPort")
+            to_port = perm.get("ToPort")
+
             for r in perm.get("IpRanges", []):
                 cidr = r.get("CidrIp", "")
                 if cidr:
-                    egress_cidrs.append(cidr)
+                    egress_rules.append(
+                        {
+                            "cidr": cidr,
+                            "protocol": protocol,
+                            "from_port": from_port,
+                            "to_port": to_port,
+                        }
+                    )
             for r in perm.get("Ipv6Ranges", []):
                 cidr = r.get("CidrIpv6", "")
                 if cidr:
-                    egress_cidrs.append(cidr)
-    return ingress_cidrs, egress_cidrs
+                    egress_rules.append(
+                        {
+                            "cidr": cidr,
+                            "protocol": protocol,
+                            "from_port": from_port,
+                            "to_port": to_port,
+                        }
+                    )
+
+    return ingress_rules, egress_rules
+
+
+def _sg_observed(sg: Dict[str, Any]) -> Dict[str, Any]:
+    ingress_rules, egress_rules = _sg_rules_with_ports([sg])
+    return {
+        "group_id": sg["GroupId"],
+        "group_name": sg.get("GroupName", ""),
+        "ingress_rules": ingress_rules,
+        "egress_rules": egress_rules,
+    }
 
 
 def _is_public_subnet(ec2_client, subnet_id: str) -> bool:
@@ -202,41 +265,7 @@ def check_aws_ec2(resource_id: str, region: Optional[str] = None) -> Dict[str, A
         "private_ip": private_ip,
         "public_ip": public_ip or None,
         "public_ip_assigned": public_ip_assigned,
-        "security_groups": [
-            {
-                "group_id": sg["GroupId"],
-                "group_name": sg.get("GroupName", ""),
-                "ingress_cidrs": [
-                    cidr
-                    for perm in sg.get("IpPermissions", [])
-                    for r in perm.get("IpRanges", [])
-                    for cidr in [r.get("CidrIp", "")]
-                    if cidr
-                ]
-                + [
-                    cidr
-                    for perm in sg.get("IpPermissions", [])
-                    for r in perm.get("Ipv6Ranges", [])
-                    for cidr in [r.get("CidrIpv6", "")]
-                    if cidr
-                ],
-                "egress_cidrs": [
-                    cidr
-                    for perm in sg.get("IpPermissionsEgress", [])
-                    for r in perm.get("IpRanges", [])
-                    for cidr in [r.get("CidrIp", "")]
-                    if cidr
-                ]
-                + [
-                    cidr
-                    for perm in sg.get("IpPermissionsEgress", [])
-                    for r in perm.get("Ipv6Ranges", [])
-                    for cidr in [r.get("CidrIpv6", "")]
-                    if cidr
-                ],
-            }
-            for sg in sgs
-        ],
+        "security_groups": [_sg_observed(sg) for sg in sgs],
     }
 
     # ── Reasons ──────────────────────────────────────────────────────────────
@@ -321,41 +350,7 @@ def check_aws_rds(resource_id: str, region: Optional[str] = None) -> Dict[str, A
         "subnet_ids": subnet_ids,
         "endpoint": endpoint_address,
         "port": endpoint_port,
-        "security_groups": [
-            {
-                "group_id": sg["GroupId"],
-                "group_name": sg.get("GroupName", ""),
-                "ingress_cidrs": [
-                    cidr
-                    for perm in sg.get("IpPermissions", [])
-                    for r in perm.get("IpRanges", [])
-                    for cidr in [r.get("CidrIp", "")]
-                    if cidr
-                ]
-                + [
-                    cidr
-                    for perm in sg.get("IpPermissions", [])
-                    for r in perm.get("Ipv6Ranges", [])
-                    for cidr in [r.get("CidrIpv6", "")]
-                    if cidr
-                ],
-                "egress_cidrs": [
-                    cidr
-                    for perm in sg.get("IpPermissionsEgress", [])
-                    for r in perm.get("IpRanges", [])
-                    for cidr in [r.get("CidrIp", "")]
-                    if cidr
-                ]
-                + [
-                    cidr
-                    for perm in sg.get("IpPermissionsEgress", [])
-                    for r in perm.get("Ipv6Ranges", [])
-                    for cidr in [r.get("CidrIpv6", "")]
-                    if cidr
-                ],
-            }
-            for sg in sgs
-        ],
+        "security_groups": [_sg_observed(sg) for sg in sgs],
     }
 
     reasons.append(f"db_state={db_state}")
@@ -416,6 +411,25 @@ def _parse_azure_resource_id(resource_id: str) -> Dict[str, str]:
     return result
 
 
+def _azure_collect_allow_rules(nsg: Any) -> List[Dict[str, Any]]:
+    """Collect allow rules from an Azure NSG object."""
+    rules: List[Dict[str, Any]] = []
+    for rule in nsg.security_rules or []:
+        if rule.access and rule.access.lower() == "allow":
+            rules.append(
+                {
+                    "name": rule.name,
+                    "direction": rule.direction,
+                    "priority": rule.priority,
+                    "protocol": rule.protocol,
+                    "source_address_prefix": rule.source_address_prefix or "",
+                    "destination_address_prefix": rule.destination_address_prefix or "",
+                    "destination_port_range": rule.destination_port_range or "",
+                }
+            )
+    return rules
+
+
 def check_azure_vm(resource_id: str) -> Dict[str, Any]:
     """Check network reachability for an Azure Virtual Machine."""
     try:
@@ -458,8 +472,10 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
     private_ips: List[str] = []
     public_ips: List[str] = []
     nsg_rules_info: List[Dict] = []
+    subnet_nsg_rules_info: List[Dict] = []
     subnet_ids: List[str] = []
     has_udr = False
+    seen_subnet_nsg_ids: set[str] = set()
 
     # Iterate NICs
     for nic_ref in vm.network_profile.network_interfaces or []:
@@ -498,6 +514,23 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
                     subnet_obj = network_client.subnets.get(sub_rg, vnet_name, subnet_name)
                     if subnet_obj.route_table:
                         has_udr = True
+
+                    if subnet_obj.network_security_group and subnet_obj.network_security_group.id:
+                        subnet_nsg_id = subnet_obj.network_security_group.id
+                        if subnet_nsg_id not in seen_subnet_nsg_ids:
+                            seen_subnet_nsg_ids.add(subnet_nsg_id)
+                            subnet_nsg_parts = _parse_azure_resource_id(subnet_nsg_id)
+                            subnet_nsg_rg = subnet_nsg_parts.get("resourcegroups", sub_rg)
+                            subnet_nsg_name = subnet_nsg_parts.get("networksecuritygroups", "")
+                            if subnet_nsg_name:
+                                subnet_nsg = network_client.network_security_groups.get(subnet_nsg_rg, subnet_nsg_name)
+                                subnet_allow_rules = _azure_collect_allow_rules(subnet_nsg)
+                                subnet_nsg_rules_info.append(
+                                    {
+                                        "nsg_name": subnet_nsg_name,
+                                        "allow_rules": subnet_allow_rules,
+                                    }
+                                )
                 except Exception:
                     pass
 
@@ -508,20 +541,7 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
             nsg_name = nsg_parts.get("networksecuritygroups", "")
             try:
                 nsg = network_client.network_security_groups.get(nsg_rg, nsg_name)
-                nsg_rules = []
-                for rule in nsg.security_rules or []:
-                    if rule.access and rule.access.lower() == "allow":
-                        nsg_rules.append(
-                            {
-                                "name": rule.name,
-                                "direction": rule.direction,
-                                "priority": rule.priority,
-                                "protocol": rule.protocol,
-                                "source_address_prefix": rule.source_address_prefix or "",
-                                "destination_address_prefix": rule.destination_address_prefix or "",
-                                "destination_port_range": rule.destination_port_range or "",
-                            }
-                        )
+                nsg_rules = _azure_collect_allow_rules(nsg)
                 nsg_rules_info.append({"nsg_name": nsg_name, "allow_rules": nsg_rules})
             except Exception:
                 pass
@@ -534,12 +554,15 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
         "subnet_ids": subnet_ids,
         "has_udr": has_udr,
         "nsg_rules": nsg_rules_info,
+        "subnet_nsg_rules": subnet_nsg_rules_info,
     }
 
     reasons.append(f"power_state={power_state}")
     reasons.append(f"public_ip_assigned={str(bool(public_ips)).lower()}")
     reasons.append(f"has_udr={str(has_udr).lower()}")
-    if nsg_rules_info:
+    reasons.append(f"nsg_rules_present_nic={str(bool(nsg_rules_info)).lower()}")
+    reasons.append(f"nsg_rules_present_subnet={str(bool(subnet_nsg_rules_info)).lower()}")
+    if nsg_rules_info or subnet_nsg_rules_info:
         reasons.append("nsg_rules_present=true")
 
     running = power_state.lower() == "running"

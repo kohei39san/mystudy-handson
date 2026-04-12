@@ -254,12 +254,86 @@ python scripts/check_network_connectivity.py \
     "public_subnet": true,
     "private_ip": "10.0.1.10",
     "public_ip": "203.0.113.10",
-    "public_ip_assigned": true
+    "public_ip_assigned": true,
+    "security_groups": [
+      {
+        "group_id": "sg-0123456789abcdef0",
+        "group_name": "web-sg",
+        "ingress_rules": [
+          {
+            "cidr": "0.0.0.0/0",
+            "protocol": "tcp",
+            "from_port": 443,
+            "to_port": 443
+          }
+        ],
+        "egress_rules": [
+          {
+            "cidr": "0.0.0.0/0",
+            "protocol": "-1",
+            "from_port": null,
+            "to_port": null
+          }
+        ]
+      }
+    ]
   }
 }
 ```
 
 サンプル出力は `sample_output/` ディレクトリを参照してください。
+
+Azure VM の場合、`observed` には NSG 情報として以下が含まれます。
+
+```json
+{
+  "power_state": "running",
+  "private_ips": ["10.0.0.4"],
+  "public_ips": ["1.2.3.4"],
+  "subnet_ids": [
+    "/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Network/virtualNetworks/<vnet>/subnets/<subnet>"
+  ],
+  "has_udr": false,
+  "nsg_rules": [
+    {
+      "nsg_name": "nic-nsg",
+      "allow_rules": [
+        {
+          "name": "AllowHTTPS",
+          "direction": "Inbound",
+          "priority": 100,
+          "protocol": "Tcp",
+          "source_address_prefix": "0.0.0.0/0",
+          "destination_address_prefix": "*",
+          "destination_port_range": "443"
+        }
+      ]
+    }
+  ],
+  "subnet_nsg_rules": [
+    {
+      "nsg_name": "subnet-nsg",
+      "allow_rules": [
+        {
+          "name": "AllowHTTPS",
+          "direction": "Inbound",
+          "priority": 100,
+          "protocol": "Tcp",
+          "source_address_prefix": "0.0.0.0/0",
+          "destination_address_prefix": "*",
+          "destination_port_range": "443"
+        }
+      ]
+    }
+  ]
+}
+```
+
+また `reasons` には、NSG の観測有無として以下が追加されます。
+
+- `nsg_rules_present_nic=true|false`
+- `nsg_rules_present_subnet=true|false`
+- `nsg_rules_present=true|false`（上記どちらかが true なら true）
 
 ---
 
@@ -289,6 +363,7 @@ python scripts/check_network_connectivity.py \
 | `power_state=running` | 必須 | 必須 |
 | Public IP あり | 必須 | 不要 |
 | Private IP あり | 不要 | 必須 |
+| NIC NSG / Subnet NSG（allow ルール観測） | 参考情報 | 参考情報 |
 
 ### GCP Compute Engine
 
