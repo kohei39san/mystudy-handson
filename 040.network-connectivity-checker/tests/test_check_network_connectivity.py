@@ -797,7 +797,7 @@ class TestGcpCloudRun:
         iam_policy = self._make_iam_policy(allow_unauthenticated=True)
 
         service = MagicMock()
-        service.namespaces.return_value.services.return_value.get.return_value.execute.return_value = cr_data
+        service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
         service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
         mock_build.return_value = service
 
@@ -813,7 +813,7 @@ class TestGcpCloudRun:
         iam_policy = self._make_iam_policy(allow_unauthenticated=False)
 
         service = MagicMock()
-        service.namespaces.return_value.services.return_value.get.return_value.execute.return_value = cr_data
+        service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
         service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
         mock_build.return_value = service
 
@@ -828,7 +828,7 @@ class TestGcpCloudRun:
         iam_policy = self._make_iam_policy(allow_unauthenticated=False)
 
         service = MagicMock()
-        service.namespaces.return_value.services.return_value.get.return_value.execute.return_value = cr_data
+        service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
         service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
         mock_build.return_value = service
 

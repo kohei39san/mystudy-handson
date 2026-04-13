@@ -811,11 +811,11 @@ def check_gcp_cloudrun(resource_id: str) -> Dict[str, Any]:
 
     service = _build_gcp_service("run", "v1")
 
-    # Cloud Run v1 uses namespaces (project) and locations
     cr_service = (
-        service.namespaces()
+        service.projects()
+        .locations()
         .services()
-        .get(name=f"namespaces/{project}/services/{service_name}")
+        .get(name=f"projects/{project}/locations/{location}/services/{service_name}")
         .execute()
     )
 
