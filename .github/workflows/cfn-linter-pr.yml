@@ -2,11 +2,10 @@ name: CloudFormation linter and PR
 
 permissions:
   contents: write
-  pull-requests: write
 
 on:
   push:
-    branches:
+    branches-ignore:
       - main
 
 jobs:
@@ -68,13 +67,10 @@ jobs:
           git add .
           git diff --cached --quiet && echo 'changes=' >> "$GITHUB_OUTPUT" || echo 'changes=changes' >> "$GITHUB_OUTPUT"
 
-      - name: Create Pull Request
-        if: steps.git_diff.outputs.changes == 'changes'
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: main
-          branch: cfn-lint-pr
-          title: "Changes by cfn-lint actions"
-          body-path: /tmp/cfn-lint-output.txt
-          labels: fix
+      - name: Commit and push changes
+        if: steps.git_diff.outputs.changes == 'changes' && !cancelled()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "Changes by cfn-lint actions"
+          git push origin HEAD
