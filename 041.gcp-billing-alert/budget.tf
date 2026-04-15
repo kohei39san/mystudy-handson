@@ -29,7 +29,7 @@ resource "google_billing_budget" "main_budget" {
 
 resource "google_monitoring_notification_channel" "email" {
   count        = length(var.alert_email_addresses)
-  display_name = "${var.budget_display_name}-email-${count.index}"
+  display_name = "${var.budget_display_name}-${var.alert_email_addresses[count.index]}"
   type         = "email"
 
   labels = {
