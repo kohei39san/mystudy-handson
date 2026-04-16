@@ -2,10 +2,11 @@ name: GitHub Actions Linter
 
 permissions:
   contents: write
-  pull-requests: write
 
 on:
   push:
+    branches-ignore:
+      - main
     paths:
       - ".github/workflows/**"
       - "!.github/workflows/*.md"
@@ -22,6 +23,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
 
       - name: Checkout Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -55,18 +57,13 @@ jobs:
           git add .
           git diff --cached --quiet && echo 'changes=' >> "$GITHUB_OUTPUT" || echo 'changes=changes' >> "$GITHUB_OUTPUT"
 
-      - name: Get current branch name
+      - name: Commit and push changes
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
-        id: get_branch
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
-
-      - name: Create Pull Request
-        if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          base: ${{ steps.get_branch.outputs.branch_name }}
-          branch: githubactions-lint-pr-${{ steps.get_branch.outputs.branch_name }}
-          title: "Changes by githubactions-lint-pr actions"
-          labels: fix
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "Changes by githubactions-lint actions"
+          git remote set-url origin https://x-access-token:${TOKEN}@github.com/${{ github.repository }}
+          git push origin HEAD
