@@ -1,0 +1,46 @@
+{
+  "Comment": "Refresh Trusted Advisor checks from a comma-separated check ID list",
+  "StartAt": "PrepareCheckIdList",
+  "States": {
+    "PrepareCheckIdList": {
+      "Type": "Pass",
+      "Parameters": {
+        "checkIdList.$": "States.StringSplit($.checkIds, ',')"
+      },
+      "ResultPath": "$.work",
+      "Next": "RefreshChecks"
+    },
+    "RefreshChecks": {
+      "Type": "Map",
+      "ItemsPath": "$.work.checkIdList",
+      "MaxConcurrency": 1,
+      "Iterator": {
+        "StartAt": "RefreshCheck",
+        "States": {
+          "RefreshCheck": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::aws-sdk:support:refreshTrustedAdvisorCheck",
+            "Parameters": {
+              "CheckId.$": "$$.Map.Item.Value"
+            },
+            "Catch": [
+              {
+                "ErrorEquals": [
+                  "States.ALL"
+                ],
+                "ResultPath": "$.error",
+                "Next": "IgnoreRefreshError"
+              }
+            ],
+            "End": true
+          },
+          "IgnoreRefreshError": {
+            "Type": "Pass",
+            "End": true
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

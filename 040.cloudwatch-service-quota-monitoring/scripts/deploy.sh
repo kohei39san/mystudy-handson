@@ -1,5 +1,5 @@
 #!/bin/bash
-# CloudWatch Service Quota Monitoring - デプロイスクリプト
+# Trusted Advisor refresh workflow + Slack notification deployment script
 
 set -euo pipefail
 
@@ -7,13 +7,13 @@ STACK_NAME="${STACK_NAME:-service-quota-monitoring}"
 STACKSET_NAME="${STACKSET_NAME:-service-quota-monitoring}"
 TEMPLATE_FILE="$(dirname "$0")/../cfn/stackset-template.yaml"
 REGION="${AWS_DEFAULT_REGION:-ap-northeast-1}"
-THRESHOLD_PERCENT="${THRESHOLD_PERCENT:-80}"
-MONITORING_SCHEDULE="${MONITORING_SCHEDULE:-rate(1 hour)}"
-NOTIFICATION_EMAIL="${NOTIFICATION_EMAIL:-}"
-EXISTING_TOPIC_ARN="${EXISTING_TOPIC_ARN:-}"
-EC2_VCPU_QUOTA="${EC2_VCPU_QUOTA:-32}"
-LAMBDA_CONCURRENCY_QUOTA="${LAMBDA_CONCURRENCY_QUOTA:-1000}"
-LAMBDA_SOURCE_FILE="${LAMBDA_SOURCE_FILE:-$(dirname "$0")/quota_monitor.py}"
+TRUSTED_ADVISOR_REFRESH_SCHEDULE="${TRUSTED_ADVISOR_REFRESH_SCHEDULE:-rate(6 hours)}"
+TRUSTED_ADVISOR_CHECK_IDS="${TRUSTED_ADVISOR_CHECK_IDS:-}"
+TRUSTED_ADVISOR_DEFINITION_FILE="${TRUSTED_ADVISOR_DEFINITION_FILE:-$(dirname "$0")/../asl/trusted-advisor-refresh.asl.json}"
+TRUSTED_ADVISOR_DEFINITION_S3_BUCKET="${TRUSTED_ADVISOR_DEFINITION_S3_BUCKET:-}"
+TRUSTED_ADVISOR_DEFINITION_S3_KEY="${TRUSTED_ADVISOR_DEFINITION_S3_KEY:-}"
+TRUSTED_ADVISOR_SLACK_CHANNEL_ARN="${TRUSTED_ADVISOR_SLACK_CHANNEL_ARN:-}"
+TRUSTED_ADVISOR_NOTIFICATION_REGIONS="${TRUSTED_ADVISOR_NOTIFICATION_REGIONS:-us-east-1,us-east-2,us-west-2,eu-west-1,eu-central-1,ap-northeast-1,ap-southeast-1,ap-southeast-2,ap-south-1,ca-central-1,sa-east-1}"
 
 usage() {
     cat <<EOF
@@ -23,8 +23,6 @@ usage() {
 コマンド:
   deploy-stack      CloudFormation スタックとしてデプロイ（単一アカウント）
   deploy-stackset   CloudFormation StackSet としてデプロイ（複数アカウント/リージョン）
-    update-lambda-code デプロイ済みスタックの Lambda コードを直接上書き
-    deploy-and-update  スタックをデプロイして Lambda コードを上書き
   add-instances     StackSet インスタンスを追加（deploy-stackset 実行後）
   delete-stack      スタックを削除
   delete-stackset   StackSet を削除
@@ -32,94 +30,87 @@ usage() {
   validate          テンプレートを検証
 
 環境変数:
-  STACK_NAME              スタック名 (デフォルト: service-quota-monitoring)
-  STACKSET_NAME           StackSet 名 (デフォルト: service-quota-monitoring)
-  AWS_DEFAULT_REGION      デプロイ先リージョン (デフォルト: ap-northeast-1)
-  THRESHOLD_PERCENT       クォータ使用率アラーム閾値 % (デフォルト: 80)
-  MONITORING_SCHEDULE     監視スケジュール (デフォルト: rate(1 hour))
-  NOTIFICATION_EMAIL      通知メールアドレス (任意)
-  EXISTING_TOPIC_ARN      既存の SNS トピック ARN (任意)
-  EC2_VCPU_QUOTA          EC2 On-Demand 標準 vCPU クォータ (デフォルト: 32)
-  LAMBDA_CONCURRENCY_QUOTA Lambda 同時実行数クォータ (デフォルト: 1000)
-    LAMBDA_SOURCE_FILE      Lambda ソースファイル (デフォルト: scripts/quota_monitor.py)
+  STACK_NAME                          スタック名 (デフォルト: service-quota-monitoring)
+  STACKSET_NAME                       StackSet 名 (デフォルト: service-quota-monitoring)
+  AWS_DEFAULT_REGION                  デプロイ先リージョン (デフォルト: ap-northeast-1)
+  TRUSTED_ADVISOR_REFRESH_SCHEDULE    TAリフレッシュの定期実行式 (デフォルト: rate(6 hours))
+  TRUSTED_ADVISOR_CHECK_IDS           リフレッシュ対象のTAチェックID(カンマ区切り, 任意)
+  TRUSTED_ADVISOR_DEFINITION_FILE     ステートマシン定義ASLファイル
+  TRUSTED_ADVISOR_DEFINITION_S3_BUCKET ASLファイルを保存するS3バケット
+  TRUSTED_ADVISOR_DEFINITION_S3_KEY   ASLファイルのS3キー(任意)
+  TRUSTED_ADVISOR_SLACK_CHANNEL_ARN   AWS User Notificationsで通知先にするSlackチャネルARN(任意)
+    TRUSTED_ADVISOR_NOTIFICATION_REGIONS AWS User Notifications EventRuleの対象リージョン(カンマ区切り)
 
 例:
-    # 単一アカウントへのデプロイ
-    NOTIFICATION_EMAIL=admin@example.com $0 deploy-stack
+  # 単一アカウントへのデプロイ
+  $0 deploy-stack
 
-    # デプロイ後に Lambda コードを直接上書き
-    $0 update-lambda-code
-
-    # デプロイとコード上書きを連続実行
-    $0 deploy-and-update
-
-  # StackSet の作成
-  $0 deploy-stackset
-
-  # StackSet のインスタンスを組織 OU に追加
-  OU_IDS=ou-xxxx-xxxxxxxx REGIONS=ap-northeast-1,us-east-1 $0 add-instances
-
-  # 特定アカウントに StackSet インスタンスを追加
-  ACCOUNT_IDS=123456789012 REGIONS=ap-northeast-1 $0 add-instances
+  # TAチェックを6時間ごとにリフレッシュしSlack通知（us-east-1でのみ有効）
+  AWS_DEFAULT_REGION=us-east-1 \
+  TRUSTED_ADVISOR_CHECK_IDS=eW7HH0l7J9,c1z7kmr03n \
+  TRUSTED_ADVISOR_DEFINITION_S3_BUCKET=my-cfn-artifacts-bucket \
+  TRUSTED_ADVISOR_SLACK_CHANNEL_ARN=arn:aws:chatbot:us-east-1:123456789012:chat-configuration/slack-channel/my-channel \
+    TRUSTED_ADVISOR_NOTIFICATION_REGIONS=us-east-1,ap-northeast-1,eu-west-1 \
+  TRUSTED_ADVISOR_REFRESH_SCHEDULE='rate(6 hours)' \
+  $0 deploy-stack
 EOF
     exit 1
 }
 
-build_parameter_overrides() {
-    local params="ParameterKey=ThresholdPercent,ParameterValue=${THRESHOLD_PERCENT}"
-    params="${params} ParameterKey=MonitoringSchedule,ParameterValue=${MONITORING_SCHEDULE}"
-    params="${params} ParameterKey=EC2StandardVCPUQuota,ParameterValue=${EC2_VCPU_QUOTA}"
-    params="${params} ParameterKey=LambdaConcurrentExecutionsQuota,ParameterValue=${LAMBDA_CONCURRENCY_QUOTA}"
-    if [ -n "${NOTIFICATION_EMAIL}" ]; then
-        params="${params} ParameterKey=NotificationEmail,ParameterValue=${NOTIFICATION_EMAIL}"
+upload_trusted_advisor_definition_if_needed() {
+    if [ -z "${TRUSTED_ADVISOR_CHECK_IDS}" ]; then
+        return
     fi
-    if [ -n "${EXISTING_TOPIC_ARN}" ]; then
-        params="${params} ParameterKey=ExistingTopicArn,ParameterValue=${EXISTING_TOPIC_ARN}"
-    fi
-    echo "${params}"
-}
 
-package_lambda_code() {
-    if [ ! -f "${LAMBDA_SOURCE_FILE}" ]; then
-        echo "エラー: Lambda ソースファイルが見つかりません: ${LAMBDA_SOURCE_FILE}"
+    if [ -z "${TRUSTED_ADVISOR_DEFINITION_S3_BUCKET}" ]; then
+        echo "エラー: TRUSTED_ADVISOR_CHECK_IDS を指定した場合は TRUSTED_ADVISOR_DEFINITION_S3_BUCKET が必須です"
         exit 1
     fi
 
-    local tmp_dir
-    local zip_file
-    tmp_dir=$(mktemp -d)
-    zip_file="${tmp_dir}/quota_monitor.zip"
+    if [ ! -f "${TRUSTED_ADVISOR_DEFINITION_FILE}" ]; then
+        echo "エラー: ステートマシン定義ファイルが見つかりません: ${TRUSTED_ADVISOR_DEFINITION_FILE}"
+        exit 1
+    fi
 
-    cp "${LAMBDA_SOURCE_FILE}" "${tmp_dir}/index.py"
-    (
-        cd "${tmp_dir}"
-        zip -q "${zip_file}" index.py
-    )
+    if [ -z "${TRUSTED_ADVISOR_DEFINITION_S3_KEY}" ]; then
+        TRUSTED_ADVISOR_DEFINITION_S3_KEY="state-machines/${STACK_NAME}/trusted-advisor-refresh.asl.json"
+    fi
 
-    echo "${zip_file}"
+    echo "ステートマシン定義をS3へアップロード中..."
+    aws s3 cp \
+        "${TRUSTED_ADVISOR_DEFINITION_FILE}" \
+        "s3://${TRUSTED_ADVISOR_DEFINITION_S3_BUCKET}/${TRUSTED_ADVISOR_DEFINITION_S3_KEY}" \
+        --region "${REGION}"
 }
 
-update_lambda_code() {
-    local zip_file
-    local function_name
+build_deploy_parameter_overrides() {
+    DEPLOY_PARAMS=(
+        "TrustedAdvisorRefreshSchedule=${TRUSTED_ADVISOR_REFRESH_SCHEDULE}"
+        "TrustedAdvisorNotificationRegions=${TRUSTED_ADVISOR_NOTIFICATION_REGIONS}"
+    )
+    if [ -n "${TRUSTED_ADVISOR_CHECK_IDS}" ]; then
+        DEPLOY_PARAMS+=("TrustedAdvisorCheckIds=${TRUSTED_ADVISOR_CHECK_IDS}")
+        DEPLOY_PARAMS+=("TrustedAdvisorDefinitionS3Bucket=${TRUSTED_ADVISOR_DEFINITION_S3_BUCKET}")
+        DEPLOY_PARAMS+=("TrustedAdvisorDefinitionS3Key=${TRUSTED_ADVISOR_DEFINITION_S3_KEY}")
+    fi
+    if [ -n "${TRUSTED_ADVISOR_SLACK_CHANNEL_ARN}" ]; then
+        DEPLOY_PARAMS+=("TrustedAdvisorSlackChannelArn=${TRUSTED_ADVISOR_SLACK_CHANNEL_ARN}")
+    fi
+}
 
-    echo "Lambda コードを直接上書き中..."
-    zip_file=$(package_lambda_code)
-    function_name=$(aws cloudformation describe-stack-resource \
-        --stack-name "${STACK_NAME}" \
-        --logical-resource-id QuotaMonitorFunction \
-        --region "${REGION}" \
-        --query 'StackResourceDetail.PhysicalResourceId' \
-        --output text)
-
-    aws lambda update-function-code \
-        --function-name "${function_name}" \
-        --zip-file "fileb://${zip_file}" \
-        --region "${REGION}" >/dev/null
-
-    rm -f "${zip_file}"
-    rmdir "$(dirname "${zip_file}")"
-    echo "Lambda コードを更新しました: ${function_name}"
+build_stackset_parameter_overrides() {
+    STACKSET_PARAMS=(
+        "ParameterKey=TrustedAdvisorRefreshSchedule,ParameterValue=${TRUSTED_ADVISOR_REFRESH_SCHEDULE}"
+        "ParameterKey=TrustedAdvisorNotificationRegions,ParameterValue=${TRUSTED_ADVISOR_NOTIFICATION_REGIONS}"
+    )
+    if [ -n "${TRUSTED_ADVISOR_CHECK_IDS}" ]; then
+        STACKSET_PARAMS+=("ParameterKey=TrustedAdvisorCheckIds,ParameterValue=${TRUSTED_ADVISOR_CHECK_IDS}")
+        STACKSET_PARAMS+=("ParameterKey=TrustedAdvisorDefinitionS3Bucket,ParameterValue=${TRUSTED_ADVISOR_DEFINITION_S3_BUCKET}")
+        STACKSET_PARAMS+=("ParameterKey=TrustedAdvisorDefinitionS3Key,ParameterValue=${TRUSTED_ADVISOR_DEFINITION_S3_KEY}")
+    fi
+    if [ -n "${TRUSTED_ADVISOR_SLACK_CHANNEL_ARN}" ]; then
+        STACKSET_PARAMS+=("ParameterKey=TrustedAdvisorSlackChannelArn,ParameterValue=${TRUSTED_ADVISOR_SLACK_CHANNEL_ARN}")
+    fi
 }
 
 validate_template() {
@@ -134,17 +125,26 @@ deploy_stack() {
     echo "CloudFormation スタックをデプロイ中..."
     echo "  スタック名: ${STACK_NAME}"
     echo "  リージョン: ${REGION}"
-    echo "  閾値: ${THRESHOLD_PERCENT}%"
-    echo "  スケジュール: ${MONITORING_SCHEDULE}"
+    if [ -n "${TRUSTED_ADVISOR_CHECK_IDS}" ]; then
+        echo "  TA定期リフレッシュ: 有効"
+    else
+        echo "  TA定期リフレッシュ: 無効 (TRUSTED_ADVISOR_CHECK_IDS未指定)"
+    fi
+    if [ -n "${TRUSTED_ADVISOR_SLACK_CHANNEL_ARN}" ]; then
+        echo "  TAリフレッシュ通知(User Notifications->Slack): 有効"
+    else
+        echo "  TAリフレッシュ通知(User Notifications->Slack): 無効"
+    fi
     echo ""
 
-    PARAMS=$(build_parameter_overrides)
+    upload_trusted_advisor_definition_if_needed
+    build_deploy_parameter_overrides
 
     aws cloudformation deploy \
         --template-file "${TEMPLATE_FILE}" \
         --stack-name "${STACK_NAME}" \
-        --parameter-overrides ${PARAMS} \
-        --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+        --parameter-overrides "${DEPLOY_PARAMS[@]}" \
+        --capabilities CAPABILITY_NAMED_IAM \
         --region "${REGION}" \
         --no-fail-on-empty-changeset
 
@@ -160,35 +160,42 @@ deploy_stack() {
 deploy_stackset() {
     echo "CloudFormation StackSet を作成中..."
     echo "  StackSet 名: ${STACKSET_NAME}"
-    echo "  閾値: ${THRESHOLD_PERCENT}%"
-    echo "  スケジュール: ${MONITORING_SCHEDULE}"
+    if [ -n "${TRUSTED_ADVISOR_CHECK_IDS}" ]; then
+        echo "  TA定期リフレッシュ: 有効 (us-east-1でのみ作成)"
+    else
+        echo "  TA定期リフレッシュ: 無効"
+    fi
+    if [ -n "${TRUSTED_ADVISOR_SLACK_CHANNEL_ARN}" ]; then
+        echo "  TAリフレッシュ通知(User Notifications->Slack): 有効 (us-east-1でのみ作成)"
+    else
+        echo "  TAリフレッシュ通知(User Notifications->Slack): 無効"
+    fi
     echo ""
 
-    PARAMS=$(build_parameter_overrides)
+    upload_trusted_advisor_definition_if_needed
+    build_stackset_parameter_overrides
 
-    # StackSet が既に存在するか確認
     if aws cloudformation describe-stack-set --stack-set-name "${STACKSET_NAME}" --region "${REGION}" &>/dev/null; then
         echo "StackSet '${STACKSET_NAME}' は既に存在します。更新中..."
         aws cloudformation update-stack-set \
             --stack-set-name "${STACKSET_NAME}" \
             --template-body "file://${TEMPLATE_FILE}" \
-            --parameter-overrides ${PARAMS} \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --parameter-overrides "${STACKSET_PARAMS[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
             --region "${REGION}"
     else
         echo "StackSet '${STACKSET_NAME}' を作成中..."
         aws cloudformation create-stack-set \
             --stack-set-name "${STACKSET_NAME}" \
             --template-body "file://${TEMPLATE_FILE}" \
-            --parameter-overrides ${PARAMS} \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --parameter-overrides "${STACKSET_PARAMS[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM \
             --region "${REGION}"
     fi
 
     echo ""
     echo "StackSet の作成/更新が完了しました。"
     echo "インスタンスを追加するには: $0 add-instances"
-    echo "各インスタンスの Lambda コードは別途 update-function-code で上書きしてください。"
 }
 
 add_stackset_instances() {
@@ -204,7 +211,6 @@ add_stackset_instances() {
 
     if [ -n "${ou_ids}" ]; then
         echo "  対象 OU: ${ou_ids}"
-        # Convert comma-separated OU IDs to JSON array
         IFS=',' read -ra OU_ARRAY <<< "${ou_ids}"
         OU_JSON=$(printf '"%s",' "${OU_ARRAY[@]}" | sed 's/,$//')
         aws cloudformation create-stack-instances \
@@ -256,7 +262,6 @@ show_status() {
         --output table 2>/dev/null || echo "スタックが見つかりません: ${STACK_NAME}"
 }
 
-# メイン処理
 if [ $# -eq 0 ]; then
     usage
 fi
@@ -269,14 +274,6 @@ case "$1" in
     deploy-stackset)
         validate_template
         deploy_stackset
-        ;;
-    update-lambda-code)
-        update_lambda_code
-        ;;
-    deploy-and-update)
-        validate_template
-        deploy_stack
-        update_lambda_code
         ;;
     add-instances)
         add_stackset_instances

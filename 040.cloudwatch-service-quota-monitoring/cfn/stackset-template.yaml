@@ -1,299 +1,191 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudWatch StackSet for monitoring AWS Service Quotas'
+Description: 'Trusted Advisor refresh workflow and Slack notification with AWS User Notifications (no SNS, no CloudWatch alarms)'
 
 Parameters:
-  ThresholdPercent:
-    Type: Number
-    Default: 80
-    MinValue: 1
-    MaxValue: 100
-    Description: 'Percentage of service quota to trigger alarm (1-100)'
-
-  MonitoringSchedule:
+  TrustedAdvisorRefreshSchedule:
     Type: String
-    Default: 'rate(1 hour)'
-    Description: 'EventBridge schedule expression for monitoring Lambda (e.g., rate(1 hour), cron(0 * * * ? *))'
+    Default: 'rate(6 hours)'
+    Description: 'EventBridge schedule expression for Trusted Advisor refresh workflow (for example rate(6 hours))'
 
-  NotificationEmail:
+  TrustedAdvisorCheckIds:
     Type: String
     Default: ''
-    Description: 'Email address for alarm notifications. Leave empty to skip email subscription.'
+    Description: 'Comma-separated Trusted Advisor check IDs to refresh (for example eW7HH0l7J9,c1z7kmr03n). Leave empty to disable scheduled refresh workflow.'
 
-  ExistingTopicArn:
+  TrustedAdvisorDefinitionS3Bucket:
     Type: String
     Default: ''
-    Description: 'Existing SNS Topic ARN for notifications. If empty, a new topic will be created.'
+    Description: 'S3 bucket that stores trusted-advisor-refresh.asl.json'
 
-  EC2StandardVCPUQuota:
-    Type: Number
-    Default: 32
-    Description: 'EC2 On-Demand Standard (A, C, D, H, I, M, R, T, Z) vCPU quota limit for this account/region'
+  TrustedAdvisorDefinitionS3Key:
+    Type: String
+    Default: ''
+    Description: 'S3 object key for trusted-advisor-refresh.asl.json'
 
-  LambdaConcurrentExecutionsQuota:
-    Type: Number
-    Default: 1000
-    Description: 'Lambda concurrent executions quota limit for this account/region'
+  TrustedAdvisorSlackChannelArn:
+    Type: String
+    Default: ''
+    Description: 'Slack channel configuration ARN for AWS User Notifications (for example arn:aws:chatbot:us-east-1:123456789012:chat-configuration/slack-channel/my-channel)'
+
+  TrustedAdvisorNotificationRegions:
+    Type: CommaDelimitedList
+    Default: 'us-east-1,us-east-2,us-west-2,eu-west-1,eu-central-1,ap-northeast-1,ap-southeast-1,ap-southeast-2,ap-south-1,ca-central-1,sa-east-1'
+    Description: 'Region list for AWS::Notifications::EventRule (major regions). Trusted Advisor events are emitted from us-east-1, so include us-east-1.'
 
 Conditions:
-  CreateTopic: !Equals [!Ref ExistingTopicArn, '']
-  HasEmail: !Not [!Equals [!Ref NotificationEmail, '']]
+  HasTrustedAdvisorCheckIds: !Not [!Equals [!Ref TrustedAdvisorCheckIds, '']]
+  HasTrustedAdvisorDefinitionS3Bucket: !Not [!Equals [!Ref TrustedAdvisorDefinitionS3Bucket, '']]
+  HasTrustedAdvisorDefinitionS3Key: !Not [!Equals [!Ref TrustedAdvisorDefinitionS3Key, '']]
+  HasTrustedAdvisorSlackChannelArn: !Not [!Equals [!Ref TrustedAdvisorSlackChannelArn, '']]
+  HasTrustedAdvisorDefinitionLocation: !And
+    - !Condition HasTrustedAdvisorDefinitionS3Bucket
+    - !Condition HasTrustedAdvisorDefinitionS3Key
+  IsUSEast1: !Equals [!Ref AWS::Region, 'us-east-1']
+  EnableTrustedAdvisorRefresh: !And
+    - !Condition HasTrustedAdvisorCheckIds
+    - !Condition HasTrustedAdvisorDefinitionLocation
+    - !Condition IsUSEast1
+  EnableTrustedAdvisorSlackNotification: !And
+    - !Condition HasTrustedAdvisorSlackChannelArn
+    - !Condition IsUSEast1
 
 Resources:
-  # SNS Topic for notifications
-  AlertTopic:
-    Type: AWS::SNS::Topic
-    Condition: CreateTopic
-    Properties:
-      TopicName: !Sub '${AWS::StackName}-service-quota-alerts'
-      Tags:
-        - Key: StackName
-          Value: !Ref AWS::StackName
-
-  # Email subscription for alert topic
-  AlertTopicEmailSubscription:
-    Type: AWS::SNS::Subscription
-    Condition: HasEmail
-    Properties:
-      TopicArn: !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
-      Protocol: email
-      Endpoint: !Ref NotificationEmail
-
-  # IAM Role for Lambda
-  QuotaMonitorRole:
+  TrustedAdvisorRefreshStateMachineRole:
     Type: AWS::IAM::Role
+    Condition: EnableTrustedAdvisorRefresh
     Properties:
-      RoleName: !Sub '${AWS::StackName}-quota-monitor-role'
+      RoleName: !Sub '${AWS::StackName}-ta-refresh-sfn-role'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
-              Service: lambda.amazonaws.com
+              Service: states.amazonaws.com
             Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: QuotaMonitorPolicy
+        - PolicyName: TrustedAdvisorRefreshWorkflowPolicy
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
-                  - servicequotas:GetServiceQuota
-                  - ec2:DescribeVpcs
-                  - ec2:DescribeAddresses
-                  - rds:DescribeDBInstances
-                  - cloudwatch:PutMetricData
+                  - support:RefreshTrustedAdvisorCheck
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:ListLogDeliveries
+                  - logs:PutLogEvents
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                  - logs:DescribeLogGroups
+                  - logs:CreateLogStream
                 Resource: '*'
       Tags:
         - Key: StackName
           Value: !Ref AWS::StackName
 
-  # Lambda function to collect quota usage metrics
-  QuotaMonitorFunction:
-    Type: AWS::Lambda::Function
+  TrustedAdvisorRefreshStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: EnableTrustedAdvisorRefresh
     Properties:
-      FunctionName: !Sub '${AWS::StackName}-quota-monitor'
-      Runtime: python3.12
-      Handler: index.handler
-      Role: !GetAtt QuotaMonitorRole.Arn
-      Timeout: 300
-      MemorySize: 128
-      Environment:
-        Variables:
-          METRIC_NAMESPACE: !Sub '${AWS::StackName}/ServiceQuotas'
-      Code:
-        ZipFile: |
-          def handler(event, context):
-              # Placeholder code; update with aws lambda update-function-code after deployment.
-              return {'statusCode': 200, 'message': 'placeholder'}
+      LogGroupName: !Sub '/aws/states/${AWS::StackName}-trusted-advisor-refresh'
+      RetentionInDays: 14
+
+  TrustedAdvisorRefreshStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Condition: EnableTrustedAdvisorRefresh
+    Properties:
+      StateMachineName: !Sub '${AWS::StackName}-trusted-advisor-refresh'
+      RoleArn: !GetAtt TrustedAdvisorRefreshStateMachineRole.Arn
+      LoggingConfiguration:
+        Level: ERROR
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt TrustedAdvisorRefreshStateMachineLogGroup.Arn
+      DefinitionS3Location:
+        Bucket: !Ref TrustedAdvisorDefinitionS3Bucket
+        Key: !Ref TrustedAdvisorDefinitionS3Key
+
+  EventBridgeStartExecutionRole:
+    Type: AWS::IAM::Role
+    Condition: EnableTrustedAdvisorRefresh
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-ta-refresh-events-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StartStateMachinePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource: !Ref TrustedAdvisorRefreshStateMachine
       Tags:
         - Key: StackName
           Value: !Ref AWS::StackName
 
-  # EventBridge rule to schedule Lambda
-  MonitoringScheduleRule:
+  TrustedAdvisorRefreshScheduleRule:
     Type: AWS::Events::Rule
+    Condition: EnableTrustedAdvisorRefresh
     Properties:
-      Name: !Sub '${AWS::StackName}-monitoring-schedule'
-      Description: 'Schedule for service quota monitoring Lambda'
-      ScheduleExpression: !Ref MonitoringSchedule
+      Name: !Sub '${AWS::StackName}-ta-refresh-schedule'
+      Description: 'Run Trusted Advisor refresh state machine on schedule'
+      ScheduleExpression: !Ref TrustedAdvisorRefreshSchedule
       State: ENABLED
       Targets:
-        - Arn: !GetAtt QuotaMonitorFunction.Arn
-          Id: QuotaMonitorTarget
+        - Arn: !Ref TrustedAdvisorRefreshStateMachine
+          Id: TrustedAdvisorRefreshStateMachineTarget
+          RoleArn: !GetAtt EventBridgeStartExecutionRole.Arn
+          Input: !Sub '{"checkIds":"${TrustedAdvisorCheckIds}"}'
 
-  # Lambda permission for EventBridge
-  LambdaEventBridgePermission:
-    Type: AWS::Lambda::Permission
+  TrustedAdvisorRefreshNotificationConfiguration:
+    Type: AWS::Notifications::NotificationConfiguration
+    Condition: EnableTrustedAdvisorSlackNotification
     Properties:
-      FunctionName: !GetAtt QuotaMonitorFunction.Arn
-      Action: lambda:InvokeFunction
-      Principal: events.amazonaws.com
-      SourceArn: !GetAtt MonitoringScheduleRule.Arn
+      Name: !Sub '${AWS::StackName}-ta-refresh'
+      Description: 'Notify Slack when Trusted Advisor refresh notification events are emitted'
+      AggregationDuration: SHORT
 
-  # CloudWatch Alarm: VPC quota usage (custom metric)
-  VPCQuotaAlarm:
-    Type: AWS::CloudWatch::Alarm
+  TrustedAdvisorRefreshChannelAssociation:
+    Type: AWS::Notifications::ChannelAssociation
+    Condition: EnableTrustedAdvisorSlackNotification
     Properties:
-      AlarmName: !Sub '${AWS::StackName}-VPC-Quota-High'
-      AlarmDescription: !Sub 'VPC count exceeds ${ThresholdPercent}% of quota limit'
-      Namespace: !Sub '${AWS::StackName}/ServiceQuotas'
-      MetricName: UsagePercentage
-      Dimensions:
-        - Name: ServiceCode
-          Value: vpc
-        - Name: QuotaCode
-          Value: L-F678F1CE
-        - Name: QuotaName
-          Value: VPCs per Region
-      Period: 3600
-      EvaluationPeriods: 1
-      Threshold: !Ref ThresholdPercent
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      Statistic: Maximum
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
-      OKActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+      Arn: !Ref TrustedAdvisorSlackChannelArn
+      NotificationConfigurationArn: !Ref TrustedAdvisorRefreshNotificationConfiguration
 
-  # CloudWatch Alarm: Elastic IP quota usage (custom metric)
-  EIPQuotaAlarm:
-    Type: AWS::CloudWatch::Alarm
+  TrustedAdvisorRefreshEventRule:
+    Type: AWS::Notifications::EventRule
+    Condition: EnableTrustedAdvisorSlackNotification
     Properties:
-      AlarmName: !Sub '${AWS::StackName}-EIP-Quota-High'
-      AlarmDescription: !Sub 'Elastic IP count exceeds ${ThresholdPercent}% of quota limit'
-      Namespace: !Sub '${AWS::StackName}/ServiceQuotas'
-      MetricName: UsagePercentage
-      Dimensions:
-        - Name: ServiceCode
-          Value: ec2
-        - Name: QuotaCode
-          Value: L-0263D0A3
-        - Name: QuotaName
-          Value: EC2-VPC Elastic IPs
-      Period: 3600
-      EvaluationPeriods: 1
-      Threshold: !Ref ThresholdPercent
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      Statistic: Maximum
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
-      OKActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
-
-  # CloudWatch Alarm: RDS instance quota usage (custom metric)
-  RDSInstanceQuotaAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub '${AWS::StackName}-RDS-Instance-Quota-High'
-      AlarmDescription: !Sub 'RDS instance count exceeds ${ThresholdPercent}% of quota limit'
-      Namespace: !Sub '${AWS::StackName}/ServiceQuotas'
-      MetricName: UsagePercentage
-      Dimensions:
-        - Name: ServiceCode
-          Value: rds
-        - Name: QuotaCode
-          Value: L-7B6409FD
-        - Name: QuotaName
-          Value: DB instances
-      Period: 3600
-      EvaluationPeriods: 1
-      Threshold: !Ref ThresholdPercent
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      Statistic: Maximum
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
-      OKActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
-
-  # CloudWatch Alarm: EC2 On-Demand Standard vCPU (native AWS/Usage metric with math expression)
-  EC2VCPUQuotaAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub '${AWS::StackName}-EC2-OnDemand-vCPU-Quota-High'
-      AlarmDescription: !Sub 'EC2 On-Demand Standard vCPU usage exceeds ${ThresholdPercent}% of quota limit'
-      Metrics:
-        - Id: usage
-          MetricStat:
-            Metric:
-              Namespace: AWS/Usage
-              MetricName: ResourceCount
-              Dimensions:
-                - Name: Service
-                  Value: EC2
-                - Name: Resource
-                  Value: vCPU
-                - Name: Type
-                  Value: Resource
-                - Name: Class
-                  Value: Standard/On-Demand
-            Period: 3600
-            Stat: Maximum
-          ReturnData: false
-        - Id: quota
-          Expression: !Sub '${EC2StandardVCPUQuota}'
-          ReturnData: false
-        - Id: percentage
-          Expression: '(usage / quota) * 100'
-          ReturnData: true
-          Label: EC2 On-Demand vCPU Usage Percentage
-      EvaluationPeriods: 1
-      Threshold: !Ref ThresholdPercent
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
-      OKActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
-
-  # CloudWatch Alarm: Lambda concurrent executions (native AWS/Lambda metric with math expression)
-  LambdaConcurrencyQuotaAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: !Sub '${AWS::StackName}-Lambda-ConcurrentExecutions-Quota-High'
-      AlarmDescription: !Sub 'Lambda concurrent executions exceeds ${ThresholdPercent}% of quota limit'
-      Metrics:
-        - Id: usage
-          MetricStat:
-            Metric:
-              Namespace: AWS/Lambda
-              MetricName: ConcurrentExecutions
-            Period: 300
-            Stat: Maximum
-          ReturnData: false
-        - Id: quota
-          Expression: !Sub '${LambdaConcurrentExecutionsQuota}'
-          ReturnData: false
-        - Id: percentage
-          Expression: '(usage / quota) * 100'
-          ReturnData: true
-          Label: Lambda Concurrent Executions Usage Percentage
-      EvaluationPeriods: 1
-      Threshold: !Ref ThresholdPercent
-      ComparisonOperator: GreaterThanOrEqualToThreshold
-      TreatMissingData: notBreaching
-      AlarmActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
-      OKActions:
-        - !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+      Source: aws.trustedadvisor
+      EventType: Trusted Advisor Check Item Refresh Notification
+      Regions: !Ref TrustedAdvisorNotificationRegions
+      NotificationConfigurationArn: !Ref TrustedAdvisorRefreshNotificationConfiguration
 
 Outputs:
-  AlertTopicArn:
-    Description: 'SNS Topic ARN for service quota alerts'
-    Value: !If [CreateTopic, !Ref AlertTopic, !Ref ExistingTopicArn]
+  TrustedAdvisorRefreshStateMachineArn:
+    Condition: EnableTrustedAdvisorRefresh
+    Description: 'ARN of Trusted Advisor refresh Step Functions state machine (created only in us-east-1 when TrustedAdvisorCheckIds is provided)'
+    Value: !Ref TrustedAdvisorRefreshStateMachine
 
-  QuotaMonitorFunctionArn:
-    Description: 'ARN of the quota monitoring Lambda function'
-    Value: !GetAtt QuotaMonitorFunction.Arn
+  TrustedAdvisorRefreshScheduleRuleArn:
+    Condition: EnableTrustedAdvisorRefresh
+    Description: 'ARN of EventBridge schedule rule for Trusted Advisor refresh workflow'
+    Value: !GetAtt TrustedAdvisorRefreshScheduleRule.Arn
 
-  MetricNamespace:
-    Description: 'CloudWatch namespace for custom quota metrics'
-    Value: !Sub '${AWS::StackName}/ServiceQuotas'
-
-  MonitoringScheduleRuleArn:
-    Description: 'ARN of the EventBridge rule for monitoring schedule'
-    Value: !GetAtt MonitoringScheduleRule.Arn
+  TrustedAdvisorRefreshNotificationConfigurationArn:
+    Condition: EnableTrustedAdvisorSlackNotification
+    Description: 'AWS User Notifications configuration ARN for Trusted Advisor refresh events'
+    Value: !Ref TrustedAdvisorRefreshNotificationConfiguration
