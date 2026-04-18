@@ -21,17 +21,17 @@
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
-    "@types/node": "25.5.0",
-    "aws-cdk": "^2.1114.1",
+    "@types/node": "25.5.2",
+    "aws-cdk": "^2.1117.0",
     "jest": "^30.3.0",
-    "ts-jest": "^29.4.6",
+    "ts-jest": "^29.4.9",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "~6.0.2"
   },
   "dependencies": {
-    "@aws-sdk/client-ssm": "^3.1021.0",
-    "aws-cdk-lib": "^2.245.0",
+    "@aws-sdk/client-ssm": "^3.1024.0",
+    "aws-cdk-lib": "^2.248.0",
     "constructs": "^10.6.0"
   },
   "overrides": {

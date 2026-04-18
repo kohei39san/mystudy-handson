@@ -3,7 +3,7 @@ on:
   pull_request:
     types: [closed]
 
-if: github.event.pull_request.merged == true && github.event.pull_request.user.name != 'dependabot[bot]'
+if: github.event.pull_request.merged == true && github.event.pull_request.user.login != 'dependabot[bot]'
 
 concurrency:
   group: agentic-workflows
@@ -83,7 +83,7 @@ Dependabot ルール:
 2. PR に現在付与されているラベルを取得する。
 3. PR 作成者が `dependabot[bot]` の場合は手順6へ進む（バージョンラベル選定のみ）。
 4. 変更ファイル一覧を取得し、パッチサマリーを確認して意図を推定する。
-5. 影響範囲カテゴリから許可リスト内のラベルを最大1つ選定する（dependabot PR ではこの手順をスキップ）。
+5. 影響範囲カテゴリから許可リスト内のラベルを最大1つ選定する（dependabot PR ではこの手順をスキップする）。
 6. バージョンカテゴリから許可リスト内のラベルを最大1つ選定する。
 7. 各カテゴリで既存の管理対象ラベルがある場合、そのカテゴリの `labels_to_add` には何も入れない。
 8. ラベル追加の safe output を出力する。

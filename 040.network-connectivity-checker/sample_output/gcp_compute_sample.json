@@ -1,0 +1,37 @@
+{
+  "provider": "gcp",
+  "resource_type": "compute",
+  "resource_id": "projects/my-project/zones/us-central1-a/instances/my-vm",
+  "internet_reachability": "reachable",
+  "private_reachability": "reachable",
+  "reasons": [
+    "instance_state=RUNNING",
+    "external_ip_assigned=true",
+    "network_tags=http-server,https-server",
+    "fw_ingress_allows=0.0.0.0/0"
+  ],
+  "observed": {
+    "instance_state": "RUNNING",
+    "network": "default",
+    "subnetwork": "default",
+    "private_ips": ["10.128.0.2"],
+    "external_ips": ["34.10.20.30"],
+    "network_tags": ["http-server", "https-server"],
+    "firewall_rules": [
+      {
+        "name": "default-allow-https",
+        "priority": 1000,
+        "source_ranges": ["0.0.0.0/0"],
+        "allowed": [{"IPProtocol": "tcp", "ports": ["443"]}],
+        "target_tags": ["https-server"]
+      },
+      {
+        "name": "default-allow-http",
+        "priority": 1000,
+        "source_ranges": ["0.0.0.0/0"],
+        "allowed": [{"IPProtocol": "tcp", "ports": ["80"]}],
+        "target_tags": ["http-server"]
+      }
+    ]
+  }
+}
