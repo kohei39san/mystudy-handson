@@ -26,7 +26,7 @@ Usage:
 import argparse
 import json
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -691,6 +691,280 @@ def _gcp_firewall_ingress_cidrs(fw_rules: List[Dict]) -> List[str]:
     return cidrs
 
 
+def _is_permission_error(exc: Exception) -> bool:
+    """Best-effort detection for GCP permission/authorization errors."""
+    msg = str(exc).lower()
+    return any(token in msg for token in ("permission", "forbidden", "403", "not authorized"))
+
+
+def _list_compute_collection(
+    compute_service,
+    collection_name: str,
+    project: str,
+    region: Optional[str] = None,
+) -> Tuple[List[Dict[str, Any]], List[str], bool]:
+    """
+    List items for a Compute API collection with pagination support.
+    Returns (items, error_codes, permission_denied_flag).
+    """
+    items: List[Dict[str, Any]] = []
+    errors: List[str] = []
+    permission_denied = False
+
+    collection_factory = getattr(compute_service, collection_name, None)
+    if collection_factory is None:
+        return [], [f"api_error:{collection_name}_unsupported"], False
+
+    collection = collection_factory()
+    list_kwargs: Dict[str, Any] = {"project": project}
+    if region:
+        list_kwargs["region"] = region
+
+    try:
+        request = collection.list(**list_kwargs)
+        while request is not None:
+            response = request.execute()
+            items.extend(response.get("items", []))
+            list_next = getattr(collection, "list_next", None)
+            if list_next is not None:
+                request = list_next(request, response)
+                continue
+
+            next_token = response.get("nextPageToken")
+            if not next_token:
+                request = None
+            else:
+                next_kwargs = dict(list_kwargs)
+                next_kwargs["pageToken"] = next_token
+                request = collection.list(**next_kwargs)
+    except Exception as exc:
+        if _is_permission_error(exc):
+            permission_denied = True
+            errors.append(f"permission_denied:{collection_name}")
+        else:
+            errors.append(f"api_error:{collection_name}")
+
+    return items, errors, permission_denied
+
+
+def _backend_references_any_neg(backend: Dict[str, Any], neg_self_links: Set[str], neg_names: Set[str]) -> bool:
+    for backend_ref in backend.get("backends", []):
+        group = backend_ref.get("group", "")
+        if group in neg_self_links:
+            return True
+        for neg_name in neg_names:
+            if group.endswith(f"/networkEndpointGroups/{neg_name}"):
+                return True
+    return False
+
+
+def _resource_references_any_backend(
+    resource: Dict[str, Any],
+    backend_self_links: Set[str],
+    backend_names: Set[str],
+) -> bool:
+    raw = json.dumps(resource, sort_keys=True)
+    for link in backend_self_links:
+        if link and link in raw:
+            return True
+    for name in backend_names:
+        if f"/backendServices/{name}" in raw:
+            return True
+        if f"/regionBackendServices/{name}" in raw:
+            return True
+    return False
+
+
+def _discover_gcp_cloudrun_load_balancers(
+    compute_service,
+    project: str,
+    location: str,
+    cloudrun_service_name: str,
+    lb_backend_service: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Reverse lookup from Cloud Run service -> serverless NEG -> backend service -> load balancer.
+    """
+    errors: List[str] = []
+    permission_denied = False
+
+    regions = {location}
+    region_items, region_errors, region_permission_denied = _list_compute_collection(
+        compute_service, "regions", project
+    )
+    errors.extend(region_errors)
+    permission_denied = permission_denied or region_permission_denied
+    for region in region_items:
+        name = region.get("name")
+        if name:
+            regions.add(name)
+
+    global_negs, neg_global_errors, neg_global_permission_denied = _list_compute_collection(
+        compute_service, "networkEndpointGroups", project
+    )
+    errors.extend(neg_global_errors)
+    permission_denied = permission_denied or neg_global_permission_denied
+
+    regional_negs: List[Dict[str, Any]] = []
+    for region in sorted(regions):
+        region_items, region_errors, region_permission_denied = _list_compute_collection(
+            compute_service, "regionNetworkEndpointGroups", project, region=region
+        )
+        regional_negs.extend(region_items)
+        errors.extend(region_errors)
+        permission_denied = permission_denied or region_permission_denied
+
+    all_negs = global_negs + regional_negs
+    matched_negs = []
+    for neg in all_negs:
+        if neg.get("networkEndpointType") != "SERVERLESS":
+            continue
+        cloud_run_config = neg.get("cloudRun", {})
+        if cloud_run_config.get("service") != cloudrun_service_name:
+            continue
+        matched_negs.append(neg)
+
+    if not matched_negs:
+        return {
+            "matched_neg_names": [],
+            "matched_backend_names": [],
+            "matched_lb_names": [],
+            "matched_lb_details": [],
+            "errors": errors,
+            "permission_denied": permission_denied,
+        }
+
+    neg_self_links = {neg.get("selfLink", "") for neg in matched_negs if neg.get("selfLink")}
+    neg_names = {neg.get("name", "") for neg in matched_negs if neg.get("name")}
+
+    global_backends, global_backend_errors, global_backend_permission_denied = _list_compute_collection(
+        compute_service, "backendServices", project
+    )
+    errors.extend(global_backend_errors)
+    permission_denied = permission_denied or global_backend_permission_denied
+
+    regional_backends: List[Dict[str, Any]] = []
+    for region in sorted(regions):
+        region_items, region_errors, region_permission_denied = _list_compute_collection(
+            compute_service, "regionBackendServices", project, region=region
+        )
+        regional_backends.extend(region_items)
+        errors.extend(region_errors)
+        permission_denied = permission_denied or region_permission_denied
+
+    matched_backends: List[Dict[str, Any]] = []
+    for backend in global_backends + regional_backends:
+        if lb_backend_service and backend.get("name") != lb_backend_service:
+            continue
+        if _backend_references_any_neg(backend, neg_self_links, neg_names):
+            matched_backends.append(backend)
+
+    if not matched_backends:
+        return {
+            "matched_neg_names": sorted(neg_names),
+            "matched_backend_names": [],
+            "matched_lb_names": [],
+            "matched_lb_details": [],
+            "errors": errors,
+            "permission_denied": permission_denied,
+        }
+
+    backend_self_links = {
+        backend.get("selfLink", "") for backend in matched_backends if backend.get("selfLink")
+    }
+    backend_names = {backend.get("name", "") for backend in matched_backends if backend.get("name")}
+
+    url_maps: List[Dict[str, Any]] = []
+    global_url_maps, global_url_map_errors, global_url_map_permission_denied = _list_compute_collection(
+        compute_service, "urlMaps", project
+    )
+    url_maps.extend(global_url_maps)
+    errors.extend(global_url_map_errors)
+    permission_denied = permission_denied or global_url_map_permission_denied
+
+    for region in sorted(regions):
+        region_items, region_errors, region_permission_denied = _list_compute_collection(
+            compute_service, "regionUrlMaps", project, region=region
+        )
+        url_maps.extend(region_items)
+        errors.extend(region_errors)
+        permission_denied = permission_denied or region_permission_denied
+
+    matched_url_map_links = {
+        url_map.get("selfLink", "")
+        for url_map in url_maps
+        if _resource_references_any_backend(url_map, backend_self_links, backend_names)
+        and url_map.get("selfLink")
+    }
+
+    proxies: List[Dict[str, Any]] = []
+    for collection_name in (
+        "targetHttpProxies",
+        "targetHttpsProxies",
+        "regionTargetHttpProxies",
+        "regionTargetHttpsProxies",
+    ):
+        if collection_name.startswith("region"):
+            for region in sorted(regions):
+                region_items, region_errors, region_permission_denied = _list_compute_collection(
+                    compute_service, collection_name, project, region=region
+                )
+                proxies.extend(region_items)
+                errors.extend(region_errors)
+                permission_denied = permission_denied or region_permission_denied
+        else:
+            global_items, global_errors, global_permission_denied = _list_compute_collection(
+                compute_service, collection_name, project
+            )
+            proxies.extend(global_items)
+            errors.extend(global_errors)
+            permission_denied = permission_denied or global_permission_denied
+
+    proxy_self_links = {
+        proxy.get("selfLink", "")
+        for proxy in proxies
+        if proxy.get("urlMap") in matched_url_map_links and proxy.get("selfLink")
+    }
+
+    forwarding_rules: List[Dict[str, Any]] = []
+    global_fw, global_fw_errors, global_fw_permission_denied = _list_compute_collection(
+        compute_service, "globalForwardingRules", project
+    )
+    forwarding_rules.extend(global_fw)
+    errors.extend(global_fw_errors)
+    permission_denied = permission_denied or global_fw_permission_denied
+
+    for region in sorted(regions):
+        region_items, region_errors, region_permission_denied = _list_compute_collection(
+            compute_service, "forwardingRules", project, region=region
+        )
+        forwarding_rules.extend(region_items)
+        errors.extend(region_errors)
+        permission_denied = permission_denied or region_permission_denied
+
+    matched_lb_details: List[Dict[str, str]] = []
+    seen_lbs: Set[Tuple[str, str]] = set()
+    for fw_rule in forwarding_rules:
+        target = fw_rule.get("target", "")
+        if target not in proxy_self_links:
+            continue
+        lb_name = fw_rule.get("name", "")
+        lb_scheme = fw_rule.get("loadBalancingScheme", "UNKNOWN")
+        key = (lb_name, lb_scheme)
+        if lb_name and key not in seen_lbs:
+            seen_lbs.add(key)
+            matched_lb_details.append({"name": lb_name, "scheme": lb_scheme})
+
+    return {
+        "matched_neg_names": sorted(neg_names),
+        "matched_backend_names": sorted(backend_names),
+        "matched_lb_names": [lb["name"] for lb in matched_lb_details],
+        "matched_lb_details": matched_lb_details,
+        "errors": errors,
+        "permission_denied": permission_denied,
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # GCP Compute Engine
 # ─────────────────────────────────────────────────────────────────────────────
@@ -799,7 +1073,7 @@ def check_gcp_compute(resource_id: str) -> Dict[str, Any]:
 # GCP Cloud Run
 # ─────────────────────────────────────────────────────────────────────────────
 
-def check_gcp_cloudrun(resource_id: str) -> Dict[str, Any]:
+def check_gcp_cloudrun(resource_id: str, lb_backend_service: Optional[str] = None) -> Dict[str, Any]:
     """
     Check network reachability for a GCP Cloud Run service.
     resource_id: projects/<proj>/locations/<region>/services/<name>
@@ -821,7 +1095,6 @@ def check_gcp_cloudrun(resource_id: str) -> Dict[str, Any]:
 
     metadata = cr_service.get("metadata", {})
     annotations = metadata.get("annotations", {})
-    spec = cr_service.get("spec", {})
 
     # Ingress setting
     ingress = annotations.get(
@@ -829,26 +1102,37 @@ def check_gcp_cloudrun(resource_id: str) -> Dict[str, Any]:
         annotations.get("serving.knative.dev/visibility", "all"),
     )
 
-    # Authentication: check IAM policy for allUsers binding
-    iam_service = _build_gcp_service("run", "v1")
-    allow_unauthenticated = False
+    # Authentication: only check whether any invoker principal exists.
+    invoker_principal_count = 0
+    iam_policy_access = "ok"
     try:
         policy_resp = (
-            iam_service.projects()
+            service.projects()
             .locations()
             .services()
-            .getIamPolicy(
-                resource=f"projects/{project}/locations/{location}/services/{service_name}"
-            )
+            .getIamPolicy(resource=f"projects/{project}/locations/{location}/services/{service_name}")
             .execute()
         )
         bindings = policy_resp.get("bindings", [])
+        invoker_members: Set[str] = set()
         for binding in bindings:
-            if binding.get("role") == "roles/run.invoker" and "allUsers" in binding.get("members", []):
-                allow_unauthenticated = True
-                break
-    except Exception:
-        allow_unauthenticated = False
+            if binding.get("role") == "roles/run.invoker":
+                invoker_members.update(binding.get("members", []))
+        invoker_principal_count = len(invoker_members)
+    except Exception as exc:
+        if _is_permission_error(exc):
+            iam_policy_access = "permission_denied"
+        else:
+            iam_policy_access = "api_error"
+
+    compute_service = _build_gcp_service("compute", "v1")
+    lb_lookup = _discover_gcp_cloudrun_load_balancers(
+        compute_service=compute_service,
+        project=project,
+        location=location,
+        cloudrun_service_name=service_name,
+        lb_backend_service=lb_backend_service,
+    )
 
     # Service URL
     status = cr_service.get("status", {})
@@ -857,13 +1141,19 @@ def check_gcp_cloudrun(resource_id: str) -> Dict[str, Any]:
     reasons: List[str] = []
     observed: Dict[str, Any] = {
         "ingress": ingress,
-        "allow_unauthenticated": allow_unauthenticated,
+        "invoker_principal_count": invoker_principal_count,
+        "iam_policy_access": iam_policy_access,
         "url": url,
         "location": location,
+        "matched_neg_names": lb_lookup.get("matched_neg_names", []),
+        "matched_backend_names": lb_lookup.get("matched_backend_names", []),
+        "matched_lb_names": lb_lookup.get("matched_lb_names", []),
+        "matched_lb_details": lb_lookup.get("matched_lb_details", []),
+        "lb_lookup_errors": lb_lookup.get("errors", []),
     }
 
     reasons.append(f"ingress={ingress}")
-    reasons.append(f"allow_unauthenticated={str(allow_unauthenticated).lower()}")
+    reasons.append(f"invoker_principal_count={invoker_principal_count}")
 
     # Internet reachability: ingress must allow external traffic
     internet_accessible_ingress = ingress in ("all", "external")
@@ -872,9 +1162,40 @@ def check_gcp_cloudrun(resource_id: str) -> Dict[str, Any]:
     else:
         internet_reachability = NOT_REACHABLE
 
-    # Private reachability: internal ingress or VPC connector
-    internal_ingress = ingress in ("internal", "internal-and-cloud-load-balancing")
-    private_reachability = REACHABLE if internal_ingress or internet_accessible_ingress else NOT_REACHABLE
+    # Private reachability: Cloud Run + LB config synthesis.
+    matched_lbs = lb_lookup.get("matched_lb_details", [])
+
+    if iam_policy_access != "ok":
+        private_reachability = UNKNOWN
+        if iam_policy_access == "permission_denied":
+            reasons.append("permission_denied:run.services.getIamPolicy")
+            reasons.append("permission_denied")
+        else:
+            reasons.append("api_error:run.services.getIamPolicy")
+            reasons.append("api_error")
+    elif invoker_principal_count == 0:
+        private_reachability = NOT_REACHABLE
+        reasons.append("invoker_missing")
+    elif lb_lookup.get("errors"):
+        private_reachability = UNKNOWN
+        reasons.extend(lb_lookup.get("errors", []))
+        if lb_lookup.get("permission_denied"):
+            reasons.append("permission_denied")
+        else:
+            reasons.append("api_error")
+    elif not matched_lbs:
+        private_reachability = NOT_REACHABLE
+        reasons.append("lb_not_found")
+    else:
+        if ingress == "internal":
+            valid_lbs = [lb for lb in matched_lbs if lb.get("scheme") == "INTERNAL_MANAGED"]
+            if valid_lbs:
+                private_reachability = REACHABLE
+            else:
+                private_reachability = NOT_REACHABLE
+                reasons.append("ingress_internal_lb_scheme_mismatch")
+        else:
+            private_reachability = REACHABLE
 
     return _build_result(
         provider="gcp",
@@ -988,7 +1309,13 @@ SUPPORTED = {
 }
 
 
-def check(provider: str, resource_type: str, resource_id: str, region: Optional[str] = None) -> Dict[str, Any]:
+def check(
+    provider: str,
+    resource_type: str,
+    resource_id: str,
+    region: Optional[str] = None,
+    lb_backend_service: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Main entry point.  Dispatches to the appropriate provider/resource-type
     checker and returns a result dictionary.
@@ -1002,6 +1329,8 @@ def check(provider: str, resource_type: str, resource_id: str, region: Optional[
     func = SUPPORTED[key]
     if region and key in {("aws", "ec2"), ("aws", "rds")}:
         return func(resource_id, region=region)
+    if key == ("gcp", "cloudrun"):
+        return func(resource_id, lb_backend_service=lb_backend_service)
     return func(resource_id)
 
 
@@ -1038,6 +1367,11 @@ def main() -> None:
         help="AWS region (optional, falls back to AWS_DEFAULT_REGION env var or profile setting)",
     )
     parser.add_argument(
+        "--lb-backend-service",
+        default=None,
+        help="Optional backend service name to disambiguate LB lookup for GCP Cloud Run",
+    )
+    parser.add_argument(
         "--output",
         default=None,
         help="Write JSON output to this file instead of stdout",
@@ -1051,6 +1385,7 @@ def main() -> None:
             resource_type=args.resource_type,
             resource_id=args.resource_id,
             region=args.region,
+            lb_backend_service=args.lb_backend_service,
         )
         output = json.dumps(result, indent=2, ensure_ascii=False)
         if args.output:
