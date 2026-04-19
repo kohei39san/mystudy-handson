@@ -791,50 +791,156 @@ class TestGcpCloudRun:
             bindings.append({"role": "roles/run.invoker", "members": ["allUsers"]})
         return {"bindings": bindings}
 
+    def _make_lb_lookup(self, names=None, details=None, errors=None, permission_denied=False):
+        if names is None:
+            names = ["fw-default"]
+        if details is None:
+            details = [{"name": "fw-default", "scheme": "EXTERNAL_MANAGED"}]
+        if errors is None:
+            errors = []
+        return {
+            "matched_neg_names": ["neg-my-svc"],
+            "matched_backend_names": ["be-my-svc"],
+            "matched_lb_names": names,
+            "matched_lb_details": details,
+            "errors": errors,
+            "permission_denied": permission_denied,
+        }
+
+    @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
     @patch("check_network_connectivity._build_gcp_service")
-    def test_public_ingress_is_internet_reachable(self, mock_build):
+    def test_public_ingress_is_internet_reachable(self, mock_build, mock_discover):
         cr_data = self._make_cr_service(ingress="all")
         iam_policy = self._make_iam_policy(allow_unauthenticated=True)
+        mock_discover.return_value = self._make_lb_lookup()
 
-        service = MagicMock()
-        service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
-        service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
-        mock_build.return_value = service
+        run_service = MagicMock()
+        run_service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
+        run_service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
+        compute_service = MagicMock()
+        mock_build.side_effect = [run_service, compute_service]
 
         result = cnc.check_gcp_cloudrun(self.RESOURCE_ID)
 
         assert result["internet_reachability"] == cnc.REACHABLE
+        assert result["private_reachability"] == cnc.REACHABLE
         assert "ingress=all" in result["reasons"]
-        assert "allow_unauthenticated=true" in result["reasons"]
+        assert "invoker_principal_count=1" in result["reasons"]
+        assert "neg_found" in result["reasons"]
+        assert "lb_found" in result["reasons"]
 
+    @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
     @patch("check_network_connectivity._build_gcp_service")
-    def test_internal_ingress_not_internet_reachable(self, mock_build):
+    def test_internal_ingress_not_internet_reachable(self, mock_build, mock_discover):
         cr_data = self._make_cr_service(ingress="internal")
-        iam_policy = self._make_iam_policy(allow_unauthenticated=False)
+        iam_policy = {"bindings": [{"role": "roles/run.invoker", "members": ["serviceAccount:svc@x"]}]}
+        mock_discover.return_value = self._make_lb_lookup(
+            names=["fw-external"],
+            details=[{"name": "fw-external", "scheme": "EXTERNAL_MANAGED"}],
+        )
 
-        service = MagicMock()
-        service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
-        service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
-        mock_build.return_value = service
+        run_service = MagicMock()
+        run_service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
+        run_service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
+        compute_service = MagicMock()
+        mock_build.side_effect = [run_service, compute_service]
 
         result = cnc.check_gcp_cloudrun(self.RESOURCE_ID)
 
         assert result["internet_reachability"] == cnc.NOT_REACHABLE
-        assert result["private_reachability"] == cnc.REACHABLE
+        assert result["private_reachability"] == cnc.NOT_REACHABLE
+        assert "neg_found" in result["reasons"]
+        assert "lb_found" in result["reasons"]
+        assert "ingress_internal_lb_scheme_mismatch" in result["reasons"]
 
+    @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
     @patch("check_network_connectivity._build_gcp_service")
-    def test_external_ingress_is_internet_reachable(self, mock_build):
+    def test_external_ingress_is_internet_reachable(self, mock_build, mock_discover):
         cr_data = self._make_cr_service(ingress="external")
-        iam_policy = self._make_iam_policy(allow_unauthenticated=False)
+        iam_policy = {"bindings": [{"role": "roles/run.invoker", "members": ["serviceAccount:svc@x"]}]}
+        mock_discover.return_value = self._make_lb_lookup()
 
-        service = MagicMock()
-        service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
-        service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
-        mock_build.return_value = service
+        run_service = MagicMock()
+        run_service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
+        run_service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
+        compute_service = MagicMock()
+        mock_build.side_effect = [run_service, compute_service]
 
         result = cnc.check_gcp_cloudrun(self.RESOURCE_ID)
 
         assert result["internet_reachability"] == cnc.REACHABLE
+        assert result["private_reachability"] == cnc.REACHABLE
+        assert "neg_found" in result["reasons"]
+        assert "lb_found" in result["reasons"]
+
+    @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
+    @patch("check_network_connectivity._build_gcp_service")
+    def test_invoker_missing_not_reachable(self, mock_build, mock_discover):
+        cr_data = self._make_cr_service(ingress="all")
+        iam_policy = {"bindings": []}
+        mock_discover.return_value = self._make_lb_lookup()
+
+        run_service = MagicMock()
+        run_service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
+        run_service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
+        compute_service = MagicMock()
+        mock_build.side_effect = [run_service, compute_service]
+
+        result = cnc.check_gcp_cloudrun(self.RESOURCE_ID)
+
+        assert result["private_reachability"] == cnc.NOT_REACHABLE
+        assert "neg_found" in result["reasons"]
+        assert "invoker_missing" in result["reasons"]
+
+    @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
+    @patch("check_network_connectivity._build_gcp_service")
+    def test_lb_permission_denied_results_unknown(self, mock_build, mock_discover):
+        cr_data = self._make_cr_service(ingress="all")
+        iam_policy = {"bindings": [{"role": "roles/run.invoker", "members": ["serviceAccount:svc@x"]}]}
+        mock_discover.return_value = self._make_lb_lookup(
+            names=[],
+            details=[],
+            errors=["permission_denied:backendServices"],
+            permission_denied=True,
+        )
+
+        run_service = MagicMock()
+        run_service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
+        run_service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
+        compute_service = MagicMock()
+        mock_build.side_effect = [run_service, compute_service]
+
+        result = cnc.check_gcp_cloudrun(self.RESOURCE_ID)
+
+        assert result["private_reachability"] == cnc.UNKNOWN
+        assert "neg_found" in result["reasons"]
+        assert "permission_denied" in result["reasons"]
+
+    @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
+    @patch("check_network_connectivity._build_gcp_service")
+    def test_multiple_lbs_one_valid_reachable(self, mock_build, mock_discover):
+        cr_data = self._make_cr_service(ingress="internal")
+        iam_policy = {"bindings": [{"role": "roles/run.invoker", "members": ["serviceAccount:svc@x"]}]}
+        mock_discover.return_value = self._make_lb_lookup(
+            names=["fw-external", "fw-internal"],
+            details=[
+                {"name": "fw-external", "scheme": "EXTERNAL_MANAGED"},
+                {"name": "fw-internal", "scheme": "INTERNAL_MANAGED"},
+            ],
+        )
+
+        run_service = MagicMock()
+        run_service.projects.return_value.locations.return_value.services.return_value.get.return_value.execute.return_value = cr_data
+        run_service.projects.return_value.locations.return_value.services.return_value.getIamPolicy.return_value.execute.return_value = iam_policy
+        compute_service = MagicMock()
+        mock_build.side_effect = [run_service, compute_service]
+
+        result = cnc.check_gcp_cloudrun(self.RESOURCE_ID)
+
+        assert result["private_reachability"] == cnc.REACHABLE
+        assert "neg_found" in result["reasons"]
+        assert "lb_found" in result["reasons"]
+        assert sorted(result["observed"]["matched_lb_names"]) == ["fw-external", "fw-internal"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
