@@ -78,6 +78,21 @@ output "gcp_cloudrun_uri" {
   value       = google_cloud_run_v2_service.test.uri
 }
 
+output "gcp_cloudrun_lb_backend_service" {
+  description = "Cloud Run を参照する Backend Service 名（--lb-backend-service に指定可能）"
+  value       = google_compute_backend_service.cloudrun.name
+}
+
+output "gcp_cloudrun_lb_ip" {
+  description = "Cloud Run 用 外部 HTTP LB のグローバル IP"
+  value       = google_compute_global_address.cloudrun.address
+}
+
+output "gcp_cloudrun_lb_url" {
+  description = "Cloud Run 用 外部 HTTP LB の URL"
+  value       = "http://${google_compute_global_address.cloudrun.address}"
+}
+
 output "gcp_cloudsql_resource_id" {
   description = "GCP Cloud SQL リソース ID（--resource-id に指定: projects/<project>/instances/<name> 形式）"
   value       = "projects/${var.gcp_project_id}/instances/${google_sql_database_instance.test.name}"

@@ -27,7 +27,7 @@
 ├── variables.tf          ← Terraform 変数定義
 ├── aws.tf                ← AWS リソース (VPC / Subnet / SG / EC2 / RDS)
 ├── azure.tf              ← Azure リソース (VNet / NSG / VM)
-├── gcp.tf                ← GCP リソース (VPC / Firewall / VM / Cloud Run)
+├── gcp.tf                ← GCP リソース (VPC / Firewall / VM / Cloud Run / LB)
 ├── outputs.tf            ← Terraform 出力値（結合テスト用リソース ID）
 ├── sample_output/
 │   ├── aws_ec2_sample.json
@@ -211,6 +211,15 @@ python scripts/check_network_connectivity.py \
 ---
 
 ### GCP Cloud Run
+
+```bash
+python scripts/check_network_connectivity.py \
+  --provider gcp \
+  --resource-type cloudrun \
+  --resource-id "projects/<project-id>/locations/<region>/services/<service-name>"
+```
+
+必要時のみ（複数候補から絞り込みたい場合）:
 
 ```bash
 python scripts/check_network_connectivity.py \
@@ -527,6 +536,10 @@ $env:TF_VAR_gcp_project_id = "<your-gcp-project-id>"
 | GCP | Firewall (deny) | `ncc-test-deny-custom-port` | 8080 拒否ルール |
 | GCP | VM Instance | `ncc-test-vm` | internet_reachability=reachable 確認用 |
 | GCP | Cloud Run Service | `ncc-test-cloudrun` | internet_reachability=reachable 確認用 |
+| GCP | Serverless NEG | `ncc-test-cloudrun-neg` | Cloud Run への LB バックエンド |
+| GCP | Backend Service | `ncc-test-cloudrun-be` | Cloud Run 逆引き判定用 |
+| GCP | URL Map / HTTP Proxy | `ncc-test-cloudrun-um` / `ncc-test-cloudrun-http-proxy` | HTTP LB 構成 |
+| GCP | Global Forwarding Rule / IP | `ncc-test-cloudrun-http-fr` | LB 公開エンドポイント |
 
 ---
 
@@ -612,6 +625,8 @@ RDS_ID=$(terraform output -raw aws_rds_identifier)
 AZURE_VM_ID=$(terraform output -raw azure_vm_resource_id)
 GCP_VM_ID=$(terraform output -raw gcp_vm_resource_id)
 GCP_CLOUDRUN_ID=$(terraform output -raw gcp_cloudrun_resource_id)
+GCP_CLOUDRUN_LB_BACKEND=$(terraform output -raw gcp_cloudrun_lb_backend_service)
+GCP_CLOUDRUN_LB_URL=$(terraform output -raw gcp_cloudrun_lb_url)
 GCP_CLOUDSQL_ID=$(terraform output -raw gcp_cloudsql_resource_id)
 ```
 
@@ -630,6 +645,8 @@ $RDS_ID         = terraform output -raw aws_rds_identifier
 $AZURE_VM_ID    = terraform output -raw azure_vm_resource_id
 $GCP_VM_ID      = terraform output -raw gcp_vm_resource_id
 $GCP_CLOUDRUN_ID = terraform output -raw gcp_cloudrun_resource_id
+$GCP_CLOUDRUN_LB_BACKEND = terraform output -raw gcp_cloudrun_lb_backend_service
+$GCP_CLOUDRUN_LB_URL = terraform output -raw gcp_cloudrun_lb_url
 $GCP_CLOUDSQL_ID = terraform output -raw gcp_cloudsql_resource_id
 ```
 
@@ -672,6 +689,13 @@ python scripts/check_network_connectivity.py \
   --provider gcp \
   --resource-type cloudrun \
   --resource-id "${GCP_CLOUDRUN_ID}"
+
+# 必要時のみ: Backend Service 名で候補を絞り込む
+python scripts/check_network_connectivity.py \
+  --provider gcp \
+  --resource-type cloudrun \
+  --resource-id "${GCP_CLOUDRUN_ID}" \
+  --lb-backend-service "${GCP_CLOUDRUN_LB_BACKEND}"
 ```
 
 *PowerShell*
@@ -711,6 +735,13 @@ python scripts/check_network_connectivity.py `
   --provider gcp `
   --resource-type cloudrun `
   --resource-id $GCP_CLOUDRUN_ID
+
+# 必要時のみ: Backend Service 名で候補を絞り込む
+python scripts/check_network_connectivity.py `
+  --provider gcp `
+  --resource-type cloudrun `
+  --resource-id $GCP_CLOUDRUN_ID `
+  --lb-backend-service $GCP_CLOUDRUN_LB_BACKEND
 ```
 
 #### 期待する結合テスト結果

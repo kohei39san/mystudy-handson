@@ -826,6 +826,8 @@ class TestGcpCloudRun:
         assert result["private_reachability"] == cnc.REACHABLE
         assert "ingress=all" in result["reasons"]
         assert "invoker_principal_count=1" in result["reasons"]
+        assert "neg_found" in result["reasons"]
+        assert "lb_found" in result["reasons"]
 
     @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
     @patch("check_network_connectivity._build_gcp_service")
@@ -847,6 +849,8 @@ class TestGcpCloudRun:
 
         assert result["internet_reachability"] == cnc.NOT_REACHABLE
         assert result["private_reachability"] == cnc.NOT_REACHABLE
+        assert "neg_found" in result["reasons"]
+        assert "lb_found" in result["reasons"]
         assert "ingress_internal_lb_scheme_mismatch" in result["reasons"]
 
     @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
@@ -866,6 +870,8 @@ class TestGcpCloudRun:
 
         assert result["internet_reachability"] == cnc.REACHABLE
         assert result["private_reachability"] == cnc.REACHABLE
+        assert "neg_found" in result["reasons"]
+        assert "lb_found" in result["reasons"]
 
     @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
     @patch("check_network_connectivity._build_gcp_service")
@@ -883,6 +889,7 @@ class TestGcpCloudRun:
         result = cnc.check_gcp_cloudrun(self.RESOURCE_ID)
 
         assert result["private_reachability"] == cnc.NOT_REACHABLE
+        assert "neg_found" in result["reasons"]
         assert "invoker_missing" in result["reasons"]
 
     @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
@@ -906,6 +913,7 @@ class TestGcpCloudRun:
         result = cnc.check_gcp_cloudrun(self.RESOURCE_ID)
 
         assert result["private_reachability"] == cnc.UNKNOWN
+        assert "neg_found" in result["reasons"]
         assert "permission_denied" in result["reasons"]
 
     @patch("check_network_connectivity._discover_gcp_cloudrun_load_balancers")
@@ -930,6 +938,8 @@ class TestGcpCloudRun:
         result = cnc.check_gcp_cloudrun(self.RESOURCE_ID)
 
         assert result["private_reachability"] == cnc.REACHABLE
+        assert "neg_found" in result["reasons"]
+        assert "lb_found" in result["reasons"]
         assert sorted(result["observed"]["matched_lb_names"]) == ["fw-external", "fw-internal"]
 
 

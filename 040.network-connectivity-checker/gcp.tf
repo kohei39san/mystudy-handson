@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# GCP リソース: VPC / Firewall Rule / VM Instance / Cloud Run Service / Cloud SQL
+# GCP リソース: VPC / Firewall Rule / VM Instance / Cloud Run Service / Load Balancer / Cloud SQL
 # ─────────────────────────────────────────────────────────────────────────────
 
 # --- VPC Network ---
@@ -123,6 +123,86 @@ resource "google_cloud_run_v2_service_iam_member" "public_invoker" {
   name     = google_cloud_run_v2_service.test.name
   role     = "roles/run.invoker"
   member   = var.cloudrun_invoker_principal
+}
+
+# --- Cloud Run 用 外部 HTTP Load Balancer（逆引き判定テスト用）---
+
+resource "google_compute_region_network_endpoint_group" "cloudrun" {
+  name                  = "${var.project_name}-cloudrun-neg"
+  region                = var.gcp_region
+  network_endpoint_type = "SERVERLESS"
+
+  cloud_run {
+    service = google_cloud_run_v2_service.test.name
+  }
+}
+
+resource "google_compute_security_policy" "cloudrun" {
+  name        = "${var.project_name}-cloudrun-armor"
+  description = "Allow only Terraform caller IP to access Cloud Run LB"
+
+  rule {
+    action   = "allow"
+    priority = 1000
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = [local.allowed_cidr]
+      }
+    }
+
+    description = "Allow only Terraform caller IP"
+  }
+
+  rule {
+    action   = "deny(403)"
+    priority = 2147483647
+
+    match {
+      versioned_expr = "SRC_IPS_V1"
+      config {
+        src_ip_ranges = ["*"]
+      }
+    }
+
+    description = "Default deny"
+  }
+}
+
+resource "google_compute_backend_service" "cloudrun" {
+  name                  = "${var.project_name}-cloudrun-be"
+  protocol              = "HTTP"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  timeout_sec           = 30
+  security_policy       = google_compute_security_policy.cloudrun.id
+
+  backend {
+    group = google_compute_region_network_endpoint_group.cloudrun.id
+  }
+}
+
+resource "google_compute_url_map" "cloudrun" {
+  name            = "${var.project_name}-cloudrun-um"
+  default_service = google_compute_backend_service.cloudrun.id
+}
+
+resource "google_compute_target_http_proxy" "cloudrun" {
+  name    = "${var.project_name}-cloudrun-http-proxy"
+  url_map = google_compute_url_map.cloudrun.id
+}
+
+resource "google_compute_global_address" "cloudrun" {
+  name = "${var.project_name}-cloudrun-lb-ip"
+}
+
+resource "google_compute_global_forwarding_rule" "cloudrun" {
+  name                  = "${var.project_name}-cloudrun-http-fr"
+  target                = google_compute_target_http_proxy.cloudrun.id
+  port_range            = "80"
+  ip_protocol           = "TCP"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  ip_address            = google_compute_global_address.cloudrun.id
 }
 
 # --- Cloud SQL Instance（結合テスト用）---
