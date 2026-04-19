@@ -747,42 +747,6 @@ def _list_compute_collection(
     return items, errors, permission_denied
 
 
-def _aggregated_list_compute_collection(
-    compute_service,
-    collection_name: str,
-    project: str,
-) -> Tuple[List[Dict[str, Any]], List[str], bool]:
-    """
-    List items for a Compute API collection using aggregatedList.
-    Returns (items, error_codes, permission_denied_flag).
-    """
-    items: List[Dict[str, Any]] = []
-    errors: List[str] = []
-    permission_denied = False
-
-    collection_factory = getattr(compute_service, collection_name, None)
-    if collection_factory is None:
-        return [], [f"api_error:{collection_name}_unsupported"], False
-
-    collection = collection_factory()
-    try:
-        request = collection.aggregatedList(project=project)
-        while request is not None:
-            response = request.execute()
-            scoped_items = response.get("items", {})
-            for _, scope_data in scoped_items.items():
-                items.extend(scope_data.get("networkEndpointGroups", []))
-            request = collection.aggregatedList_next(request, response)
-    except Exception as exc:
-        if _is_permission_error(exc):
-            permission_denied = True
-            errors.append(f"permission_denied:{collection_name}")
-        else:
-            errors.append(f"api_error:{collection_name}")
-
-    return items, errors, permission_denied
-
-
 def _backend_references_any_neg(backend: Dict[str, Any], neg_self_links: Set[str], neg_names: Set[str]) -> bool:
     for backend_ref in backend.get("backends", []):
         group = backend_ref.get("group", "")
@@ -817,7 +781,6 @@ def _discover_gcp_cloudrun_load_balancers_for_regions(
     regions: Set[str],
     cloudrun_service_name: str,
     lb_backend_service: Optional[str] = None,
-    include_global_negs: bool = True,
 ) -> Dict[str, Any]:
     """
     Reverse lookup from Cloud Run service -> serverless NEG -> backend service -> load balancer.
@@ -835,17 +798,8 @@ def _discover_gcp_cloudrun_load_balancers_for_regions(
         errors.extend(region_errors)
         permission_denied = permission_denied or region_permission_denied
 
-    global_negs: List[Dict[str, Any]] = []
-    if include_global_negs:
-        global_negs, neg_global_errors, neg_global_permission_denied = _aggregated_list_compute_collection(
-            compute_service, "networkEndpointGroups", project
-        )
-        errors.extend(neg_global_errors)
-        permission_denied = permission_denied or neg_global_permission_denied
-
-    all_negs = regional_negs + global_negs
     matched_negs = []
-    for neg in all_negs:
+    for neg in regional_negs:
         if neg.get("networkEndpointType") != "SERVERLESS":
             continue
         cloud_run_config = neg.get("cloudRun", {})
@@ -1006,73 +960,13 @@ def _discover_gcp_cloudrun_load_balancers(
 
     Search order:
     1) Cloud Run's location
-    2) Global
-    3) Other regions
     """
-    # 1) Cloud Run's location only
-    primary = _discover_gcp_cloudrun_load_balancers_for_regions(
+    return _discover_gcp_cloudrun_load_balancers_for_regions(
         compute_service=compute_service,
         project=project,
         regions={location},
         cloudrun_service_name=cloudrun_service_name,
         lb_backend_service=lb_backend_service,
-        include_global_negs=False,
-    )
-
-    if primary.get("errors") or primary.get("permission_denied"):
-        return primary
-
-    if primary.get("matched_neg_names"):
-        return primary
-
-    # 2) Global only
-    global_only = _discover_gcp_cloudrun_load_balancers_for_regions(
-        compute_service=compute_service,
-        project=project,
-        regions=set(),
-        cloudrun_service_name=cloudrun_service_name,
-        lb_backend_service=lb_backend_service,
-        include_global_negs=True,
-    )
-
-    if global_only.get("errors") or global_only.get("permission_denied"):
-        return global_only
-
-    if global_only.get("matched_neg_names"):
-        return global_only
-
-    # 3) Other regions (exclude Cloud Run's location)
-    region_items, region_errors, region_permission_denied = _list_compute_collection(
-        compute_service, "regions", project
-    )
-    if region_errors:
-        merged_errors = list(primary.get("errors", [])) + list(global_only.get("errors", [])) + region_errors
-        return {
-            "matched_neg_names": global_only.get("matched_neg_names", []),
-            "matched_backend_names": global_only.get("matched_backend_names", []),
-            "matched_lb_names": global_only.get("matched_lb_names", []),
-            "matched_lb_details": global_only.get("matched_lb_details", []),
-            "errors": merged_errors,
-            "permission_denied": bool(
-                primary.get("permission_denied", False)
-                or global_only.get("permission_denied", False)
-                or region_permission_denied
-            ),
-        }
-
-    all_regions: Set[str] = set()
-    for region in region_items:
-        name = region.get("name")
-        if name and name != location:
-            all_regions.add(name)
-
-    return _discover_gcp_cloudrun_load_balancers_for_regions(
-        compute_service=compute_service,
-        project=project,
-        regions=all_regions,
-        cloudrun_service_name=cloudrun_service_name,
-        lb_backend_service=lb_backend_service,
-        include_global_negs=False,
     )
 
 
