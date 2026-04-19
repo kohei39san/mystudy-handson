@@ -87,7 +87,6 @@ class RevokeAPITester:
         Returns:
             テスト結果
         """
-        print(f"
         print(f"対象ユーザー: {target_username}")
         
         # リクエストヘッダーを設定
@@ -154,7 +153,7 @@ class RevokeAPITester:
         Args:
             access_token: 管理者のアクセストークン
         """
-        print(f"
+        print(f"無効なリクエストのテストを開始します")
         
         headers = {
             'Authorization': f'Bearer {access_token}',
@@ -162,7 +161,7 @@ class RevokeAPITester:
         }
         
         # テストケース1: 空のリクエストボディ
-        print("
+        print("テストケース1: 空のリクエストボディ")
         try:
             response = self.session.post(
                 f"{self.api_endpoint}/auth/revoke",
@@ -179,7 +178,7 @@ class RevokeAPITester:
             print(f"❌ リクエストエラー: {str(e)}")
         
         # テストケース2: 存在しないユーザー
-        print("
+        print("テストケース2: 存在しないユーザー")
         try:
             response = self.session.post(
                 f"{self.api_endpoint}/auth/revoke",
@@ -247,7 +246,7 @@ def main():
     # 無効なリクエストのテスト
     tester.test_invalid_requests(access_token)
     
-    print(f"
+    print(f"テスト完了")
     if result['success']:
         print("✅ 全体的な結果: 成功")
         sys.exit(0)
