@@ -62,7 +62,7 @@ def _build_result(
 # AWS helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _get_boto3_client(service: str, region: Optional[str] = None):
+def _get_boto3_client(service: str, region: Optional[str] = None, profile: Optional[str] = None):
     """Return a boto3 client, importing boto3 lazily."""
     try:
         import boto3  # type: ignore
@@ -71,6 +71,9 @@ def _get_boto3_client(service: str, region: Optional[str] = None):
     kwargs: Dict[str, Any] = {}
     if region:
         kwargs["region_name"] = region
+    if profile:
+        session = boto3.Session(profile_name=profile)
+        return session.client(service, **kwargs)
     return boto3.client(service, **kwargs)
 
 
@@ -276,10 +279,10 @@ def _find_ec2_load_balancers(elbv2_client, instance_id: str) -> List[Dict[str, s
 # AWS EC2
 # ─────────────────────────────────────────────────────────────────────────────
 
-def check_aws_ec2(resource_id: str, region: Optional[str] = None) -> Dict[str, Any]:
+def check_aws_ec2(resource_id: str, region: Optional[str] = None, profile: Optional[str] = None) -> Dict[str, Any]:
     """Check network reachability for an AWS EC2 instance."""
-    ec2 = _get_boto3_client("ec2", region)
-    elbv2 = _get_boto3_client("elbv2", region)
+    ec2 = _get_boto3_client("ec2", region, profile)
+    elbv2 = _get_boto3_client("elbv2", region, profile)
 
     resp = ec2.describe_instances(InstanceIds=[resource_id])
     reservations = resp.get("Reservations", [])
@@ -367,10 +370,10 @@ def check_aws_ec2(resource_id: str, region: Optional[str] = None) -> Dict[str, A
 # AWS RDS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def check_aws_rds(resource_id: str, region: Optional[str] = None) -> Dict[str, Any]:
+def check_aws_rds(resource_id: str, region: Optional[str] = None, profile: Optional[str] = None) -> Dict[str, Any]:
     """Check network reachability for an AWS RDS DB instance."""
-    rds = _get_boto3_client("rds", region)
-    ec2 = _get_boto3_client("ec2", region)
+    rds = _get_boto3_client("rds", region, profile)
+    ec2 = _get_boto3_client("ec2", region, profile)
 
     resp = rds.describe_db_instances(DBInstanceIdentifier=resource_id)
     instances = resp.get("DBInstances", [])
@@ -1381,6 +1384,7 @@ def check(
     resource_id: str,
     region: Optional[str] = None,
     lb_backend_service: Optional[str] = None,
+    profile: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Main entry point.  Dispatches to the appropriate provider/resource-type
@@ -1393,8 +1397,8 @@ def check(
             f"Supported: {', '.join(f'{p}/{r}' for p, r in SUPPORTED)}"
         )
     func = SUPPORTED[key]
-    if region and key in {("aws", "ec2"), ("aws", "rds")}:
-        return func(resource_id, region=region)
+    if key in {("aws", "ec2"), ("aws", "rds")}:
+        return func(resource_id, region=region, profile=profile)
     if key == ("gcp", "cloudrun"):
         return func(resource_id, lb_backend_service=lb_backend_service)
     return func(resource_id)
@@ -1438,6 +1442,11 @@ def main() -> None:
         help="Optional backend service name to disambiguate LB lookup for GCP Cloud Run",
     )
     parser.add_argument(
+        "--profile",
+        default=None,
+        help="AWS named profile to use (aws provider only). Overrides default credential chain.",
+    )
+    parser.add_argument(
         "--output",
         default=None,
         help="Write JSON output to this file instead of stdout",
@@ -1452,6 +1461,7 @@ def main() -> None:
             resource_id=args.resource_id,
             region=args.region,
             lb_backend_service=args.lb_backend_service,
+            profile=args.profile,
         )
         output = json.dumps(result, indent=2, ensure_ascii=False)
         if args.output:
