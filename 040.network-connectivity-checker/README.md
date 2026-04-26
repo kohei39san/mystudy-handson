@@ -142,6 +142,7 @@ usage: check_network_connectivity.py [-h]
   --resource-id RESOURCE_ID
   [--region REGION]
   [--lb-backend-service LB_BACKEND_SERVICE]
+  [--profile PROFILE]
   [--output OUTPUT]
 ```
 
@@ -152,6 +153,7 @@ usage: check_network_connectivity.py [-h]
 | `--resource-id` | リソース識別子（種別ごとに異なる、後述） |
 | `--region` | AWS リージョン（省略時は環境変数 `AWS_DEFAULT_REGION` を参照） |
 | `--lb-backend-service` | GCP Cloud Run 判定時に、複数候補から絞り込む任意の Backend Service 名 |
+| `--profile` | **AWS のみ** 使用する名前付きプロファイル（省略時はデフォルト認証チェーンを使用） |
 | `--output` | JSON 出力先ファイルパス（省略時は標準出力） |
 
 ---
@@ -164,9 +166,18 @@ python scripts/check_network_connectivity.py \
   --resource-type ec2 \
   --resource-id i-0abc1234567890def \
   --region ap-northeast-1
+
+# AWS プロファイルを指定する場合
+python scripts/check_network_connectivity.py \
+  --provider aws \
+  --resource-type ec2 \
+  --resource-id i-0abc1234567890def \
+  --region ap-northeast-1 \
+  --profile myprofile
 ```
 
-**`--resource-id`**: EC2 インスタンス ID（例: `i-0abc1234567890def`）
+**`--resource-id`**: EC2 インスタンス ID（例: `i-0abc1234567890def`）  
+**`--profile`**: AWS CLI で設定した名前付きプロファイル名（省略可）
 
 ---
 
@@ -178,9 +189,18 @@ python scripts/check_network_connectivity.py \
   --resource-type rds \
   --resource-id mydbinstance \
   --region ap-northeast-1
+
+# AWS プロファイルを指定する場合
+python scripts/check_network_connectivity.py \
+  --provider aws \
+  --resource-type rds \
+  --resource-id mydbinstance \
+  --region ap-northeast-1 \
+  --profile myprofile
 ```
 
-**`--resource-id`**: DB インスタンス識別子（例: `mydbinstance`）
+**`--resource-id`**: DB インスタンス識別子（例: `mydbinstance`）  
+**`--profile`**: AWS CLI で設定した名前付きプロファイル名（省略可）
 
 ---
 

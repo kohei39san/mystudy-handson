@@ -1,4 +1,4 @@
-"""
+﻿"""
 Unit tests for check_network_connectivity.py
 
 All external API calls (boto3, Azure SDK, GCP API) are mocked so that these
@@ -16,9 +16,9 @@ import pytest
 import check_network_connectivity as cnc
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # Helper factories
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 def _make_ec2_instance(
     state="running",
@@ -65,9 +65,9 @@ def _make_sg(group_id="sg-111", ingress_cidrs=None, egress_cidrs=None):
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # Utility / helper tests
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 class TestBuildResult:
     """Tests for _build_result helper."""
@@ -188,9 +188,9 @@ class TestParseGcpResourceId:
         assert parsed["instances"] == "my-db"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # Dispatcher tests
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 class TestDispatcher:
     def test_unsupported_combination_raises(self):
@@ -206,9 +206,9 @@ class TestDispatcher:
         assert ("gcp", "cloudsql") in cnc.SUPPORTED
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # AWS EC2 tests
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 class TestAwsEc2:
     """Tests for check_aws_ec2."""
@@ -363,7 +363,7 @@ class TestAwsEc2:
 
     @patch("check_network_connectivity._get_boto3_client")
     def test_private_instance_with_internet_facing_alb_is_reachable(self, mock_client):
-        """EC2 in private subnet, no public IP, but registered to an internet-facing ALB → reachable."""
+        """EC2 in private subnet, no public IP, but registered to an internet-facing ALB 竊・reachable."""
         instance = _make_ec2_instance(public_ip="")
         sg = _make_sg()
 
@@ -378,7 +378,7 @@ class TestAwsEc2:
         # Override target group to reference the instance id from _make_ec2_instance (no id field,
         # use "i-private" which is the id we pass to check_aws_ec2 below)
 
-        mock_client.side_effect = lambda svc, region=None: (
+        mock_client.side_effect = lambda svc, region=None, profile=None: (
             elbv2_client if svc == "elbv2" else ec2_client
         )
 
@@ -391,7 +391,7 @@ class TestAwsEc2:
 
     @patch("check_network_connectivity._get_boto3_client")
     def test_private_instance_with_internal_alb_not_internet_reachable(self, mock_client):
-        """EC2 in private subnet, no public IP, only internal ALB → not internet reachable."""
+        """EC2 in private subnet, no public IP, only internal ALB 竊・not internet reachable."""
         instance = _make_ec2_instance(public_ip="")
         sg = _make_sg()
 
@@ -403,7 +403,7 @@ class TestAwsEc2:
             "TargetHealthDescriptions": [{"Target": {"Id": "i-private-internal", "Port": 80}}]
         }
 
-        mock_client.side_effect = lambda svc, region=None: (
+        mock_client.side_effect = lambda svc, region=None, profile=None: (
             elbv2_client if svc == "elbv2" else ec2_client
         )
 
@@ -416,14 +416,14 @@ class TestAwsEc2:
 
     @patch("check_network_connectivity._get_boto3_client")
     def test_no_lb_behavior_unchanged(self, mock_client):
-        """No LB → internet_reachability depends solely on public IP + public subnet (unchanged)."""
+        """No LB 竊・internet_reachability depends solely on public IP + public subnet (unchanged)."""
         instance = _make_ec2_instance()
         sg = _make_sg()
         ec2_client = self._mock_ec2_client(instance, sg, public_subnet=True)
         elbv2_client = MagicMock()
         elbv2_client.describe_target_groups.return_value = {"TargetGroups": []}
 
-        mock_client.side_effect = lambda svc, region=None: (
+        mock_client.side_effect = lambda svc, region=None, profile=None: (
             elbv2_client if svc == "elbv2" else ec2_client
         )
 
@@ -434,9 +434,9 @@ class TestAwsEc2:
         assert result["observed"]["load_balancers"] == []
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # AWS RDS tests
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 class TestAwsRds:
     """Tests for check_aws_rds."""
@@ -475,7 +475,7 @@ class TestAwsRds:
         rds_client.describe_db_instances.return_value = {"DBInstances": [db]}
         ec2_client.describe_security_groups.return_value = {"SecurityGroups": [sg]}
 
-        mock_client.side_effect = lambda svc, region=None: (
+        mock_client.side_effect = lambda svc, region=None, profile=None: (
             rds_client if svc == "rds" else ec2_client
         )
 
@@ -496,7 +496,7 @@ class TestAwsRds:
         rds_client.describe_db_instances.return_value = {"DBInstances": [db]}
         ec2_client.describe_security_groups.return_value = {"SecurityGroups": [sg]}
 
-        mock_client.side_effect = lambda svc, region=None: (
+        mock_client.side_effect = lambda svc, region=None, profile=None: (
             rds_client if svc == "rds" else ec2_client
         )
 
@@ -515,7 +515,7 @@ class TestAwsRds:
         rds_client.describe_db_instances.return_value = {"DBInstances": [db]}
         ec2_client.describe_security_groups.return_value = {"SecurityGroups": [sg]}
 
-        mock_client.side_effect = lambda svc, region=None: (
+        mock_client.side_effect = lambda svc, region=None, profile=None: (
             rds_client if svc == "rds" else ec2_client
         )
 
@@ -543,7 +543,7 @@ class TestAwsRds:
         rds_client.describe_db_instances.return_value = {"DBInstances": [db]}
         ec2_client.describe_security_groups.return_value = {"SecurityGroups": [sg]}
 
-        mock_client.side_effect = lambda svc, region=None: (
+        mock_client.side_effect = lambda svc, region=None, profile=None: (
             rds_client if svc == "rds" else ec2_client
         )
 
@@ -563,9 +563,9 @@ class TestAwsRds:
         assert observed_sg["ingress_rules"][0]["to_port"] == 443
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # Azure VM tests
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 class TestAzureVm:
     """Tests for check_azure_vm."""
@@ -749,9 +749,9 @@ class TestAzureVm:
             cnc.check_azure_vm("just-a-vm-name")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # GCP Compute Engine tests
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 class TestGcpCompute:
     """Tests for check_gcp_compute."""
@@ -872,9 +872,9 @@ class TestGcpCompute:
         assert "external_ip_assigned=false" in result["reasons"]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # GCP Cloud Run tests
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 class TestGcpCloudRun:
     """Tests for check_gcp_cloudrun."""
@@ -1049,9 +1049,9 @@ class TestGcpCloudRun:
         assert sorted(result["observed"]["matched_lb_names"]) == ["fw-external", "fw-internal"]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # GCP Cloud SQL tests
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 class TestGcpCloudSql:
     """Tests for check_gcp_cloudsql."""
@@ -1156,9 +1156,9 @@ class TestGcpCloudSql:
         assert "authorized_networks" in result["observed"]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 # JSON serialisability tests
-# ─────────────────────────────────────────────────────────────────────────────
+# 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
 class TestJsonSerializable:
     """Verify result dicts can be serialised to JSON without errors."""
@@ -1180,3 +1180,112 @@ class TestJsonSerializable:
         serialised = json.dumps(result)
         parsed = json.loads(serialised)
         assert parsed["provider"] == "aws"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AWS profile option tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestAwsProfile:
+    """Verify that --profile is propagated to _get_boto3_client."""
+
+    def _mock_ec2_client(self, instance, sg):
+        client = MagicMock()
+        client.describe_instances.return_value = {"Reservations": [{"Instances": [instance]}]}
+        client.describe_security_groups.return_value = {"SecurityGroups": [sg]}
+        client.describe_route_tables.return_value = {
+            "RouteTables": [{"Routes": [{"GatewayId": "igw-x", "DestinationCidrBlock": "0.0.0.0/0"}]}]
+        }
+        client.describe_target_groups.return_value = {"TargetGroups": []}
+        return client
+
+    @patch("check_network_connectivity._get_boto3_client")
+    def test_ec2_profile_passed_to_client(self, mock_client):
+        instance = _make_ec2_instance()
+        sg = _make_sg()
+        client = self._mock_ec2_client(instance, sg)
+        mock_client.return_value = client
+
+        cnc.check_aws_ec2("i-123", profile="my-profile")
+
+        calls = mock_client.call_args_list
+        assert all(call.args[2] == "my-profile" or call.kwargs.get("profile") == "my-profile" for call in calls)
+
+    @patch("check_network_connectivity._get_boto3_client")
+    def test_ec2_no_profile_uses_default(self, mock_client):
+        instance = _make_ec2_instance()
+        sg = _make_sg()
+        client = self._mock_ec2_client(instance, sg)
+        mock_client.return_value = client
+
+        cnc.check_aws_ec2("i-123")
+
+        calls = mock_client.call_args_list
+        for call in calls:
+            profile_arg = call.args[2] if len(call.args) > 2 else call.kwargs.get("profile")
+            assert profile_arg is None
+
+    @patch("check_network_connectivity._get_boto3_client")
+    def test_rds_profile_passed_to_client(self, mock_client):
+        db = {
+            "DBInstanceStatus": "available",
+            "PubliclyAccessible": False,
+            "DBSubnetGroup": {
+                "VpcId": "vpc-111",
+                "DBSubnetGroupName": "sg-group",
+                "Subnets": [],
+            },
+            "VpcSecurityGroups": [],
+            "Endpoint": {"Address": "mydb.rds.amazonaws.com", "Port": 3306},
+        }
+        rds_client = MagicMock()
+        rds_client.describe_db_instances.return_value = {"DBInstances": [db]}
+        ec2_client = MagicMock()
+        ec2_client.describe_security_groups.return_value = {"SecurityGroups": []}
+        mock_client.side_effect = lambda svc, region=None, profile=None: (
+            rds_client if svc == "rds" else ec2_client
+        )
+
+        cnc.check_aws_rds("mydb", profile="my-profile")
+
+        calls = mock_client.call_args_list
+        assert all(call.args[2] == "my-profile" or call.kwargs.get("profile") == "my-profile" for call in calls)
+
+    def test_get_boto3_client_uses_session_when_profile_given(self):
+        """_get_boto3_client creates a boto3.Session when profile is specified."""
+        import unittest.mock as um
+        with um.patch("boto3.Session") as mock_session_cls, um.patch("boto3.client") as mock_direct_client:
+            mock_session = MagicMock()
+            mock_session_cls.return_value = mock_session
+            mock_session.client.return_value = MagicMock()
+
+            cnc._get_boto3_client("ec2", profile="my-profile")
+
+            mock_session_cls.assert_called_once_with(profile_name="my-profile")
+            mock_session.client.assert_called_once()
+            mock_direct_client.assert_not_called()
+
+    def test_get_boto3_client_uses_direct_client_without_profile(self):
+        """_get_boto3_client uses boto3.client directly when no profile is specified."""
+        import unittest.mock as um
+        with um.patch("boto3.Session") as mock_session_cls, um.patch("boto3.client") as mock_direct_client:
+            mock_direct_client.return_value = MagicMock()
+
+            cnc._get_boto3_client("ec2")
+
+            mock_session_cls.assert_not_called()
+            mock_direct_client.assert_called_once()
+
+    def test_check_dispatcher_passes_profile_to_aws_ec2(self):
+        mock_fn = MagicMock(return_value={"result": "ok"})
+        with patch.dict(cnc.SUPPORTED, {("aws", "ec2"): mock_fn}):
+            cnc.check("aws", "ec2", "i-123", profile="my-profile")
+            mock_fn.assert_called_once_with("i-123", region=None, profile="my-profile")
+
+    def test_check_dispatcher_passes_profile_to_aws_rds(self):
+        mock_fn = MagicMock(return_value={"result": "ok"})
+        with patch.dict(cnc.SUPPORTED, {("aws", "rds"): mock_fn}):
+            cnc.check("aws", "rds", "mydb", region="us-east-1", profile="my-profile")
+            mock_fn.assert_called_once_with("mydb", region="us-east-1", profile="my-profile")
+
+
