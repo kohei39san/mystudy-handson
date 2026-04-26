@@ -188,6 +188,124 @@ resource "aws_instance" "test" {
   }
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ALB（internet-facing）: EC2 をターゲットにしたテスト用 ALB
+# ─────────────────────────────────────────────────────────────────────────────
+
+# --- Subnet（ALB 用セカンダリパブリック: 別 AZ が必要）---
+
+resource "aws_subnet" "public_secondary" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.3.0/24"
+  availability_zone       = "${var.aws_region}c"
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name = "${var.project_name}-public-secondary-subnet"
+    Tier = "public"
+  }
+}
+
+resource "aws_route_table_association" "public_secondary" {
+  subnet_id      = aws_subnet.public_secondary.id
+  route_table_id = aws_route_table.public.id
+}
+
+# --- Security Group（ALB 用: 実行元グローバル IP からの HTTP のみ許可）---
+
+resource "aws_security_group" "alb" {
+  name        = "${var.project_name}-alb-sg"
+  description = "Security group for integration test ALB"
+  vpc_id      = aws_vpc.main.id
+
+  # HTTP 許可（実行元 IP からのみ: integration test 専用）
+  # tfsec:ignore:aws-ec2-no-public-ingress-sgr
+  ingress {
+    description = "Allow HTTP from caller IP - integration test only, not for production use"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = [local.allowed_cidr]
+  }
+
+  egress {
+    description = "Allow all outbound"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project_name}-alb-sg"
+  }
+}
+
+# --- Target Group（EC2 インスタンスをターゲットに登録）---
+
+resource "aws_lb_target_group" "ec2" {
+  name     = "${var.project_name}-ec2-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
+  target_type = "instance"
+
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+    interval            = 30
+  }
+
+  tags = {
+    Name = "${var.project_name}-ec2-tg"
+  }
+}
+
+resource "aws_lb_target_group_attachment" "ec2" {
+  target_group_arn = aws_lb_target_group.ec2.arn
+  target_id        = aws_instance.test.id
+  port             = 80
+}
+
+# --- ALB（internet-facing）---
+
+resource "aws_lb" "test_internet_facing" {
+  name               = "${var.project_name}-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb.id]
+  subnets            = [aws_subnet.public.id, aws_subnet.public_secondary.id]
+
+  depends_on = [
+    aws_internet_gateway.main,
+    aws_route_table_association.public,
+    aws_route_table_association.public_secondary,
+  ]
+
+  enable_deletion_protection = false
+
+  tags = {
+    Name = "${var.project_name}-alb"
+  }
+}
+
+# --- Listener（HTTP:80 → EC2 Target Group）---
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.test_internet_facing.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.ec2.arn
+  }
+}
+
 # --- DB Subnet Group（RDS 用マルチ AZ サブネットグループ）---
 
 resource "aws_db_subnet_group" "main" {

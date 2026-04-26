@@ -29,6 +29,16 @@ output "aws_rds_endpoint" {
   value       = aws_db_instance.test.endpoint
 }
 
+output "aws_alb_arn" {
+  description = "テスト用 ALB ARN"
+  value       = aws_lb.test_internet_facing.arn
+}
+
+output "aws_alb_dns_name" {
+  description = "テスト用 ALB の DNS 名"
+  value       = aws_lb.test_internet_facing.dns_name
+}
+
 output "aws_vpc_id" {
   description = "AWS VPC ID"
   value       = aws_vpc.main.id

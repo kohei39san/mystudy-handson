@@ -51,7 +51,7 @@
 
 | リソース | 必要な IAM アクション |
 |---------|---------------------|
-| EC2 | `ec2:DescribeInstances` `ec2:DescribeSecurityGroups` `ec2:DescribeRouteTables` `ec2:DescribeSubnets` |
+| EC2 | `ec2:DescribeInstances` `ec2:DescribeSecurityGroups` `ec2:DescribeRouteTables` `ec2:DescribeSubnets` `elasticloadbalancing:DescribeTargetGroups` `elasticloadbalancing:DescribeTargetHealth` `elasticloadbalancing:DescribeLoadBalancers` |
 | RDS | `rds:DescribeDBInstances` `ec2:DescribeSecurityGroups` |
 
 最小権限ポリシー例（AWS マネージドポリシー）:
