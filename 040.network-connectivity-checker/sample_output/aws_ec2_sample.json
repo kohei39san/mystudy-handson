@@ -20,6 +20,7 @@
     "private_ip": "10.0.1.10",
     "public_ip": "203.0.113.10",
     "public_ip_assigned": true,
+    "load_balancers": [],
     "security_groups": [
       {
         "group_id": "sg-0abc1234567890def",

@@ -226,6 +226,52 @@ def _has_nat_route(ec2_client, subnet_id: str) -> bool:
     return False
 
 
+def _find_ec2_load_balancers(elbv2_client, instance_id: str) -> List[Dict[str, str]]:
+    """
+    Find ELBv2 (ALB/NLB) load balancers that have the given EC2 instance as a
+    registered target.
+
+    Performs a reverse lookup:
+      EC2 instance → Target Groups (TargetType=instance) → Load Balancers
+
+    Returns a list of dicts with "name" and "scheme" keys
+    (e.g. [{"name": "my-alb", "scheme": "internet-facing"}]).
+    """
+    lb_arns: Set[str] = set()
+    paginator_kwargs: Dict[str, Any] = {}
+
+    while True:
+        resp = elbv2_client.describe_target_groups(**paginator_kwargs)
+        for tg in resp.get("TargetGroups", []):
+            if tg.get("TargetType") != "instance":
+                continue
+            tg_arn = tg.get("TargetGroupArn", "")
+            if not tg_arn:
+                continue
+            health_resp = elbv2_client.describe_target_health(TargetGroupArn=tg_arn)
+            for desc in health_resp.get("TargetHealthDescriptions", []):
+                if desc.get("Target", {}).get("Id") == instance_id:
+                    for arn in tg.get("LoadBalancerArns", []):
+                        lb_arns.add(arn)
+                    break
+        next_marker = resp.get("NextMarker")
+        if not next_marker:
+            break
+        paginator_kwargs = {"Marker": next_marker}
+
+    if not lb_arns:
+        return []
+
+    lb_resp = elbv2_client.describe_load_balancers(LoadBalancerArns=list(lb_arns))
+    result: List[Dict[str, str]] = []
+    for lb in lb_resp.get("LoadBalancers", []):
+        name = lb.get("LoadBalancerName", "")
+        scheme = lb.get("Scheme", "")
+        if name:
+            result.append({"name": name, "scheme": scheme})
+    return result
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # AWS EC2
 # ─────────────────────────────────────────────────────────────────────────────
@@ -233,6 +279,7 @@ def _has_nat_route(ec2_client, subnet_id: str) -> bool:
 def check_aws_ec2(resource_id: str, region: Optional[str] = None) -> Dict[str, Any]:
     """Check network reachability for an AWS EC2 instance."""
     ec2 = _get_boto3_client("ec2", region)
+    elbv2 = _get_boto3_client("elbv2", region)
 
     resp = ec2.describe_instances(InstanceIds=[resource_id])
     reservations = resp.get("Reservations", [])
@@ -256,6 +303,10 @@ def check_aws_ec2(resource_id: str, region: Optional[str] = None) -> Dict[str, A
     nat_route = _has_nat_route(ec2, subnet_id) if subnet_id else False
     public_ip_assigned = bool(public_ip)
 
+    # Load balancers (ELBv2) associated with this instance
+    load_balancers = _find_ec2_load_balancers(elbv2, resource_id)
+    has_internet_facing_lb = any(lb["scheme"] == "internet-facing" for lb in load_balancers)
+
     reasons: List[str] = []
     observed: Dict[str, Any] = {
         "instance_state": instance_state,
@@ -266,6 +317,7 @@ def check_aws_ec2(resource_id: str, region: Optional[str] = None) -> Dict[str, A
         "public_ip": public_ip or None,
         "public_ip_assigned": public_ip_assigned,
         "security_groups": [_sg_observed(sg) for sg in sgs],
+        "load_balancers": load_balancers,
     }
 
     # ── Reasons ──────────────────────────────────────────────────────────────
@@ -273,6 +325,7 @@ def check_aws_ec2(resource_id: str, region: Optional[str] = None) -> Dict[str, A
     reasons.append(f"public_subnet={str(public_subnet).lower()}")
     reasons.append(f"nat_route={str(nat_route).lower()}")
     reasons.append(f"public_ip_assigned={str(public_ip_assigned).lower()}")
+    reasons.append(f"lb_internet_facing={str(has_internet_facing_lb).lower()}")
     if ingress_cidrs:
         reasons.append(f"sg_ingress_allows={','.join(sorted(set(ingress_cidrs)))}")
     if egress_cidrs:
@@ -281,9 +334,10 @@ def check_aws_ec2(resource_id: str, region: Optional[str] = None) -> Dict[str, A
     # ── Reachability judgement ────────────────────────────────────────────────
     running = instance_state == "running"
 
-    # Internet reachability: instance must be running, in a public subnet
-    # (or have a public IP directly reachable), and have a public IP assigned.
-    if running and public_ip_assigned and public_subnet:
+    # Internet reachability: instance must be running, and either
+    # (a) in a public subnet with a public IP assigned, or
+    # (b) registered as a target of an internet-facing ELBv2 load balancer.
+    if running and (public_ip_assigned and public_subnet or has_internet_facing_lb):
         internet_reachability = REACHABLE
     elif not running:
         internet_reachability = NOT_REACHABLE

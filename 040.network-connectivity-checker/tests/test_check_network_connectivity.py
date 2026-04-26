@@ -232,7 +232,40 @@ class TestAwsEc2:
         client.describe_route_tables.return_value = {
             "RouteTables": [{"Routes": rt_routes}]
         }
+        # elbv2: no LBs by default (same client object is returned for both "ec2" and "elbv2")
+        client.describe_target_groups.return_value = {"TargetGroups": []}
         return client
+
+    def _mock_elbv2_client(self, load_balancers):
+        """
+        Build a mock elbv2 client that simulates a single target group
+        containing all given instance targets.
+
+        load_balancers: list of dicts with keys "name", "scheme", "arn"
+        """
+        elbv2 = MagicMock()
+        lb_arns = [lb["arn"] for lb in load_balancers]
+        elbv2.describe_target_groups.return_value = {
+            "TargetGroups": [
+                {
+                    "TargetGroupArn": "arn:aws:elasticloadbalancing:ap-northeast-1:123456789012:targetgroup/test-tg/abc123",
+                    "TargetType": "instance",
+                    "LoadBalancerArns": lb_arns,
+                }
+            ]
+        }
+        elbv2.describe_target_health.return_value = {
+            "TargetHealthDescriptions": [
+                {"Target": {"Id": "i-private", "Port": 80}}
+            ]
+        }
+        elbv2.describe_load_balancers.return_value = {
+            "LoadBalancers": [
+                {"LoadBalancerName": lb["name"], "Scheme": lb["scheme"]}
+                for lb in load_balancers
+            ]
+        }
+        return elbv2
 
     @patch("check_network_connectivity._get_boto3_client")
     def test_running_public_instance_is_reachable(self, mock_client):
@@ -326,6 +359,79 @@ class TestAwsEc2:
         assert observed_sg["ingress_rules"][0]["protocol"] == "tcp"
         assert observed_sg["ingress_rules"][0]["from_port"] == 443
         assert observed_sg["ingress_rules"][0]["to_port"] == 443
+        assert "load_balancers" in result["observed"]
+
+    @patch("check_network_connectivity._get_boto3_client")
+    def test_private_instance_with_internet_facing_alb_is_reachable(self, mock_client):
+        """EC2 in private subnet, no public IP, but registered to an internet-facing ALB → reachable."""
+        instance = _make_ec2_instance(public_ip="")
+        sg = _make_sg()
+
+        ec2_client = self._mock_ec2_client(instance, sg, public_subnet=False)
+        elbv2_client = self._mock_elbv2_client([
+            {"name": "my-alb", "scheme": "internet-facing", "arn": "arn:aws:elasticloadbalancing:ap-northeast-1:123:loadbalancer/app/my-alb/abc"}
+        ])
+        # Patch the health check to match the instance id used in the test
+        elbv2_client.describe_target_health.return_value = {
+            "TargetHealthDescriptions": [{"Target": {"Id": "i-private", "Port": 80}}]
+        }
+        # Override target group to reference the instance id from _make_ec2_instance (no id field,
+        # use "i-private" which is the id we pass to check_aws_ec2 below)
+
+        mock_client.side_effect = lambda svc, region=None: (
+            elbv2_client if svc == "elbv2" else ec2_client
+        )
+
+        result = cnc.check_aws_ec2("i-private")
+
+        assert result["internet_reachability"] == cnc.REACHABLE
+        assert result["private_reachability"] == cnc.REACHABLE
+        assert "lb_internet_facing=true" in result["reasons"]
+        assert result["observed"]["load_balancers"] == [{"name": "my-alb", "scheme": "internet-facing"}]
+
+    @patch("check_network_connectivity._get_boto3_client")
+    def test_private_instance_with_internal_alb_not_internet_reachable(self, mock_client):
+        """EC2 in private subnet, no public IP, only internal ALB → not internet reachable."""
+        instance = _make_ec2_instance(public_ip="")
+        sg = _make_sg()
+
+        ec2_client = self._mock_ec2_client(instance, sg, public_subnet=False)
+        elbv2_client = self._mock_elbv2_client([
+            {"name": "my-internal-alb", "scheme": "internal", "arn": "arn:aws:elasticloadbalancing:ap-northeast-1:123:loadbalancer/app/my-internal-alb/def"}
+        ])
+        elbv2_client.describe_target_health.return_value = {
+            "TargetHealthDescriptions": [{"Target": {"Id": "i-private-internal", "Port": 80}}]
+        }
+
+        mock_client.side_effect = lambda svc, region=None: (
+            elbv2_client if svc == "elbv2" else ec2_client
+        )
+
+        result = cnc.check_aws_ec2("i-private-internal")
+
+        assert result["internet_reachability"] == cnc.NOT_REACHABLE
+        assert result["private_reachability"] == cnc.REACHABLE
+        assert "lb_internet_facing=false" in result["reasons"]
+        assert result["observed"]["load_balancers"] == [{"name": "my-internal-alb", "scheme": "internal"}]
+
+    @patch("check_network_connectivity._get_boto3_client")
+    def test_no_lb_behavior_unchanged(self, mock_client):
+        """No LB → internet_reachability depends solely on public IP + public subnet (unchanged)."""
+        instance = _make_ec2_instance()
+        sg = _make_sg()
+        ec2_client = self._mock_ec2_client(instance, sg, public_subnet=True)
+        elbv2_client = MagicMock()
+        elbv2_client.describe_target_groups.return_value = {"TargetGroups": []}
+
+        mock_client.side_effect = lambda svc, region=None: (
+            elbv2_client if svc == "elbv2" else ec2_client
+        )
+
+        result = cnc.check_aws_ec2("i-nolb")
+
+        assert result["internet_reachability"] == cnc.REACHABLE
+        assert "lb_internet_facing=false" in result["reasons"]
+        assert result["observed"]["load_balancers"] == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1067,6 +1173,7 @@ class TestJsonSerializable:
         client.describe_route_tables.return_value = {
             "RouteTables": [{"Routes": [{"GatewayId": "igw-x", "DestinationCidrBlock": "0.0.0.0/0"}]}]
         }
+        client.describe_target_groups.return_value = {"TargetGroups": []}
         mock_client.return_value = client
 
         result = cnc.check_aws_ec2("i-json")
