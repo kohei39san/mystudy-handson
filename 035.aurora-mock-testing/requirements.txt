@@ -15,7 +15,7 @@ pytest-mock>=3.10.0
 moto>=4.2.0
 
 # Development dependencies
-black>=23.0.0
+black>=26.3.1
 flake8>=6.0.0
 mypy>=1.0.0
 
