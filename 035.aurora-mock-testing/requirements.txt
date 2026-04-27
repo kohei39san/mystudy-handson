@@ -17,7 +17,7 @@ moto>=4.2.0
 # Development dependencies
 black>=23.0.0
 flake8>=6.0.0
-mypy>=1.0.0
+mypy>=1.20.2
 
 # Type hints
 types-requests>=2.28.0
