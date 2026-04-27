@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Trusted Advisor refresh workflow and Slack notification with AWS User Notifications (no SNS, no CloudWatch alarms)'
+
+Parameters:
+  TrustedAdvisorRefreshSchedule:
+    Type: String
+    Default: 'rate(6 hours)'
+    Description: 'EventBridge schedule expression for Trusted Advisor refresh workflow (for example rate(6 hours))'
+
+  TrustedAdvisorCheckIds:
+    Type: String
+    Default: ''
+    Description: 'Comma-separated Trusted Advisor check IDs to refresh (for example eW7HH0l7J9,c1z7kmr03n). Leave empty to disable scheduled refresh workflow.'
+
+  TrustedAdvisorDefinitionS3Bucket:
+    Type: String
+    Default: ''
+    Description: 'S3 bucket that stores trusted-advisor-refresh.asl.json'
+
+  TrustedAdvisorDefinitionS3Key:
+    Type: String
+    Default: ''
+    Description: 'S3 object key for trusted-advisor-refresh.asl.json'
+
+  TrustedAdvisorSlackChannelArn:
+    Type: String
+    Default: ''
+    Description: 'Slack channel configuration ARN for AWS User Notifications (for example arn:aws:chatbot:us-east-1:123456789012:chat-configuration/slack-channel/my-channel)'
+
+  TrustedAdvisorNotificationRegions:
+    Type: CommaDelimitedList
+    Default: 'us-east-1,us-east-2,us-west-2,eu-west-1,eu-central-1,ap-northeast-1,ap-southeast-1,ap-southeast-2,ap-south-1,ca-central-1,sa-east-1'
+    Description: 'Region list for AWS::Notifications::EventRule (major regions). Trusted Advisor events are emitted from us-east-1, so include us-east-1.'
+
+Conditions:
+  HasTrustedAdvisorCheckIds: !Not [!Equals [!Ref TrustedAdvisorCheckIds, '']]
+  HasTrustedAdvisorDefinitionS3Bucket: !Not [!Equals [!Ref TrustedAdvisorDefinitionS3Bucket, '']]
+  HasTrustedAdvisorDefinitionS3Key: !Not [!Equals [!Ref TrustedAdvisorDefinitionS3Key, '']]
+  HasTrustedAdvisorSlackChannelArn: !Not [!Equals [!Ref TrustedAdvisorSlackChannelArn, '']]
+  HasTrustedAdvisorDefinitionLocation: !And
+    - !Condition HasTrustedAdvisorDefinitionS3Bucket
+    - !Condition HasTrustedAdvisorDefinitionS3Key
+  IsUSEast1: !Equals [!Ref AWS::Region, 'us-east-1']
+  EnableTrustedAdvisorRefresh: !And
+    - !Condition HasTrustedAdvisorCheckIds
+    - !Condition HasTrustedAdvisorDefinitionLocation
+    - !Condition IsUSEast1
+  EnableTrustedAdvisorSlackNotification: !And
+    - !Condition HasTrustedAdvisorSlackChannelArn
+    - !Condition IsUSEast1
+
+Resources:
+  TrustedAdvisorRefreshStateMachineRole:
+    Type: AWS::IAM::Role
+    Condition: EnableTrustedAdvisorRefresh
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-ta-refresh-sfn-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TrustedAdvisorRefreshWorkflowPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - support:RefreshTrustedAdvisorCheck
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:ListLogDeliveries
+                  - logs:PutLogEvents
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                  - logs:DescribeLogGroups
+                  - logs:CreateLogStream
+                Resource: '*'
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+
+  TrustedAdvisorRefreshStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: EnableTrustedAdvisorRefresh
+    Properties:
+      LogGroupName: !Sub '/aws/states/${AWS::StackName}-trusted-advisor-refresh'
+      RetentionInDays: 14
+
+  TrustedAdvisorRefreshStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Condition: EnableTrustedAdvisorRefresh
+    Properties:
+      StateMachineName: !Sub '${AWS::StackName}-trusted-advisor-refresh'
+      RoleArn: !GetAtt TrustedAdvisorRefreshStateMachineRole.Arn
+      LoggingConfiguration:
+        Level: ERROR
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt TrustedAdvisorRefreshStateMachineLogGroup.Arn
+      DefinitionS3Location:
+        Bucket: !Ref TrustedAdvisorDefinitionS3Bucket
+        Key: !Ref TrustedAdvisorDefinitionS3Key
+
+  EventBridgeStartExecutionRole:
+    Type: AWS::IAM::Role
+    Condition: EnableTrustedAdvisorRefresh
+    Properties:
+      RoleName: !Sub '${AWS::StackName}-ta-refresh-events-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StartStateMachinePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource: !Ref TrustedAdvisorRefreshStateMachine
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+
+  TrustedAdvisorRefreshScheduleRule:
+    Type: AWS::Events::Rule
+    Condition: EnableTrustedAdvisorRefresh
+    Properties:
+      Name: !Sub '${AWS::StackName}-ta-refresh-schedule'
+      Description: 'Run Trusted Advisor refresh state machine on schedule'
+      ScheduleExpression: !Ref TrustedAdvisorRefreshSchedule
+      State: ENABLED
+      Targets:
+        - Arn: !Ref TrustedAdvisorRefreshStateMachine
+          Id: TrustedAdvisorRefreshStateMachineTarget
+          RoleArn: !GetAtt EventBridgeStartExecutionRole.Arn
+          Input: !Sub '{"checkIds":"${TrustedAdvisorCheckIds}"}'
+
+  TrustedAdvisorRefreshNotificationConfiguration:
+    Type: AWS::Notifications::NotificationConfiguration
+    Condition: EnableTrustedAdvisorSlackNotification
+    Properties:
+      Name: !Sub '${AWS::StackName}-ta-refresh'
+      Description: 'Notify Slack when Trusted Advisor refresh notification events are emitted'
+      AggregationDuration: SHORT
+
+  TrustedAdvisorRefreshChannelAssociation:
+    Type: AWS::Notifications::ChannelAssociation
+    Condition: EnableTrustedAdvisorSlackNotification
+    Properties:
+      Arn: !Ref TrustedAdvisorSlackChannelArn
+      NotificationConfigurationArn: !Ref TrustedAdvisorRefreshNotificationConfiguration
+
+  TrustedAdvisorRefreshEventRule:
+    Type: AWS::Notifications::EventRule
+    Condition: EnableTrustedAdvisorSlackNotification
+    Properties:
+      Source: aws.trustedadvisor
+      EventType: Trusted Advisor Check Item Refresh Notification
+      Regions: !Ref TrustedAdvisorNotificationRegions
+      NotificationConfigurationArn: !Ref TrustedAdvisorRefreshNotificationConfiguration
+
+Outputs:
+  TrustedAdvisorRefreshStateMachineArn:
+    Condition: EnableTrustedAdvisorRefresh
+    Description: 'ARN of Trusted Advisor refresh Step Functions state machine (created only in us-east-1 when TrustedAdvisorCheckIds is provided)'
+    Value: !Ref TrustedAdvisorRefreshStateMachine
+
+  TrustedAdvisorRefreshScheduleRuleArn:
+    Condition: EnableTrustedAdvisorRefresh
+    Description: 'ARN of EventBridge schedule rule for Trusted Advisor refresh workflow'
+    Value: !GetAtt TrustedAdvisorRefreshScheduleRule.Arn
+
+  TrustedAdvisorRefreshNotificationConfigurationArn:
+    Condition: EnableTrustedAdvisorSlackNotification
+    Description: 'AWS User Notifications configuration ARN for Trusted Advisor refresh events'
+    Value: !Ref TrustedAdvisorRefreshNotificationConfiguration

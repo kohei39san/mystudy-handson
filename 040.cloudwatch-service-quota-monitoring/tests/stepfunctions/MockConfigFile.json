@@ -1,0 +1,25 @@
+{
+  "StateMachines": {
+    "ta-refresh-local": {
+      "MockedSuccess": {
+        "RefreshCheck": {
+          "0": {
+            "Return": {
+              "status": "success"
+            }
+          }
+        }
+      },
+      "MockedFailure": {
+        "RefreshCheck": {
+          "0": {
+            "Throw": {
+              "Error": "Support.ThrottlingException",
+              "Cause": "mocked failure"
+            }
+          }
+        }
+      }
+    }
+  }
+}
