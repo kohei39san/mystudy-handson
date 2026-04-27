@@ -2,6 +2,8 @@
 
 このCloudFormationテンプレート群は、特定のAWSリソースを作成する際に`Owner`タグの指定を強制するService Control Policy (SCP)と、タグの形式を制御するTag Policyをデプロイします。
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 概要
 
 このSCPは、以下のリソースを作成する際に`Owner`タグが指定されていない場合、そのアクションを拒否します：

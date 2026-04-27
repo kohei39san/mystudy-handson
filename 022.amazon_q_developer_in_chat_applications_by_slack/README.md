@@ -2,6 +2,8 @@
 
 このTerraform構成は、SlackでAmazon Q Developerを使用するためのCloudFormationスタックをデプロイします。
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## リソース構成
 
 このTerraform構成では以下のリソースを作成します：

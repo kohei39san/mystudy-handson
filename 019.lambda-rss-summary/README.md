@@ -2,6 +2,8 @@
 
 このプロジェクトは、指定したRSSフィードの内容をダウンロードし、OpenRouterを使用して要約し、その結果をSlackに送信するLambda関数を提供します。
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 機能概要
 
 1. EventBridgeのスケジュールに従って定期的にLambda関数が実行されます
