@@ -47,6 +47,13 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      aws-cdk-major:
+        patterns:
+          - "aws-cdk"
+          - "aws-cdk-lib"
+          - "constructs"
+        update-types:
+          - "major"
       other-npm:
         patterns:
           - "*"
@@ -58,6 +65,16 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      other-npm-major:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@aws-sdk/*"
+          - "aws-cdk"
+          - "aws-cdk-lib"
+          - "constructs"
+        update-types:
+          - "major"
   - package-ecosystem: "pip"
     directories:
       - "**/*"
@@ -79,6 +96,11 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      all-pip-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
   - package-ecosystem: terraform
     directories: 
       - "**/*"
@@ -91,9 +113,6 @@ updates:
     open-pull-requests-limit: 1000
     cooldown:
       default-days: 7
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
     groups:
       aws-provider:
         patterns:
@@ -101,12 +120,22 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      aws-provider-major:
+        patterns:
+          - "hashicorp/aws"
+        update-types:
+          - "major"
       oci-provider:
         patterns:
           - "oracle/oci"
         update-types:
           - "minor"
           - "patch"
+      oci-provider-major:
+        patterns:
+          - "oracle/oci"
+        update-types:
+          - "major"
       hashicorp-providers:
         patterns:
           - "hashicorp/http"
@@ -118,6 +147,16 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      hashicorp-providers-major:
+        patterns:
+          - "hashicorp/http"
+          - "hashicorp/null"
+          - "hashicorp/random"
+          - "hashicorp/local"
+          - "hashicorp/tls"
+          - "hashicorp/time"
+        update-types:
+          - "major"
       other-providers:
         patterns:
           - "*"
@@ -133,3 +172,17 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      other-providers-major:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "hashicorp/aws"
+          - "oracle/oci"
+          - "hashicorp/http"
+          - "hashicorp/null"
+          - "hashicorp/random"
+          - "hashicorp/local"
+          - "hashicorp/tls"
+          - "hashicorp/time"
+        update-types:
+          - "major"
