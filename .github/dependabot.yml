@@ -141,51 +141,23 @@ updates:
           - "major"
       hashicorp-providers:
         patterns:
-          - "hashicorp/http"
-          - "hashicorp/null"
-          - "hashicorp/random"
-          - "hashicorp/local"
-          - "hashicorp/tls"
-          - "hashicorp/time"
+          - "hashicorp/*"
         update-types:
           - "minor"
           - "patch"
       hashicorp-providers-major:
         patterns:
-          - "hashicorp/http"
-          - "hashicorp/null"
-          - "hashicorp/random"
-          - "hashicorp/local"
-          - "hashicorp/tls"
-          - "hashicorp/time"
+          - "hashicorp/*"
         update-types:
           - "major"
       other-providers:
         patterns:
           - "*"
-        exclude-patterns:
-          - "hashicorp/aws"
-          - "oracle/oci"
-          - "hashicorp/http"
-          - "hashicorp/null"
-          - "hashicorp/random"
-          - "hashicorp/local"
-          - "hashicorp/tls"
-          - "hashicorp/time"
         update-types:
           - "minor"
           - "patch"
       other-providers-major:
         patterns:
           - "*"
-        exclude-patterns:
-          - "hashicorp/aws"
-          - "oracle/oci"
-          - "hashicorp/http"
-          - "hashicorp/null"
-          - "hashicorp/random"
-          - "hashicorp/local"
-          - "hashicorp/tls"
-          - "hashicorp/time"
         update-types:
           - "major"
