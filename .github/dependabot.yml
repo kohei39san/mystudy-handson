@@ -101,6 +101,9 @@ updates:
           - "*"
         update-types:
           - "major"
+      others:
+        patterns:
+          - "*"
   - package-ecosystem: terraform
     directories: 
       - "**/*"
