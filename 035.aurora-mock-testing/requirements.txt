@@ -3,7 +3,7 @@ boto3>=1.26.0
 botocore>=1.29.0
 
 # Database connectivity
-psycopg2-binary>=2.9.0
+psycopg2-binary>=2.9.12
 
 # Web framework and HTTP client
 Flask>=2.3.0
