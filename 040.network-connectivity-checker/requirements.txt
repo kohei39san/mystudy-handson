@@ -8,7 +8,7 @@ azure-identity==1.16.1
 
 # GCP
 google-auth==2.27.0
-google-auth-httplib2==0.2.0
+google-auth-httplib2==0.3.1
 google-api-python-client==2.118.0
 
 # Dev / test
