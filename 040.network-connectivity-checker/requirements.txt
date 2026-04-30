@@ -1,5 +1,5 @@
 # AWS
-boto3==1.42.89
+boto3==1.42.94
 
 # Azure
 azure-mgmt-compute==30.0.0
