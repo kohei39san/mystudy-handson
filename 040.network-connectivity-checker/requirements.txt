@@ -12,5 +12,5 @@ google-auth-httplib2==0.2.0
 google-api-python-client==2.118.0
 
 # Dev / test
-pytest==8.0.0
+pytest==9.0.3
 pytest-mock==3.12.0
