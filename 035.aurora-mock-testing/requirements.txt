@@ -1,6 +1,6 @@
 # AWS SDK
 boto3>=1.43.0
-botocore>=1.43.0
+botocore>=1.43.2
 
 # Database connectivity
 psycopg2-binary>=2.9.12
