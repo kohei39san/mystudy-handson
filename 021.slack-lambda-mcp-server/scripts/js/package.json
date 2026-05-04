@@ -9,9 +9,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@aws-sdk/client-sns": "^3.1030.0",
-    "@aws-sdk/client-ssm": "^3.1030.0",
-    "@slack/bolt": "^4.7.0"
+    "@aws-sdk/client-sns": "^3.1032.0",
+    "@aws-sdk/client-ssm": "^3.1032.0",
+    "@slack/bolt": "^4.7.1"
   },
   "overrides": {
     "fast-xml-parser": "^5.7.0"
