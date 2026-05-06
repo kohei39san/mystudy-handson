@@ -10,7 +10,7 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = "${var.project_name}-vpc"
+    Name      = "${var.project_name}-vpc"
     Terraform = "true"
   }
 }
@@ -21,7 +21,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "${var.project_name}-igw"
+    Name      = "${var.project_name}-igw"
     Terraform = "true"
   }
 }
@@ -35,8 +35,8 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.project_name}-public-subnet"
-    Tier = "public"
+    Name      = "${var.project_name}-public-subnet"
+    Tier      = "public"
     Terraform = "true"
   }
 }
@@ -49,8 +49,8 @@ resource "aws_subnet" "private" {
   availability_zone = "${var.aws_region}c"
 
   tags = {
-    Name = "${var.project_name}-private-subnet"
-    Tier = "private"
+    Name      = "${var.project_name}-private-subnet"
+    Tier      = "private"
     Terraform = "true"
   }
 }
@@ -66,7 +66,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "${var.project_name}-public-rt"
+    Name      = "${var.project_name}-public-rt"
     Terraform = "true"
   }
 }
@@ -124,7 +124,7 @@ resource "aws_security_group" "ec2" {
   }
 
   tags = {
-    Name = "${var.project_name}-ec2-sg"
+    Name      = "${var.project_name}-ec2-sg"
     Terraform = "true"
   }
 }
@@ -155,7 +155,7 @@ resource "aws_security_group" "rds" {
   }
 
   tags = {
-    Name = "${var.project_name}-rds-sg"
+    Name      = "${var.project_name}-rds-sg"
     Terraform = "true"
   }
 }
@@ -191,7 +191,7 @@ resource "aws_instance" "test" {
   associate_public_ip_address = true
 
   tags = {
-    Name = "${var.project_name}-ec2"
+    Name      = "${var.project_name}-ec2"
     Terraform = "true"
   }
 }
@@ -209,8 +209,8 @@ resource "aws_subnet" "public_secondary" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "${var.project_name}-public-secondary-subnet"
-    Tier = "public"
+    Name      = "${var.project_name}-public-secondary-subnet"
+    Tier      = "public"
     Terraform = "true"
   }
 }
@@ -246,7 +246,7 @@ resource "aws_security_group" "alb" {
   }
 
   tags = {
-    Name = "${var.project_name}-alb-sg"
+    Name      = "${var.project_name}-alb-sg"
     Terraform = "true"
   }
 }
@@ -271,7 +271,7 @@ resource "aws_lb_target_group" "ec2" {
   }
 
   tags = {
-    Name = "${var.project_name}-ec2-tg"
+    Name      = "${var.project_name}-ec2-tg"
     Terraform = "true"
   }
 }
@@ -300,7 +300,7 @@ resource "aws_lb" "test_internet_facing" {
   enable_deletion_protection = false
 
   tags = {
-    Name = "${var.project_name}-alb"
+    Name      = "${var.project_name}-alb"
     Terraform = "true"
   }
 }
@@ -316,6 +316,11 @@ resource "aws_lb_listener" "http" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.ec2.arn
   }
+
+  tags = {
+    Name      = "${var.project_name}-alb-listener-http"
+    Terraform = "true"
+  }
 }
 
 # --- DB Subnet Group（RDS 用マルチ AZ サブネットグループ）---
@@ -325,7 +330,7 @@ resource "aws_db_subnet_group" "main" {
   subnet_ids = [aws_subnet.public.id, aws_subnet.private.id]
 
   tags = {
-    Name = "${var.project_name}-db-subnet-group"
+    Name      = "${var.project_name}-db-subnet-group"
     Terraform = "true"
   }
 }
@@ -349,7 +354,7 @@ resource "aws_db_instance" "test" {
   multi_az               = false
 
   tags = {
-    Name = "${var.project_name}-rds"
+    Name      = "${var.project_name}-rds"
     Terraform = "true"
   }
 }
