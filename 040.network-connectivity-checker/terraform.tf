@@ -29,6 +29,7 @@ provider "aws" {
       Project     = var.project_name
       Environment = var.environment
       Owner       = var.owner
+      Terraform   = "true"
       ManagedBy   = "Terraform"
     }
   }
