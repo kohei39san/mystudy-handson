@@ -5,6 +5,11 @@ data "aws_ssm_parameter" "ami" {
 resource "aws_network_interface" "ni" {
   subnet_id       = aws_subnet.subnet.id
   security_groups = [aws_security_group.sg.id]
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 resource "aws_key_pair" "deployer" {
@@ -30,6 +35,11 @@ resource "aws_iam_role" "eice_tunnel_role" {
   })
 }
 
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
+
 resource "aws_iam_role_policy_attachment" "eice_tunnel_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   role       = aws_iam_role.eice_tunnel_role.name
@@ -39,6 +49,11 @@ resource "aws_iam_instance_profile" "eice_tunnel_instance_profile" {
   name = var.iam_instance_profile
   role = aws_iam_role.eice_tunnel_role.name
 }
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 
 resource "aws_instance" "instance" {
   ami                  = data.aws_ssm_parameter.ami.value
@@ -51,5 +66,10 @@ resource "aws_instance" "instance" {
   }
   root_block_device {
     volume_size = var.root_block_volume_size
+  }
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
   }
 }
