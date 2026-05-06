@@ -28,6 +28,7 @@
 ├── aws.tf                ← AWS リソース (VPC / Subnet / SG / EC2 / RDS)
 ├── azure.tf              ← Azure リソース (VNet / NSG / VM)
 ├── gcp.tf                ← GCP リソース (VPC / Firewall / VM / Cloud Run / LB)
+├── network_access.tf     ← 共通ネットワークアクセス制御（発信元 IP 取得など）
 ├── outputs.tf            ← Terraform 出力値（結合テスト用リソース ID）
 ├── sample_output/
 │   ├── aws_ec2_sample.json
