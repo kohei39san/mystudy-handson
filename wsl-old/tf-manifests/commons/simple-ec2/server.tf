@@ -5,6 +5,11 @@ data "aws_ssm_parameter" "ami" {
 resource "aws_network_interface" "ni" {
   subnet_id       = aws_subnet.subnet.id
   security_groups = var.vpc_security_group_ids
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 # Add key pair resource
@@ -31,6 +36,11 @@ resource "aws_iam_role" "simple_ec2_role" {
   })
 }
 
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
+
 resource "aws_iam_role_policy_attachment" "simple_ec2_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   role       = aws_iam_role.simple_ec2_role.name
@@ -40,6 +50,11 @@ resource "aws_iam_instance_profile" "simple_ec2_instance_profile" {
   name = var.iam_instance_profile
   role = aws_iam_role.simple_ec2_role.name
 }
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 
 resource "aws_instance" "instance" {
   ami                  = data.aws_ssm_parameter.ami.value
@@ -52,5 +67,10 @@ resource "aws_instance" "instance" {
   }
   root_block_device {
     volume_size = var.root_block_volume_size
+  }
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
   }
 }
