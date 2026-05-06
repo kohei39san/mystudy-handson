@@ -11,6 +11,7 @@ resource "aws_vpc" "main" {
 
   tags = {
     Name = "${var.project_name}-vpc"
+    Terraform = "true"
   }
 }
 
@@ -21,6 +22,7 @@ resource "aws_internet_gateway" "main" {
 
   tags = {
     Name = "${var.project_name}-igw"
+    Terraform = "true"
   }
 }
 
@@ -35,6 +37,7 @@ resource "aws_subnet" "public" {
   tags = {
     Name = "${var.project_name}-public-subnet"
     Tier = "public"
+    Terraform = "true"
   }
 }
 
@@ -48,6 +51,7 @@ resource "aws_subnet" "private" {
   tags = {
     Name = "${var.project_name}-private-subnet"
     Tier = "private"
+    Terraform = "true"
   }
 }
 
@@ -63,6 +67,7 @@ resource "aws_route_table" "public" {
 
   tags = {
     Name = "${var.project_name}-public-rt"
+    Terraform = "true"
   }
 }
 
@@ -120,6 +125,7 @@ resource "aws_security_group" "ec2" {
 
   tags = {
     Name = "${var.project_name}-ec2-sg"
+    Terraform = "true"
   }
 }
 
@@ -150,6 +156,7 @@ resource "aws_security_group" "rds" {
 
   tags = {
     Name = "${var.project_name}-rds-sg"
+    Terraform = "true"
   }
 }
 
@@ -185,6 +192,7 @@ resource "aws_instance" "test" {
 
   tags = {
     Name = "${var.project_name}-ec2"
+    Terraform = "true"
   }
 }
 
@@ -203,6 +211,7 @@ resource "aws_subnet" "public_secondary" {
   tags = {
     Name = "${var.project_name}-public-secondary-subnet"
     Tier = "public"
+    Terraform = "true"
   }
 }
 
@@ -238,6 +247,7 @@ resource "aws_security_group" "alb" {
 
   tags = {
     Name = "${var.project_name}-alb-sg"
+    Terraform = "true"
   }
 }
 
@@ -262,6 +272,7 @@ resource "aws_lb_target_group" "ec2" {
 
   tags = {
     Name = "${var.project_name}-ec2-tg"
+    Terraform = "true"
   }
 }
 
@@ -290,6 +301,7 @@ resource "aws_lb" "test_internet_facing" {
 
   tags = {
     Name = "${var.project_name}-alb"
+    Terraform = "true"
   }
 }
 
@@ -314,6 +326,7 @@ resource "aws_db_subnet_group" "main" {
 
   tags = {
     Name = "${var.project_name}-db-subnet-group"
+    Terraform = "true"
   }
 }
 
@@ -337,5 +350,6 @@ resource "aws_db_instance" "test" {
 
   tags = {
     Name = "${var.project_name}-rds"
+    Terraform = "true"
   }
 }

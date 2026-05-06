@@ -19,12 +19,22 @@ resource "aws_subnet" "subnet" {
 }
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 resource "aws_route_table" "rt" {
   vpc_id = aws_vpc.vpc.id
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
   }
 }
 resource "aws_route_table_association" "rta" {
@@ -34,10 +44,20 @@ resource "aws_route_table_association" "rta" {
 resource "aws_security_group" "sg" {
   name   = var.sg_name
   vpc_id = aws_vpc.vpc.id
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 resource "aws_security_group" "sg_eice" {
   name   = var.sg_eice_name
   vpc_id = aws_vpc.vpc.id
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 resource "aws_vpc_security_group_egress_rule" "sg_egress" {
@@ -47,6 +67,11 @@ resource "aws_vpc_security_group_egress_rule" "sg_egress" {
   ip_protocol = "-1"
   from_port   = 0
   to_port     = 0
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 resource "aws_vpc_security_group_ingress_rule" "sg_ingress" {
@@ -56,6 +81,11 @@ resource "aws_vpc_security_group_ingress_rule" "sg_ingress" {
   ip_protocol                  = "tcp"
   from_port                    = 22
   to_port                      = 22
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
 
 resource "aws_vpc_security_group_egress_rule" "sg_eice_egress" {
@@ -65,4 +95,9 @@ resource "aws_vpc_security_group_egress_rule" "sg_eice_egress" {
   ip_protocol                  = "tcp"
   from_port                    = 22
   to_port                      = 22
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
 }
