@@ -34,12 +34,12 @@ resource "aws_iam_role" "simple_ec2_role" {
       }
     ]
   })
-}
 
   tags = {
     Environment = "dev"
     Terraform   = "true"
   }
+}
 
 resource "aws_iam_role_policy_attachment" "simple_ec2_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -49,12 +49,12 @@ resource "aws_iam_role_policy_attachment" "simple_ec2_policy_attachment" {
 resource "aws_iam_instance_profile" "simple_ec2_instance_profile" {
   name = var.iam_instance_profile
   role = aws_iam_role.simple_ec2_role.name
-}
 
   tags = {
     Environment = "dev"
     Terraform   = "true"
   }
+}
 
 resource "aws_instance" "instance" {
   ami                  = data.aws_ssm_parameter.ami.value

@@ -316,6 +316,11 @@ resource "aws_lb_listener" "http" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.ec2.arn
   }
+
+  tags = {
+    Name      = "${var.project_name}-alb-listener-http"
+    Terraform = "true"
+  }
 }
 
 # --- DB Subnet Group（RDS 用マルチ AZ サブネットグループ）---

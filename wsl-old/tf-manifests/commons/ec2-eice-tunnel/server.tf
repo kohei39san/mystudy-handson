@@ -33,12 +33,12 @@ resource "aws_iam_role" "eice_tunnel_role" {
       }
     ]
   })
-}
 
   tags = {
     Environment = "dev"
     Terraform   = "true"
   }
+}
 
 resource "aws_iam_role_policy_attachment" "eice_tunnel_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -48,12 +48,12 @@ resource "aws_iam_role_policy_attachment" "eice_tunnel_policy_attachment" {
 resource "aws_iam_instance_profile" "eice_tunnel_instance_profile" {
   name = var.iam_instance_profile
   role = aws_iam_role.eice_tunnel_role.name
-}
 
   tags = {
     Environment = "dev"
     Terraform   = "true"
   }
+}
 
 resource "aws_instance" "instance" {
   ami                  = data.aws_ssm_parameter.ami.value
