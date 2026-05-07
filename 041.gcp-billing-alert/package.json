@@ -1,0 +1,21 @@
+{
+  "name": "gcp-billing-alert-infrastructure-manager",
+  "version": "1.0.0",
+  "description": "Google Cloud Infrastructure Manager APIを使用したTerraformデプロイメント",
+  "main": "deploy.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "ts-node deploy.ts deploy",
+    "status": "ts-node deploy.ts status",
+    "destroy": "ts-node deploy.ts destroy",
+    "dev": "ts-node deploy.ts"
+  },
+  "dependencies": {
+    "@google-cloud/infra-manager": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+}
