@@ -11,9 +11,13 @@
     "dev": "ts-node deploy.ts"
   },
   "dependencies": {
-    "@google-cloud/infra-manager": "^1.0.0"
+    "@google-cloud/config": "^0.12.1",
+    "@google-cloud/storage": "^7.16.0",
+    "archiver": "^7.0.1",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.2",
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0",
     "ts-node": "^10.9.0"

@@ -21,6 +21,7 @@
 - Google Cloud 請求先アカウント
 - Node.js v18 以上
 - npm または yarn
+- 事前作成済み Cloud Storage バケット（Terraformソース配置用）
 
 ## 前提条件
 
@@ -65,93 +66,171 @@
 
 ## 使用方法
 
-### 1. 環境セットアップ
+このセクションでは、デプロイまでの全ステップを順番に説明します。
+
+### ステップ 1: 前提条件の確認・準備
+
+#### 1.1 Google Cloud APIの有効化
+
+下記の 3 つの API を有効化してください：
 
 ```bash
-# パッケージをインストール
+gcloud services enable config.googleapis.com
+gcloud services enable billingbudgets.googleapis.com
+gcloud services enable monitoring.googleapis.com
+```
+
+#### 1.2 Google Cloud 認証
+
+次のいずれかの方法で認証を設定してください：
+
+**方法 1: gcloud CLI で認証（推奨）**
+```bash
+gcloud auth application-default login
+```
+
+**方法 2: Service Account キーを使用**
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
+```
+
+#### 1.3 Cloud Storage バケットの作成
+
+Terraform のソースコードを保存するバケットを作成します：
+
+```bash
+gsutil mb gs://your-billing-alert-bucket
+```
+
+### ステップ 2: ローカル環境のセットアップ
+
+```bash
+# リポジトリディレクトリに移動
+cd 041.gcp-billing-alert
+
+# npm 依存パッケージのインストール
 npm install
-```
 
-### 2. 設定ファイルの準備
-
-```bash
-# 環境変数ファイルを作成
+# 環境変数ファイルのコピー
 cp .env.example .env
-
-# .env ファイルを編集して以下の値を設定
-# - GCP_PROJECT_ID: あなたのプロジェクトID
-# - GCP_LOCATION: デプロイメント場所（例：us-central1）
-# - DEPLOYMENT_NAME: デプロイメント名
 ```
 
-```bash
-# terraform.tfvars を作成
-cp terraform.tfvars.example terraform.tfvars
+### ステップ 3: .env ファイルの設定
 
-# terraform.tfvars を編集して以下の値を設定
-# - project_id: Google Cloud プロジェクトID（必須）
-# - billing_account_id: 請求先アカウントID（必須）
-# - alert_email_addresses: アラート通知先メールアドレス（必須）
+エディタで `.env` を開き、必須項目を設定します。
+
+#### 必須項目（全ユーザー共通）
+
+```bash
+# Google Cloud プロジェクト・インフラストラクチャ設定
+GCP_PROJECT_ID=your-project-id
+GCP_LOCATION=asia-northeast1
+DEPLOYMENT_NAME=billing-alert-deployment
+GCP_SERVICE_ACCOUNT=infra-manager-runner@your-project-id.iam.gserviceaccount.com
+
+# Terraform 変数
+TF_PROJECT_ID=your-project-id
+TF_BILLING_ACCOUNT_ID=your-billing-account-id
+TF_ALERT_EMAIL_ADDRESSES=["admin@example.com","finance@example.com"]
 ```
 
-### 3. デプロイメント実行
-
-Infrastructure Manager にTerraformをデプロイします：
+#### オプション項目（必要に応じて設定）
 
 ```bash
-# デプロイ実行
+# 予算設定
+TF_BUDGET_AMOUNT=1000           # 予算金額（デフォルト: 1）
+TF_CURRENCY_CODE=JPY            # 通貨コード（デフォルト: JPY）
+TF_BUDGET_DISPLAY_NAME=Monthly-Billing-Alert  # 予算名
+
+# アラート設定
+TF_ALERT_THRESHOLD_PERCENTAGES=[50,80,100]  # アラート閾値（%）
+TF_REGION=asia-northeast1       # リージョン
+```
+
+### ステップ 4: デプロイメント実行（2つの方法から選択）
+
+#### **パス A: 自動アップロード（推奨）**
+
+`deploy.ts` が Terraform ファイルの zip 作成と GCS アップロードを自動で実行します。
+
+**設定:**
+```bash
+AUTO_UPLOAD_TERRAFORM=true
+ARTIFACTS_GCS_BUCKET=your-billing-alert-bucket
+TF_DIR=./
+```
+
+**実行:**
+```bash
 npm run deploy
 ```
 
-**実行時の処理:**
-1. Terraformファイルを読み込み
-2. Infrastructure Manager にデプロイメントを作成
-3. 予算（Budget）と通知チャネル（Notification Channel）を作成
+このコマンドで以下が自動実行されます：
+1. Terraform ファイル（.tf）を zip 化
+2. GCS バケットにアップロード
+3. Infrastructure Manager デプロイメント作成
 
-**期待される出力:**
-```
-🌍 Google Cloud Infrastructure Manager にデプロイ中...
+#### **パス B: 手動アップロード**
 
-📂 Terraformファイルを読み込み中...
-  ✓ terraform.tf
-  ✓ variables.tf
-  ✓ budget.tf
-  ✓ outputs.tf
+Terraform ファイルを自分で zip 化して GCS にアップロードする場合：
 
-📝 デプロイメントを作成中...
-✓ デプロイメント作成リクエストが送信されました
-
-🚀 デプロイメントを適用中...
-✓ デプロイメントが適用されました
-  状態: APPLIED
-
-✅ デプロイが完了しました！
+**設定:**
+```bash
+AUTO_UPLOAD_TERRAFORM=false
+GCS_SOURCE_URI=gs://your-billing-alert-bucket/terraform.zip
 ```
 
-### 4. デプロイメント状態の確認
+**実行:**
+```bash
+# Terraform ファイルを zip 化
+zip -r terraform.zip terraform.tf variables.tf budget.tf outputs.tf
+
+# GCS にアップロード
+gsutil cp terraform.zip gs://your-billing-alert-bucket/terraform.zip
+
+# デプロイメント作成
+npm run deploy
+```
+
+### ステップ 5: デプロイメントの状態確認
 
 ```bash
+# デプロイメント状態を確認
 npm run status
 ```
 
-**出力例:**
-```
-📊 デプロイメント状態:
-  名前: projects/YOUR_PROJECT/locations/us-central1/deployments/gcp-billing-alert-deployment
-  状態: APPLIED
-  作成日: 2024-05-08T10:30:00Z
-  更新日: 2024-05-08T10:35:00Z
-```
+Google Cloud Console でも確認できます：
+- **Infrastructure Manager**: https://console.cloud.google.com/infra-manager/deployments
+- **予算設定**: https://console.cloud.google.com/billing/budgets
+- **通知チャネル**: https://console.cloud.google.com/monitoring/alerting/notificationchannels
 
-### 5. リソース削除
-
-不要になった場合はリソースを削除します：
+### ステップ 6: クリーンアップ（不要な場合）
 
 ```bash
+# デプロイメント削除
 npm run destroy
 ```
 
-**注意:** このコマンドはすべての関連リソース（予算、モニタリングチャネル）も削除します。
+## `.env` の全設定項目リファレンス
+
+| 環境変数 | 必須？ | デフォルト | 説明 | パス |
+|---------|--------|----------|------|------|
+| `GCP_PROJECT_ID` | ✓ | - | Google Cloud プロジェクト ID | A, B |
+| `GCP_LOCATION` | ✓ | - | Infrastructure Manager デプロイメント場所 | A, B |
+| `DEPLOYMENT_NAME` | ✓ | - | デプロイメント名 | A, B |
+| `GCP_SERVICE_ACCOUNT` | ✓ | - | Infrastructure Manager 実行用サービスアカウント | A, B |
+| `AUTO_UPLOAD_TERRAFORM` | ✗ | false | true で自動 zip/upload | A |
+| `ARTIFACTS_GCS_BUCKET` | ✗ | - | Terraform zip 保存先バケット | A |
+| `TF_DIR` | ✗ | ./ | Terraform ファイルディレクトリ | A |
+| `GCS_SOURCE_URI` | ✗ | - | Terraform zip の GCS URI (gs://...) | B |
+| `TF_PROJECT_ID` | ✓ | - | Terraform が使用する GCP プロジェクト ID | A, B |
+| `TF_BILLING_ACCOUNT_ID` | ✓ | - | Terraform が使用する請求先アカウント ID | A, B |
+| `TF_ALERT_EMAIL_ADDRESSES` | ✓ | - | アラート通知先メール（JSON 配列またはカンマ区切り） | A, B |
+| `TF_BUDGET_AMOUNT` | ✗ | 1 | 予算金額 | A, B |
+| `TF_CURRENCY_CODE` | ✗ | JPY | 通貨コード | A, B |
+| `TF_BUDGET_DISPLAY_NAME` | ✗ | Monthly-Billing-Alert | 予算の表示名 | A, B |
+| `TF_ALERT_THRESHOLD_PERCENTAGES` | ✗ | [50,80,100] | アラート閾値（%、JSON 配列） | A, B |
+| `TF_REGION` | ✗ | asia-northeast1 | Google Cloud リージョン | A, B |
 
 ## トラブルシューティング
 
