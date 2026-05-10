@@ -90,9 +90,19 @@ async function deployWithInfrastructureManager(
       `✓ デプロイメント作成リクエストが送信されました: ${operation.name}`
     );
 
-    // オペレーション完了を待機
+    // デプロイメント作成完了を待機
     const [deployment] = await operation.promise();
     console.log(`✓ デプロイメントが作成されました: ${deployment.name}`);
+
+    // revision の actuation build 完了を待機
+    console.log("⏳ revision の完了を待機中...");
+    await waitForRevisionApplied(
+      client,
+      config.projectId,
+      config.location,
+      config.deploymentName
+    );
+    console.log("✓ revision が APPLIED になりました");
   } catch (error) {
     console.error("❌ デプロイメント作成エラー:", error);
     throw error;
@@ -133,6 +143,67 @@ async function checkDeploymentStatus(
     console.error("❌ デプロイメント状態確認エラー:", error);
     throw error;
   }
+}
+
+/**
+ * revision が APPLIED になるまで待機する
+ */
+async function waitForRevisionApplied(
+  client: ConfigClient,
+  projectId: string,
+  location: string,
+  deploymentName: string,
+  timeoutMs = 10 * 60 * 1000,
+  intervalMs = 15_000
+): Promise<void> {
+  const deploymentPath = client.deploymentPath(
+    projectId,
+    location,
+    deploymentName
+  );
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const [deployment] = await client.getDeployment({ name: deploymentPath });
+
+    if (!deployment.latestRevision) {
+      console.log("  revision の生成待ち...");
+      await sleep(intervalMs);
+      continue;
+    }
+
+    const [revision] = await client.getRevision({
+      name: deployment.latestRevision,
+    });
+
+    console.log(`  revision: ${revision.name}`);
+    console.log(`  state: ${revision.state}`);
+
+    if (revision.state === "APPLIED") {
+      return;
+    }
+
+    if (revision.state === "FAILED") {
+      throw new Error(
+        `revision が FAILED になりました: ${revision.name}${
+          revision.stateDetail ? ` / ${revision.stateDetail}` : ""
+        }`
+      );
+    }
+
+    await sleep(intervalMs);
+  }
+
+  throw new Error(
+    `revision の完了待機がタイムアウトしました: ${deploymentName}`
+  );
+}
+
+/**
+ * 指定ミリ秒待機する
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -431,6 +502,7 @@ async function destroyDeployment(
 
     const [operation] = await client.deleteDeployment({
       name: deploymentPath,
+      force: true,
     });
 
     console.log(`✓ 削除リクエストが送信されました: ${operation.name}`);

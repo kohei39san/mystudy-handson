@@ -134,6 +134,8 @@ TF_BILLING_ACCOUNT_ID=your-billing-account-id
 TF_ALERT_EMAIL_ADDRESSES=["admin@example.com","finance@example.com"]
 ```
 
+Infrastructure Manager が Terraform ソース ZIP を読むため、`GCP_SERVICE_ACCOUNT` には少なくともソースバケットに対する権限を付与してください。`roles/storage.objectViewer` に加えて、バケットの存在確認で `roles/storage.bucketViewer` が必要になることがあります。対象は `GCS_SOURCE_URI` のバケットです。
+
 #### オプション項目（必要に応じて設定）
 
 ```bash
@@ -180,6 +182,8 @@ AUTO_UPLOAD_TERRAFORM=false
 GCS_SOURCE_URI=gs://your-billing-alert-bucket/terraform.zip
 ```
 
+`GCS_SOURCE_URI` は `gs://` から始まる ZIP の完全なパスを指定します。`GCP_SERVICE_ACCOUNT` には、このバケットを読み取れる権限を付与してください。
+
 **実行:**
 ```bash
 # Terraform ファイルを zip 化
@@ -211,6 +215,8 @@ Google Cloud Console でも確認できます：
 npm run destroy
 ```
 
+`destroy` は Infrastructure Manager の `force=true` で削除します。
+
 ## `.env` の全設定項目リファレンス
 
 | 環境変数 | 必須？ | デフォルト | 説明 | パス |
@@ -231,6 +237,15 @@ npm run destroy
 | `TF_BUDGET_DISPLAY_NAME` | ✗ | Monthly-Billing-Alert | 予算の表示名 | A, B |
 | `TF_ALERT_THRESHOLD_PERCENTAGES` | ✗ | [50,80,100] | アラート閾値（%、JSON 配列） | A, B |
 | `TF_REGION` | ✗ | asia-northeast1 | Google Cloud リージョン | A, B |
+
+## バケット権限の確認
+
+`Revision failed ... does not have access to the bucket` が出る場合は、`GCS_SOURCE_URI` のバケットに対して、`GCP_SERVICE_ACCOUNT` に以下を付与してください。
+
+- `roles/storage.objectViewer`
+- `roles/storage.bucketViewer`
+
+必要なら、権限付与後に数分待ってから再実行してください。
 
 ## トラブルシューティング
 
