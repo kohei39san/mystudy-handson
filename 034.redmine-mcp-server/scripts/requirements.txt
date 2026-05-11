@@ -1,4 +1,4 @@
-mcp>=1.27.0
+mcp>=1.27.1
 selenium>=4.43.0
 webdriver-manager>=4.0.2
 pydantic>=2.13.3
