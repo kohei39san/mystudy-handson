@@ -102,15 +102,15 @@ resource "azurerm_network_security_group" "main" {
   # 複数の送信元IP許可（複数アドレスパターンをテストするためのルール）
   # source_address_prefixes を使用して複数のCIDRブロックを許可
   security_rule {
-    name                        = "AllowMultipleSources"
-    priority                    = 130
-    direction                   = "Inbound"
-    access                      = "Allow"
-    protocol                    = "Tcp"
-    source_port_range           = "*"
-    destination_port_range      = "3306"
-    source_address_prefixes     = ["10.0.0.0/24", "192.168.1.0/24", "203.0.113.0/24"]
-    destination_address_prefix  = "*"
+    name                       = "AllowMultipleSources"
+    priority                   = 130
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "3306"
+    source_address_prefixes    = ["10.0.0.0/24", "192.168.1.0/24", "203.0.113.0/24"]
+    destination_address_prefix = "*"
   }
 
   tags = {
