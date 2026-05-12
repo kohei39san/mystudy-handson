@@ -36,20 +36,17 @@ updates:
       other-npm:
         patterns:
           - "*"
-        group-by: "dependency-name"
         update-types:
           - "minor"
           - "patch"
       other-npm-major:
         patterns:
           - "*"
-        group-by: "dependency-name"
         update-types:
           - "major"
       others:
         patterns:
           - "*"
-        group-by: "dependency-name"
   - package-ecosystem: "pip"
     directories:
       - "**/*"
@@ -68,20 +65,17 @@ updates:
       all-pip:
         patterns:
           - "*"
-        group-by: "dependency-name"
         update-types:
           - "minor"
           - "patch"
       all-pip-major:
         patterns:
           - "*"
-        group-by: "dependency-name"
         update-types:
           - "major"
       others:
         patterns:
           - "*"
-        group-by: "dependency-name"
   - package-ecosystem: terraform
     directories: 
       - "**/*"
@@ -98,17 +92,14 @@ updates:
       other-providers:
         patterns:
           - "*"
-        group-by: "dependency-name"
         update-types:
           - "minor"
           - "patch"
       other-providers-major:
         patterns:
           - "*"
-        group-by: "dependency-name"
         update-types:
           - "major"
       others:
         patterns:
           - "*"
-        group-by: "dependency-name"
