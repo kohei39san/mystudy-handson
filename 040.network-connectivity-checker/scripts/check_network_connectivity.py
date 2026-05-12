@@ -480,7 +480,9 @@ def _azure_collect_allow_rules(nsg: Any) -> List[Dict[str, Any]]:
                     "priority": rule.priority,
                     "protocol": rule.protocol,
                     "source_address_prefix": rule.source_address_prefix or "",
+                    "source_address_prefixes": rule.source_address_prefixes or [],
                     "destination_address_prefix": rule.destination_address_prefix or "",
+                    "destination_address_prefixes": rule.destination_address_prefixes or [],
                     "destination_port_range": rule.destination_port_range or "",
                 }
             )
