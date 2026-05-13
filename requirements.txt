@@ -2,8 +2,8 @@
 # This file is the single source of truth for pip dependency updates.
 
 # AWS
-boto3==1.43.2
-botocore==1.43.2
+boto3==1.43.4
+botocore==1.43.4
 
 # Azure
 azure-identity==1.25.3
