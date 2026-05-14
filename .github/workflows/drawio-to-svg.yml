@@ -5,6 +5,8 @@ permissions:
 
 on:
   push:
+    branches-ignore:
+      - main
     paths:
       - "**/*.drawio"
   workflow_dispatch:
