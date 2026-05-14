@@ -1,0 +1,159 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "budgetName": {
+      "type": "string",
+      "defaultValue": "Monthly-Billing-Alert",
+      "metadata": {
+        "description": "Name of the budget"
+      }
+    },
+    "amount": {
+      "type": "int",
+      "defaultValue": 100,
+      "metadata": {
+        "description": "Budget amount in the subscription currency"
+      }
+    },
+    "timeGrain": {
+      "type": "string",
+      "defaultValue": "Monthly",
+      "allowedValues": [
+        "Monthly",
+        "Quarterly",
+        "Annual"
+      ],
+      "metadata": {
+        "description": "Time period covered by the budget"
+      }
+    },
+    "startDate": {
+      "type": "string",
+      "metadata": {
+        "description": "Start date of the budget in YYYY-MM-DD format (must be the first day of the month)"
+      }
+    },
+    "endDate": {
+      "type": "string",
+      "metadata": {
+        "description": "End date of the budget in YYYY-MM-DD format"
+      }
+    },
+    "contactEmails": {
+      "type": "array",
+      "metadata": {
+        "description": "List of email addresses to receive budget alert notifications (up to 5)"
+      }
+    },
+    "contactRoles": {
+      "type": "array",
+      "defaultValue": [
+        "Owner"
+      ],
+      "metadata": {
+        "description": "List of roles to receive budget alert notifications (Owner, Contributor, Reader)"
+      }
+    },
+    "actualAlertThreshold1": {
+      "type": "int",
+      "defaultValue": 50,
+      "minValue": 1,
+      "maxValue": 1000,
+      "metadata": {
+        "description": "First actual cost alert threshold as a percentage of the budget amount"
+      }
+    },
+    "actualAlertThreshold2": {
+      "type": "int",
+      "defaultValue": 80,
+      "minValue": 1,
+      "maxValue": 1000,
+      "metadata": {
+        "description": "Second actual cost alert threshold as a percentage of the budget amount"
+      }
+    },
+    "actualAlertThreshold3": {
+      "type": "int",
+      "defaultValue": 100,
+      "minValue": 1,
+      "maxValue": 1000,
+      "metadata": {
+        "description": "Third actual cost alert threshold as a percentage of the budget amount"
+      }
+    },
+    "forecastedAlertThreshold": {
+      "type": "int",
+      "defaultValue": 100,
+      "minValue": 1,
+      "maxValue": 1000,
+      "metadata": {
+        "description": "Forecasted cost alert threshold as a percentage of the budget amount"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Consumption/budgets",
+      "apiVersion": "2019-10-01",
+      "name": "[parameters('budgetName')]",
+      "properties": {
+        "timePeriod": {
+          "startDate": "[parameters('startDate')]",
+          "endDate": "[parameters('endDate')]"
+        },
+        "timeGrain": "[parameters('timeGrain')]",
+        "amount": "[parameters('amount')]",
+        "category": "Cost",
+        "notifications": {
+          "Actual_GreaterThan_50Percent": {
+            "enabled": true,
+            "operator": "GreaterThan",
+            "threshold": "[parameters('actualAlertThreshold1')]",
+            "thresholdType": "Actual",
+            "contactEmails": "[parameters('contactEmails')]",
+            "contactRoles": "[parameters('contactRoles')]"
+          },
+          "Actual_GreaterThan_80Percent": {
+            "enabled": true,
+            "operator": "GreaterThan",
+            "threshold": "[parameters('actualAlertThreshold2')]",
+            "thresholdType": "Actual",
+            "contactEmails": "[parameters('contactEmails')]",
+            "contactRoles": "[parameters('contactRoles')]"
+          },
+          "Actual_GreaterThan_100Percent": {
+            "enabled": true,
+            "operator": "GreaterThan",
+            "threshold": "[parameters('actualAlertThreshold3')]",
+            "thresholdType": "Actual",
+            "contactEmails": "[parameters('contactEmails')]",
+            "contactRoles": "[parameters('contactRoles')]"
+          },
+          "Forecasted_GreaterThan_100Percent": {
+            "enabled": true,
+            "operator": "GreaterThan",
+            "threshold": "[parameters('forecastedAlertThreshold')]",
+            "thresholdType": "Forecasted",
+            "contactEmails": "[parameters('contactEmails')]",
+            "contactRoles": "[parameters('contactRoles')]"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "budgetId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Consumption/budgets', parameters('budgetName'))]"
+    },
+    "budgetName": {
+      "type": "string",
+      "value": "[parameters('budgetName')]"
+    },
+    "budgetAmount": {
+      "type": "int",
+      "value": "[parameters('amount')]"
+    }
+  }
+}
