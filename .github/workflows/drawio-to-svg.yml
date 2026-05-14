@@ -8,6 +8,12 @@ on:
   push:
     paths:
       - "**/*.drawio"
+  workflow_dispatch:
+    inputs:
+      drawio_file_path:
+        description: "対象のDraw.ioファイルパス（省略時は全ファイルを対象）"
+        required: false
+        default: ""
 
 jobs:
   convert-drawio-to-svg:
@@ -32,9 +38,17 @@ jobs:
         id: changed-files
         run: |
           # Get the list of changed .drawio files
-          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+          all_drawio_files="$(find . -name "*.drawio" -type f | grep -v "^\./.git/" || true)"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual trigger: convert specified file or all .drawio files
+            if [ -n "${{ github.event.inputs.drawio_file_path }}" ]; then
+              changed_files="${{ github.event.inputs.drawio_file_path }}"
+            else
+              changed_files="$all_drawio_files"
+            fi
+          elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
             # First commit in branch, check all .drawio files
-            changed_files="$(find . -name "*.drawio" -type f | grep -v "^\./.git/" || true)"
+            changed_files="$all_drawio_files"
           else
             # Get changed .drawio files from the diff
             changed_files="$(git diff --name-only "${{ github.event.before }}..${{ github.sha }}" | grep "\.drawio$" || true)"
