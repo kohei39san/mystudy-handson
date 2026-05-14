@@ -2,7 +2,6 @@ name: Convert Draw.io to SVG
 
 permissions:
   contents: write
-  pull-requests: write
 
 on:
   push:
@@ -162,18 +161,10 @@ jobs:
           git add .
           git diff --cached --quiet && echo 'changes=' >> "$GITHUB_OUTPUT" || echo 'changes=changes' >> "$GITHUB_OUTPUT"
 
-      - name: Get current branch name
+      - name: Commit and push changes
         if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
-        id: get_branch
         run: |
-          echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
-
-      - name: Create Pull Request
-        if: ${{ steps.git_diff.outputs.changes == 'changes' && !cancelled() }}
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: ${{ steps.get_branch.outputs.branch_name }}
-          branch: drawio-to-svg-pr-${{ steps.get_branch.outputs.branch_name }}
-          title: "Changes by drawio-to-svg actions"
-          labels: fix
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: convert Draw.io files to SVG [skip ci]"
+          git push origin HEAD
