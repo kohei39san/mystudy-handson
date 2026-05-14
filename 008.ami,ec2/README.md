@@ -2,6 +2,10 @@
 
 このTerraform構成は、EC2インスタンスからAMIを作成し、別リージョンにコピーする仕組みを提供します。また、AMI作成を自動化するLambda関数も含まれています。
 
+## アーキテクチャ図
+
+![Architecture Diagram](src/architecture.svg)
+
 ## リソース構成
 
 ### ネットワークリソース
