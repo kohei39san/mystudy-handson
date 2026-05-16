@@ -31,8 +31,8 @@ resource "azurerm_lb" "test" {
 }
 
 resource "azurerm_lb_backend_address_pool" "test" {
-  name                = "test-backend-pool"
-  loadbalancer_id     = azurerm_lb.test.id
+  name            = "test-backend-pool"
+  loadbalancer_id = azurerm_lb.test.id
 }
 
 resource "azurerm_network_interface_backend_address_pool_association" "vm" {
@@ -43,17 +43,17 @@ resource "azurerm_network_interface_backend_address_pool_association" "vm" {
 
 # Health Probe (TCP 80)
 resource "azurerm_lb_probe" "test" {
-  name                = "test-probe"
-  loadbalancer_id     = azurerm_lb.test.id
-  protocol            = "Tcp"
-  port                = 80
+  name            = "test-probe"
+  loadbalancer_id = azurerm_lb.test.id
+  protocol        = "Tcp"
+  port            = 80
 }
 
 # LB Rule (HTTP)
 resource "azurerm_lb_rule" "test" {
   name                           = "test-lb-rule"
   loadbalancer_id                = azurerm_lb.test.id
-  protocol                      = "Tcp"
+  protocol                       = "Tcp"
   frontend_port                  = 80
   backend_port                   = 80
   frontend_ip_configuration_name = "PublicLBFrontend"
