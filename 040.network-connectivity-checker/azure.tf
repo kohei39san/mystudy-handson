@@ -1,3 +1,65 @@
+################################################################################
+# Azure Load Balancer (Standard, Public) テスト用リソース
+################################################################################
+
+resource "azurerm_public_ip" "lb" {
+  name                = "${var.project_name}-lb-pip"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+
+  tags = {
+    Name = "${var.project_name}-lb-pip"
+  }
+}
+
+resource "azurerm_lb" "test" {
+  name                = "${var.project_name}-lb"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku                 = "Standard"
+
+  frontend_ip_configuration {
+    name                 = "PublicLBFrontend"
+    public_ip_address_id = azurerm_public_ip.lb.id
+  }
+
+  tags = {
+    Name = "${var.project_name}-lb"
+  }
+}
+
+resource "azurerm_lb_backend_address_pool" "test" {
+  name                = "test-backend-pool"
+  loadbalancer_id     = azurerm_lb.test.id
+}
+
+resource "azurerm_network_interface_backend_address_pool_association" "vm" {
+  network_interface_id    = azurerm_network_interface.vm.id
+  ip_configuration_name   = "internal"
+  backend_address_pool_id = azurerm_lb_backend_address_pool.test.id
+}
+
+# Health Probe (TCP 80)
+resource "azurerm_lb_probe" "test" {
+  name                = "test-probe"
+  loadbalancer_id     = azurerm_lb.test.id
+  protocol            = "Tcp"
+  port                = 80
+}
+
+# LB Rule (HTTP)
+resource "azurerm_lb_rule" "test" {
+  name                           = "test-lb-rule"
+  loadbalancer_id                = azurerm_lb.test.id
+  protocol                      = "Tcp"
+  frontend_port                  = 80
+  backend_port                   = 80
+  frontend_ip_configuration_name = "PublicLBFrontend"
+  backend_address_pool_ids       = [azurerm_lb_backend_address_pool.test.id]
+  probe_id                       = azurerm_lb_probe.test.id
+}
 # ─────────────────────────────────────────────────────────────────────────────
 # Azure リソース: VNet / NSG / VM
 # ─────────────────────────────────────────────────────────────────────────────
