@@ -535,6 +535,10 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
     subnet_ids: List[str] = []
     has_udr = False
     seen_subnet_nsg_ids: set[str] = set()
+    # Azure LB逆引き用
+    nic_backend_pools: List[str] = []
+    lb_backend_pool_map: Dict[str, Dict[str, str]] = {}
+    lb_associations: List[Dict[str, str]] = []
 
     # Iterate NICs
     for nic_ref in vm.network_profile.network_interfaces or []:
@@ -593,6 +597,12 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
                 except Exception:
                     pass
 
+            # Azure LB: 逆引き用 (backend address pools)
+            if ip_config.load_balancer_backend_address_pools:
+                for pool in ip_config.load_balancer_backend_address_pools:
+                    if pool.id:
+                        nic_backend_pools.append(pool.id)
+
         # NSG on NIC
         if nic.network_security_group and nic.network_security_group.id:
             nsg_parts = _parse_azure_resource_id(nic.network_security_group.id)
@@ -605,6 +615,22 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
             except Exception:
                 pass
 
+    # Azure LB: 逆引き (LB名・プール名取得)
+    if nic_backend_pools:
+        lbs = list(network_client.load_balancers.list(resource_group_name=resource_group))
+        for lb in lbs:
+            for pool in lb.backend_address_pools or []:
+                if pool.id in nic_backend_pools:
+                    lb_backend_pool_map[pool.id] = {
+                        "lb_name": lb.name,
+                        "pool_name": pool.name,
+                        "lb_type": lb.sku.name if lb.sku else "Unknown",
+                        "frontend": ",".join([fip.name for fip in lb.frontend_ip_configurations or []]),
+                    }
+        for pool_id in nic_backend_pools:
+            if pool_id in lb_backend_pool_map:
+                lb_associations.append(lb_backend_pool_map[pool_id])
+
     reasons: List[str] = []
     observed: Dict[str, Any] = {
         "power_state": power_state,
@@ -614,6 +640,7 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
         "has_udr": has_udr,
         "nsg_rules": nsg_rules_info,
         "subnet_nsg_rules": subnet_nsg_rules_info,
+        "azure_lb_backend_pools": lb_associations,
     }
 
     reasons.append(f"power_state={power_state}")
@@ -623,6 +650,8 @@ def check_azure_vm(resource_id: str) -> Dict[str, Any]:
     reasons.append(f"nsg_rules_present_subnet={str(bool(subnet_nsg_rules_info)).lower()}")
     if nsg_rules_info or subnet_nsg_rules_info:
         reasons.append("nsg_rules_present=true")
+    if lb_associations:
+        reasons.append(f"azure_lb_backend_pools={','.join([f'{a['lb_name']}/{a['pool_name']}' for a in lb_associations])}")
 
     running = power_state.lower() == "running"
     has_public_ip = bool(public_ips)
