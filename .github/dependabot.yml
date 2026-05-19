@@ -27,37 +27,26 @@ updates:
       time: "18:00"
       timezone: "Asia/Tokyo"
     target-branch: main
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 100
     cooldown:
       semver-patch-days: 7
       semver-minor-days: 14
       semver-major-days: 30
     groups:
-      aws-sdk:
-        patterns:
-          - "@aws-sdk/*"
-        update-types:
-          - "minor"
-          - "patch"
-      aws-cdk:
-        patterns:
-          - "aws-cdk"
-          - "aws-cdk-lib"
-          - "constructs"
-        update-types:
-          - "minor"
-          - "patch"
       other-npm:
         patterns:
           - "*"
-        exclude-patterns:
-          - "@aws-sdk/*"
-          - "aws-cdk"
-          - "aws-cdk-lib"
-          - "constructs"
         update-types:
           - "minor"
           - "patch"
+      other-npm-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+      others:
+        patterns:
+          - "*"
   - package-ecosystem: "pip"
     directories:
       - "**/*"
@@ -67,7 +56,7 @@ updates:
       time: "18:00"
       timezone: "Asia/Tokyo"
     target-branch: main
-    open-pull-requests-limit: 1000
+    open-pull-requests-limit: 100
     cooldown:
       semver-patch-days: 7
       semver-minor-days: 14
@@ -79,6 +68,14 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      all-pip-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+      others:
+        patterns:
+          - "*"
   - package-ecosystem: terraform
     directories: 
       - "**/*"
@@ -88,48 +85,21 @@ updates:
       time: "18:00"
       timezone: "Asia/Tokyo"
     target-branch: main
-    open-pull-requests-limit: 1000
+    open-pull-requests-limit: 100
     cooldown:
       default-days: 7
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
     groups:
-      aws-provider:
-        patterns:
-          - "hashicorp/aws"
-        update-types:
-          - "minor"
-          - "patch"
-      oci-provider:
-        patterns:
-          - "oracle/oci"
-        update-types:
-          - "minor"
-          - "patch"
-      hashicorp-providers:
-        patterns:
-          - "hashicorp/http"
-          - "hashicorp/null"
-          - "hashicorp/random"
-          - "hashicorp/local"
-          - "hashicorp/tls"
-          - "hashicorp/time"
-        update-types:
-          - "minor"
-          - "patch"
       other-providers:
         patterns:
           - "*"
-        exclude-patterns:
-          - "hashicorp/aws"
-          - "oracle/oci"
-          - "hashicorp/http"
-          - "hashicorp/null"
-          - "hashicorp/random"
-          - "hashicorp/local"
-          - "hashicorp/tls"
-          - "hashicorp/time"
         update-types:
           - "minor"
           - "patch"
+      other-providers-major:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+      others:
+        patterns:
+          - "*"

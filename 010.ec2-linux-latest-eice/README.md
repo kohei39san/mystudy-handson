@@ -2,6 +2,10 @@
 
 このTerraform構成は、EC2 Instance Connect Endpoint (EICE) を使用してプライベートサブネット内のEC2インスタンスに安全にアクセスできる環境を構築します。
 
+## アーキテクチャ図
+
+![Architecture Diagram](src/architecture.svg)
+
 ## リソース構成
 
 ### ネットワークリソース

@@ -17,6 +17,6 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: CloudFormation Linter
-        uses: scottbrenner/cfn-lint-action@9636da81fb2e0cef75725d8dda11b0148940b7ae # v2.6.0
+        uses: scottbrenner/cfn-lint-action@ed184e91f5085a2932501da8314e899e5e0ef5be # v2.7.1
         with:
           command: cfn-lint **/cfn/**/*.yaml

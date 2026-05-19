@@ -3,7 +3,7 @@ terraform {
   required_providers {
     helm = {
       source  = "hashicorp/helm"
-      version = "2.17.0"
+      version = "3.1.1"
     }
     kustomization = {
       source  = "kbst/kustomization"
@@ -11,7 +11,7 @@ terraform {
     }
     docker = {
       source  = "kreuzwerker/docker"
-      version = "3.9.0"
+      version = "4.3.0"
     }
     null = {
       source  = "hashicorp/null"

@@ -1,0 +1,48 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and update the values
+# Command: cp terraform.tfvars.example terraform.tfvars
+
+#==============================================================================
+# REQUIRED CONFIGURATION
+#==============================================================================
+
+# Required: Google Cloud project ID
+project_id = "your-gcp-project-id"
+
+# Required: Google Cloud billing account ID
+# You can find this in the Google Cloud Console under Billing
+billing_account_id = "XXXXXX-XXXXXX-XXXXXX"
+
+# Required: List of email addresses to receive budget alerts
+alert_email_addresses = [
+  "admin@example.com",
+  "finance@example.com"
+]
+
+#==============================================================================
+# BUDGET CONFIGURATION
+#==============================================================================
+
+# Budget amount in the specified currency
+budget_amount = 1000
+
+# Currency code (e.g., USD, JPY)
+currency_code = "JPY"
+
+# Display name for the budget (shown in Google Cloud Console)
+budget_display_name = "Monthly Billing Alert"
+
+#==============================================================================
+# ALERT CONFIGURATION
+#==============================================================================
+
+# List of percentages at which to trigger alerts
+# For example, [50, 80, 100] means alert at 50%, 80%, and 100% of budget
+alert_threshold_percentages = [50, 80, 100]
+
+#==============================================================================
+# OPTIONAL CONFIGURATION
+#==============================================================================
+
+# Google Cloud region (default: asia-northeast1)
+# region = "asia-northeast1"

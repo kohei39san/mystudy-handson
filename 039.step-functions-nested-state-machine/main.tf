@@ -7,4 +7,8 @@ resource "aws_cloudformation_stack" "nested" {
     ProjectName = var.project_name
     Environment = var.environment
   }
+
+  tags = {
+    Terraform = "true"
+  }
 }

@@ -7,11 +7,11 @@ terraform {
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "2.17.0"
+      version = "3.1.1"
     }
     docker = {
       source  = "kreuzwerker/docker"
-      version = "3.9.0"
+      version = "4.3.0"
     }
     null = {
       source  = "hashicorp/null"

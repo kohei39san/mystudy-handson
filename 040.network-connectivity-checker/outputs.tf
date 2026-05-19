@@ -29,6 +29,16 @@ output "aws_rds_endpoint" {
   value       = aws_db_instance.test.endpoint
 }
 
+output "aws_alb_arn" {
+  description = "テスト用 ALB ARN"
+  value       = aws_lb.test_internet_facing.arn
+}
+
+output "aws_alb_dns_name" {
+  description = "テスト用 ALB の DNS 名"
+  value       = aws_lb.test_internet_facing.dns_name
+}
+
 output "aws_vpc_id" {
   description = "AWS VPC ID"
   value       = aws_vpc.main.id
@@ -76,6 +86,21 @@ output "gcp_cloudrun_resource_id" {
 output "gcp_cloudrun_uri" {
   description = "GCP Cloud Run サービス URI"
   value       = google_cloud_run_v2_service.test.uri
+}
+
+output "gcp_cloudrun_lb_backend_service" {
+  description = "Cloud Run を参照する Backend Service 名（--lb-backend-service に指定可能）"
+  value       = google_compute_backend_service.cloudrun.name
+}
+
+output "gcp_cloudrun_lb_ip" {
+  description = "Cloud Run 用 外部 HTTP LB のグローバル IP"
+  value       = google_compute_global_address.cloudrun.address
+}
+
+output "gcp_cloudrun_lb_url" {
+  description = "Cloud Run 用 外部 HTTP LB の URL"
+  value       = "http://${google_compute_global_address.cloudrun.address}"
 }
 
 output "gcp_cloudsql_resource_id" {

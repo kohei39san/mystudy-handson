@@ -6,12 +6,22 @@
   "private_reachability": "reachable",
   "reasons": [
     "ingress=all",
-    "allow_unauthenticated=true"
+    "invoker_principal_count=1",
+    "neg_found",
+    "lb_found"
   ],
   "observed": {
     "ingress": "all",
-    "allow_unauthenticated": true,
+    "invoker_principal_count": 1,
+    "iam_policy_access": "ok",
     "url": "https://my-service-abcdef-uc.a.run.app",
-    "location": "us-central1"
+    "location": "us-central1",
+    "matched_neg_names": ["my-service-neg"],
+    "matched_backend_names": ["my-service-be"],
+    "matched_lb_names": ["my-service-http-fr"],
+    "matched_lb_details": [
+      {"name": "my-service-http-fr", "scheme": "EXTERNAL_MANAGED"}
+    ],
+    "lb_lookup_errors": []
   }
 }

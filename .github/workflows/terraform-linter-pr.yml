@@ -29,7 +29,7 @@ jobs:
       - name: Format Terraform files
         run: terraform fmt -recursive
 
-      - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         name: Cache plugin dir for TFLint
         with:
           path: ~/.tflint.d/plugins
@@ -51,7 +51,7 @@ jobs:
 
       - name: Configure AWS Credentials
         if: steps.check_role.outputs.aws_role_available == 'true'
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6.1.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-northeast-1
