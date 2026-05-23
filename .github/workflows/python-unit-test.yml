@@ -1,0 +1,72 @@
+name: Python Unit Test
+
+on:
+  pull_request:
+    paths:
+      - "**/pytest.ini"
+      - "**/tests/**/*.py"
+      - "**/scripts/**/*.py"
+      - "requirements.txt"
+      - ".github/workflows/python-unit-test.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "**/pytest.ini"
+      - "**/tests/**/*.py"
+      - "**/scripts/**/*.py"
+      - "requirements.txt"
+      - ".github/workflows/python-unit-test.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  python-unit-test:
+    name: Python Unit Test (Auto Detect)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Discover and run Python unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t dirs < <(find . -type f -name pytest.ini -not -path "*/.venv/*" -not -path "*/.pytest_cache/*" -exec dirname {} \; | sed 's#^./##' | sort -u)
+
+          if [ "${#dirs[@]}" -eq 0 ]; then
+            echo "No pytest.ini found. Skipping Python unit tests."
+            exit 0
+          fi
+
+          failed=0
+          for dir in "${dirs[@]}"; do
+            echo "==> Checking ${dir}"
+
+            if [ ! -d "${dir}/tests" ]; then
+              echo "No tests directory in ${dir}; skipped"
+              continue
+            fi
+
+            if ! grep -R -E "@pytest\.mark\.unit|\.mark\.unit" "${dir}/tests" --include='*.py' > /dev/null 2>&1; then
+              echo "No unit marker found in ${dir}/tests; skipped"
+              continue
+            fi
+
+            echo "Running pytest -m unit in ${dir}"
+            if ! (cd "${dir}" && pytest -m unit -q); then
+              failed=1
+            fi
+          done
+
+          exit ${failed}
