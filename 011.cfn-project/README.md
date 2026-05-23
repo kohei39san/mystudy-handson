@@ -19,7 +19,7 @@
 ## ファイル構成
 
 ```
-011.cfn/
+011.cfn-project/
 ├── cfn/
 │   ├── ec2-latest-image.yaml    # 最新AMI IDを動的取得するCloudFormationテンプレート
 │   ├── sample.yaml              # 基本的なEC2構成のCloudFormationテンプレート
