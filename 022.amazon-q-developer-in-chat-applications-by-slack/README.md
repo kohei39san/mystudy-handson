@@ -19,7 +19,7 @@
 ## ファイル構成
 
 ```
-022.amazon_q_developer_in_chat_applications_by_slack/
+022.amazon-q-developer-in-chat-applications-by-slack/
 ├── main.tf                      # メインのTerraform設定
 ├── outputs.tf                   # 出力値の定義
 ├── terraform.tf                 # Terraformプロバイダー設定
