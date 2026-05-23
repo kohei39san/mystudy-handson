@@ -89,6 +89,7 @@ class FakeContext:
         self.pages = pages
 
 
+@pytest.mark.unit
 def test_load_credit_codes_skips_comments_and_blank_lines(tmp_path):
     csv = tmp_path / "credits.csv"
     csv.write_text("# comment\n\nCODE-1\n  CODE-2  \n", encoding="utf-8")
@@ -98,6 +99,7 @@ def test_load_credit_codes_skips_comments_and_blank_lines(tmp_path):
     assert codes == ["CODE-1", "CODE-2"]
 
 
+@pytest.mark.unit
 def test_load_credit_codes_missing_file_exits(tmp_path):
     missing = tmp_path / "no-file.csv"
 
@@ -107,6 +109,7 @@ def test_load_credit_codes_missing_file_exits(tmp_path):
     assert exc.value.code == 1
 
 
+@pytest.mark.unit
 def test_save_log_creates_json_file(tmp_path, monkeypatch):
     monkeypatch.setattr(apply_credits, "LOGS_DIR", tmp_path / "logs")
     payload = [{"code": "C1", "status": "success"}]
@@ -118,6 +121,7 @@ def test_save_log_creates_json_file(tmp_path, monkeypatch):
     assert data == payload
 
 
+@pytest.mark.unit
 def test_load_runtime_settings_reads_env(monkeypatch):
     monkeypatch.setattr(apply_credits, "load_dotenv", lambda *_args, **_kwargs: None)
     monkeypatch.setenv("LOGIN_URL", "https://example.com/login")
@@ -133,6 +137,7 @@ def test_load_runtime_settings_reads_env(monkeypatch):
     assert settings["login_timeout_ms"] == 12345
 
 
+@pytest.mark.unit
 def test_load_runtime_settings_requires_login_url(monkeypatch):
     monkeypatch.setattr(apply_credits, "load_dotenv", lambda *_args, **_kwargs: None)
     monkeypatch.delenv("LOGIN_URL", raising=False)
@@ -144,6 +149,7 @@ def test_load_runtime_settings_requires_login_url(monkeypatch):
     assert "LOGIN_URL" in str(exc.value)
 
 
+@pytest.mark.unit
 def test_load_runtime_settings_timeout_must_be_integer(monkeypatch):
     monkeypatch.setattr(apply_credits, "load_dotenv", lambda *_args, **_kwargs: None)
     monkeypatch.setenv("LOGIN_URL", "https://example.com/login")
@@ -155,6 +161,7 @@ def test_load_runtime_settings_timeout_must_be_integer(monkeypatch):
     assert "LOGIN_TIMEOUT_MS" in str(exc.value)
 
 
+@pytest.mark.unit
 def test_is_ready_url_exact_and_wildcard():
     assert (
         apply_credits._is_ready_url(
@@ -179,6 +186,7 @@ def test_is_ready_url_exact_and_wildcard():
     )
 
 
+@pytest.mark.integration
 def test_wait_for_ready_page_finds_matching_tab():
     context = FakeContext(
         pages=[
@@ -198,6 +206,7 @@ def test_wait_for_ready_page_finds_matching_tab():
     assert matched.url.startswith("https://us-east-1.console.aws.amazon.com/costmanagement/home")
 
 
+@pytest.mark.integration
 def test_wait_for_ready_page_timeout():
     context = FakeContext(pages=[FakeTab("https://idp.example.com/login")])
 
@@ -211,6 +220,7 @@ def test_wait_for_ready_page_timeout():
         )
 
 
+@pytest.mark.unit
 def test_is_billing_api_response_filters_noise_and_method():
     ok = DummyResponse(200, method="POST", url="https://example.com/redeem")
     noise = DummyResponse(200, method="POST", url="https://example.com/analytics")
@@ -221,6 +231,7 @@ def test_is_billing_api_response_filters_noise_and_method():
     assert apply_credits._is_billing_api_response(get_req) is False
 
 
+@pytest.mark.integration
 def test_apply_credit_success():
     page = FakePage(response=DummyResponse(200), mode="ok")
 
@@ -232,6 +243,7 @@ def test_apply_credit_success():
     assert result["error"] is None
 
 
+@pytest.mark.integration
 def test_apply_credit_failed_non_200():
     page = FakePage(response=DummyResponse(400), mode="ok")
 
@@ -241,6 +253,7 @@ def test_apply_credit_failed_non_200():
     assert result["http_status"] == 400
 
 
+@pytest.mark.integration
 def test_apply_credit_timeout():
     page = FakePage(response=DummyResponse(200), mode="timeout_click")
 
@@ -251,6 +264,7 @@ def test_apply_credit_timeout():
     assert "以内に返りませんでした" in (result["error"] or "")
 
 
+@pytest.mark.integration
 def test_apply_credit_error():
     page = FakePage(response=DummyResponse(200), mode="error_goto")
 
@@ -261,6 +275,7 @@ def test_apply_credit_error():
     assert "goto failed" in (result["error"] or "")
 
 
+@pytest.mark.integration
 def test_apply_credit_failed_when_error_flash_appears(monkeypatch):
     async def fake_detect(_page, timeout_ms=2000):
         return True, "クレジットの適用中に問題が発生しました"
@@ -275,6 +290,7 @@ def test_apply_credit_failed_when_error_flash_appears(monkeypatch):
     assert "問題が発生" in (result["error"] or "")
 
 
+@pytest.mark.integration
 def test_apply_credit_timeout_but_error_flash_means_failed(monkeypatch):
     async def fake_detect(_page, timeout_ms=2000):
         return True, "クレジットの適用中に問題が発生しました"

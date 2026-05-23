@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "description": "Consolidated Node.js dependencies for this repository",
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest --passWithNoTests --testPathPatterns=unit --testPathPatterns=\\.unit\\. --testPathPatterns=\\.spec\\.",
+    "test:integration": "jest --passWithNoTests --testPathPatterns=integration --testPathPatterns=\\.integration\\."
+  },
   "dependencies": {
     "@aws-sdk/client-sns": "^3.1037.0",
     "@aws-sdk/client-ssm": "^3.1037.0",
