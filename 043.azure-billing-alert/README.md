@@ -28,7 +28,7 @@
 ├── main.tf                      # Action GroupおよびBudgetリソース定義
 ├── outputs.tf                   # 出力値の定義
 ├── terraform.tfvars.example     # 設定例ファイル
-├── cfn/
+├── arm/
 │   └── budget.json              # ARMテンプレート (Microsoft.Consumption/budgets)
 └── scripts/
     └── deploy.sh                # ARMテンプレートデプロイスクリプト
@@ -106,7 +106,7 @@ chmod +x scripts/deploy.sh
 az deployment sub create \
   --name "billing-alert-deployment" \
   --location "japaneast" \
-  --template-file cfn/budget.json \
+  --template-file arm/budget.json \
   --parameters \
     budgetName="Monthly-Billing-Alert" \
     amount=100 \

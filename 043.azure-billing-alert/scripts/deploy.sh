@@ -10,7 +10,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-TEMPLATE_FILE="$PROJECT_DIR/cfn/budget.json"
+TEMPLATE_FILE="$PROJECT_DIR/arm/budget.json"
 
 # Default values
 DEPLOYMENT_NAME="billing-alert-deployment"
