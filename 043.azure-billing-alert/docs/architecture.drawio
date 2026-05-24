@@ -1,0 +1,102 @@
+<mxfile host="app.diagrams.net" modified="2026-05-24T00:00:00.000Z" agent="Mozilla/5.0" version="26.2.15" type="device" compressed="false">
+  <diagram id="azure-billing-alert-architecture" name="Page-1"><mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+  <root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+
+    <mxCell id="sub" value="Azure Subscription" style="swimlane;startSize=28;fillColor=#eaf3ff;strokeColor=#6c8ebf;html=1;" vertex="1" parent="1">
+      <mxGeometry x="40" y="40" width="1180" height="520" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="tf" value="Terraform&#xa;main.tf" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="40" y="620" width="180" height="60" as="geometry"/>
+    </mxCell>
+    <mxCell id="arm" value="Azure CLI&#xa;az deployment sub create" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+      <mxGeometry x="260" y="620" width="260" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="subIcon" value="Subscription" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.azure_subscription;" vertex="1" parent="sub">
+      <mxGeometry x="40" y="70" width="70" height="55" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="cost" value="Cost Management" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Cost_Management.svg;" vertex="1" parent="sub">
+      <mxGeometry x="170" y="65" width="80" height="80" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="budget" value="Cost Budget" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/general/Cost_Budgets.svg;" vertex="1" parent="sub">
+      <mxGeometry x="320" y="65" width="80" height="80" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="actual50" value="Actual &gt; 50%" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.azure_alert;" vertex="1" parent="sub">
+      <mxGeometry x="500" y="30" width="70" height="65" as="geometry"/>
+    </mxCell>
+    <mxCell id="actual80" value="Actual &gt; 80%" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.azure_alert;" vertex="1" parent="sub">
+      <mxGeometry x="500" y="120" width="70" height="65" as="geometry"/>
+    </mxCell>
+    <mxCell id="actual100" value="Actual &gt; 100%" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.azure_alert;" vertex="1" parent="sub">
+      <mxGeometry x="500" y="210" width="70" height="65" as="geometry"/>
+    </mxCell>
+    <mxCell id="forecast100" value="Forecasted &gt; 100%" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.azure_alert;" vertex="1" parent="sub">
+      <mxGeometry x="500" y="300" width="70" height="65" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="ag" value="Action Group" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/identity/Groups.svg;" vertex="1" parent="sub">
+      <mxGeometry x="700" y="155" width="90" height="80" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="msg" value="Notification" style="verticalLabelPosition=bottom;html=1;verticalAlign=top;align=center;strokeColor=none;fillColor=#00BEF2;shape=mxgraph.azure.message;pointerEvents=1;" vertex="1" parent="sub">
+      <mxGeometry x="860" y="165" width="70" height="60" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="mail" value="Contact Emails&#xa;- admin@example.com&#xa;- finance@example.com&#xa;Contact Roles: Owner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;spacingLeft=8;" vertex="1" parent="sub">
+      <mxGeometry x="980" y="140" width="180" height="130" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e1" value="create/update" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="tf" target="budget" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e2" value="create" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="tf" target="ag" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e3" value="or" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;" edge="1" source="arm" target="budget" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e4" value="tracks cost" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="cost" target="budget" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e5" value="Actual 50%" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="budget" target="actual50" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e6" value="Actual 80%" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="budget" target="actual80" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e7" value="Actual 100%" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="budget" target="actual100" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e8" value="Forecasted 100%" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="budget" target="forecast100" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e9" value="send to" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="actual50" target="ag" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e10" value="send to" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="actual80" target="ag" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e11" value="send to" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="actual100" target="ag" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e12" value="send to" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="forecast100" target="ag" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+
+    <mxCell id="e13" value="notifies" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="ag" target="msg" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+    <mxCell id="e14" value="email" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="msg" target="mail" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+  </root>
+</mxGraphModel></diagram>
+</mxfile>
