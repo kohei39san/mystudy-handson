@@ -84,9 +84,9 @@ jobs:
 
       - name: Set working directory
         run: |
-          DIRECTORY=$(find . -maxdepth 1 -type d -name "040*" -printf "%f\n" | head -1)
+          DIRECTORY=$(find . -maxdepth 1 -type d -name "044*" -printf "%f\n" | head -1)
           if [ -z "$DIRECTORY" ]; then
-            echo "Error: 040.cloudwatch-service-quota-monitoring directory not found"
+            echo "Error: 044.service-quotas-auto-management directory not found"
             exit 1
           fi
           echo "WORKING_DIRECTORY=${DIRECTORY}" >> "$GITHUB_ENV"
