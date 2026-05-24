@@ -1,0 +1,80 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and update the values
+# Command: cp terraform.tfvars.example terraform.tfvars
+
+#==============================================================================
+# REQUIRED CONFIGURATION
+#==============================================================================
+
+# Required: Azure subscription ID
+# You can find this in the Azure Portal under Subscriptions
+subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Required: Start date of the budget (must be the first day of the month)
+# Format: YYYY-MM-DD
+start_date = "2025-01-01"
+
+# Required: End date of the budget
+# Format: YYYY-MM-DD
+end_date = "2025-12-31"
+
+# Required: List of email addresses to receive budget alerts
+alert_email_addresses = [
+  "admin@example.com",
+  "finance@example.com"
+]
+
+#==============================================================================
+# BUDGET CONFIGURATION
+#==============================================================================
+
+# Budget amount in the subscription currency
+budget_amount = 100
+
+# Time period covered by the budget
+# Valid values: "Monthly", "Quarterly", "Annual"
+time_grain = "Monthly"
+
+# Name of the budget (shown in Azure Portal)
+budget_name = "Monthly-Billing-Alert"
+
+#==============================================================================
+# ALERT CONFIGURATION
+#==============================================================================
+
+# Actual cost alert thresholds as percentages of the budget amount
+# Alert will fire when actual cost exceeds each threshold
+actual_alert_thresholds = [50, 80, 100]
+
+# Forecasted cost alert threshold as a percentage of the budget amount
+# Alert will fire when forecasted cost is expected to exceed this threshold
+forecasted_alert_threshold = 100
+
+#==============================================================================
+# NOTIFICATION CONFIGURATION
+#==============================================================================
+
+# Name of the Action Group for budget alerts
+action_group_name = "ag-billing-alert"
+
+# Short name of the Action Group (max 12 characters)
+action_group_short_name = "BillAlert"
+
+#==============================================================================
+# RESOURCE CONFIGURATION
+#==============================================================================
+
+# Resource group name for the Action Group
+resource_group_name = "rg-billing-alert"
+
+# Azure region
+# See: https://azure.microsoft.com/en-us/explore/global-infrastructure/geographies/
+location = "japaneast"
+
+# Tags to apply to resources
+tags = {
+  Terraform   = "true"
+  Environment = "production"
+  Purpose     = "cost-monitoring"
+  Owner       = "finance-team"
+}
