@@ -1,0 +1,64 @@
+<mxfile host="app.diagrams.net" modified="2026-05-24T00:00:00.000Z" agent="GitHub Copilot" version="24.7.5" type="device">
+  <diagram id="architecture" name="Architecture">
+    <mxGraphModel dx="1248" dy="720" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="cfn" value="CloudFormation" style="swimlane;startSize=30;rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;html=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="520" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="tpl" value="CloudFormation Template" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudformation;" vertex="1" parent="cfn">
+          <mxGeometry x="70" y="65" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="nc" value="NotificationConfiguration" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.user_notifications;" vertex="1" parent="cfn">
+          <mxGeometry x="300" y="65" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="ca" value="ChannelAssociation&#xa;(optional)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.chatbot;" vertex="1" parent="cfn">
+          <mxGeometry x="300" y="190" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="runtime" value="Runtime" style="swimlane;startSize=30;rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;html=1;" vertex="1" parent="1">
+          <mxGeometry x="620" y="40" width="900" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="script" value="scripts/deploy.sh&#xa;enable-auto-management" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="runtime">
+          <mxGeometry x="30" y="70" width="240" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="sq" value="Service Quotas&#xa;Automatic Management" style="dashed=0;outlineConnect=0;html=1;align=center;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;shape=mxgraph.webicons.aws;gradientColor=#DFDEDE" vertex="1" parent="runtime">
+          <mxGeometry x="390" y="70" width="102" height="102" as="geometry"/>
+        </mxCell>
+        <mxCell id="am" value="利用率監視&#xa;80% / 95%" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="runtime">
+          <mxGeometry x="580" y="70" width="200" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="un" value="AWS User Notifications" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.user_notifications;" vertex="1" parent="runtime">
+          <mxGeometry x="110" y="190" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="sl" value="Slack Channel&#xa;(AWS Chatbot)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#E7157B;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.chatbot;" vertex="1" parent="runtime">
+          <mxGeometry x="400" y="190" width="78" height="78" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" value="create" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="tpl" target="nc" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" value="create" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="tpl" target="ca" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" value="--notification-arn" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="script" target="sq" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" value="monitor" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="sq" target="am" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e5" value="usage notifications" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="am" target="un" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e6" value="deliver" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" source="un" target="sl" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e7" value="linked config" style="edgeStyle=orthogonalEdgeStyle;rounded=1;dashed=1;html=1;" edge="1" source="nc" target="un" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e8" value="optional link" style="edgeStyle=orthogonalEdgeStyle;rounded=1;dashed=1;html=1;" edge="1" source="ca" target="sl" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
