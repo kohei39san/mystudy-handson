@@ -28,6 +28,10 @@
         "MAX_RETRIES": "3",
         "RETRY_DELAY": "1.0"
       }
+    },
+    "drawio-mcp-app": {
+      "type": "http",
+      "url": "https://mcp.draw.io/mcp"
     }
   }
 }
