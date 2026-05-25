@@ -3,6 +3,8 @@
 マルチクラウド（AWS / Azure / GCP）向けに、インスタンスやマネージドサービスのネットワーク到達性を  
 制御プレーン API から判定する Python スクリプトです。
 
+![アーキテクチャ図](src/architecture.svg)
+
 ## 概要
 
 | プロバイダ | リソース種別 | `--resource-type` |
