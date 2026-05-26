@@ -65,5 +65,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "Changes by githubactions-lint actions"
-          git remote set-url origin https://x-access-token:${TOKEN}@github.com/${{ github.repository }}
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}"
           git push origin HEAD
