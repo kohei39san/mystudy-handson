@@ -43,19 +43,23 @@ jobs:
         id: set_defaults
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            echo "BRANCH_NAME=update-from-source-repo" >> $GITHUB_ENV
-            echo "COMMIT_MESSAGE=Update from source repository - $(date)" >> $GITHUB_ENV
-            echo "PR_TITLE=Update from source repository" >> $GITHUB_ENV
-            echo "PR_BODY=This PR contains updates from the source repository." >> $GITHUB_ENV
+            {
+              echo "BRANCH_NAME=update-from-source-repo"
+              echo "COMMIT_MESSAGE=Update from source repository - $(date)"
+              echo "PR_TITLE=Update from source repository"
+              echo "PR_BODY=This PR contains updates from the source repository."
+            } >> "$GITHUB_ENV"
           else
-            echo "BRANCH_NAME=${{ inputs.branch_name }}" >> $GITHUB_ENV
-            echo "COMMIT_MESSAGE=${{ inputs.commit_message }}" >> $GITHUB_ENV
-            echo "PR_TITLE=${{ inputs.pr_title }}" >> $GITHUB_ENV
-            echo "PR_BODY=${{ inputs.pr_body }}" >> $GITHUB_ENV
+            {
+              echo "BRANCH_NAME=${{ inputs.branch_name }}"
+              echo "COMMIT_MESSAGE=${{ inputs.commit_message }}"
+              echo "PR_TITLE=${{ inputs.pr_title }}"
+              echo "PR_BODY=${{ inputs.pr_body }}"
+            } >> "$GITHUB_ENV"
           fi
-          REPO_OWNER=$(echo "${{ github.repository }}" | cut -d '/' -f 1)
-          echo "REPO_OWNER=$REPO_OWNER" >> $GITHUB_ENV
-          echo "repo_owner=$REPO_OWNER" >> $GITHUB_OUTPUT
+          REPO_OWNER="$(echo "${{ github.repository }}" | cut -d '/' -f 1)"
+          echo "REPO_OWNER=$REPO_OWNER" >> "$GITHUB_ENV"
+          echo "repo_owner=$REPO_OWNER" >> "$GITHUB_OUTPUT"
 
       - name: Set target repository details
         id: set_target_details
@@ -82,19 +86,23 @@ jobs:
             exit 1
           fi
 
-          echo "TARGET_REPO_OWNER=$TARGET_REPO_OWNER" >> $GITHUB_ENV
-          echo "TARGET_REPO_NAME=$TARGET_REPO_NAME" >> $GITHUB_ENV
-          echo "target_repo_owner=$TARGET_REPO_OWNER" >> $GITHUB_OUTPUT
-          echo "target_repo_name=$TARGET_REPO_NAME" >> $GITHUB_OUTPUT
-          echo "TARGET_REPO=$TARGET_REPO" >> $GITHUB_ENV
-          echo "target_repo=$TARGET_REPO" >> $GITHUB_OUTPUT
+          {
+            echo "TARGET_REPO_OWNER=$TARGET_REPO_OWNER"
+            echo "TARGET_REPO_NAME=$TARGET_REPO_NAME"
+            echo "TARGET_REPO=$TARGET_REPO"
+          } >> "$GITHUB_ENV"
+          {
+            echo "target_repo_owner=$TARGET_REPO_OWNER"
+            echo "target_repo_name=$TARGET_REPO_NAME"
+            echo "target_repo=$TARGET_REPO"
+          } >> "$GITHUB_OUTPUT"
 
           echo "::add-mask::$TARGET_REPO_OWNER"
           echo "::add-mask::$TARGET_REPO_NAME"
 
       - name: Generate GitHub App token for target repository
         id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
@@ -108,9 +116,9 @@ jobs:
           # Create and checkout a new branch in the target repository
           cd target_repo
           git fetch origin
-          if git show-ref --verify --quiet refs/remotes/origin/$BRANCH_NAME; then
+          if git show-ref --verify --quiet "refs/remotes/origin/$BRANCH_NAME"; then
             echo "Branch $BRANCH_NAME already exists, checking out and resetting"
-            git checkout -B "$BRANCH_NAME" origin/$BRANCH_NAME
+            git checkout -B "$BRANCH_NAME" "origin/$BRANCH_NAME"
           else
             echo "Creating new branch $BRANCH_NAME"
             git checkout -b "$BRANCH_NAME"
@@ -134,14 +142,14 @@ jobs:
           # Check if there are changes to commit
           if git diff --staged --quiet; then
             echo "No changes to commit"
-            echo "HAS_CHANGES=false" >> $GITHUB_ENV
+            echo "HAS_CHANGES=false" >> "$GITHUB_ENV"
           else
             # Commit changes
             git commit -m "$COMMIT_MESSAGE"
             
             # Force push changes to overwrite existing branch
             git push --force origin "$BRANCH_NAME"
-            echo "HAS_CHANGES=true" >> $GITHUB_ENV
+            echo "HAS_CHANGES=true" >> "$GITHUB_ENV"
           fi
 
       - name: Create or update pull request

@@ -56,20 +56,26 @@ jobs:
         id: set_defaults
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            echo "PR_TITLE=Update from fork - $(date +%Y/%m/%d)" >> $GITHUB_ENV
-            echo "PR_BODY=This PR contains updates from the fork repository." >> $GITHUB_ENV
+            {
+              echo "PR_TITLE=Update from fork - $(date +%Y/%m/%d)"
+              echo "PR_BODY=This PR contains updates from the fork repository."
+            } >> "$GITHUB_ENV"
           else
-            echo "PR_TITLE=${{ inputs.pr_title }}" >> $GITHUB_ENV
-            echo "PR_BODY=${{ inputs.pr_body }}" >> $GITHUB_ENV
+            {
+              echo "PR_TITLE=${{ inputs.pr_title }}"
+              echo "PR_BODY=${{ inputs.pr_body }}"
+            } >> "$GITHUB_ENV"
           fi
 
-          echo "UPSTREAM_REPO=${{ steps.upstream.outputs.upstream_full_name }}" >> $GITHUB_ENV
-          echo "UPSTREAM_OWNER=${{ steps.upstream.outputs.upstream_owner }}" >> $GITHUB_ENV
-          echo "UPSTREAM_REPO_NAME=${{ steps.upstream.outputs.upstream_repo }}" >> $GITHUB_ENV
+          {
+            echo "UPSTREAM_REPO=${{ steps.upstream.outputs.upstream_full_name }}"
+            echo "UPSTREAM_OWNER=${{ steps.upstream.outputs.upstream_owner }}"
+            echo "UPSTREAM_REPO_NAME=${{ steps.upstream.outputs.upstream_repo }}"
+          } >> "$GITHUB_ENV"
 
       - name: Generate GitHub App token for upstream repository
         id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
