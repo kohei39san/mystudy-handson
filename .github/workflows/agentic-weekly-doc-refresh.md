@@ -15,6 +15,7 @@ tools:
 safe-outputs:
   create-pull-request:
     max: 1
+    protected-files: allowed
 ---
 
 # Weekly Documentation Refresh
