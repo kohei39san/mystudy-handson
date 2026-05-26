@@ -11,6 +11,7 @@
 
 ## アーキテクチャ
 
+
 ### 主要コンポーネント
 
 1. **Amazon Cognito User Pool**

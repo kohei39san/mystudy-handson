@@ -2,6 +2,8 @@
 
 このコードは、Azure Cost Management の予算アラート（Budget Alert）を設定します。実際の支出（Actual）および予測支出（Forecasted）が設定した閾値を超えた際に、指定したメールアドレスへ通知を送信します。
 
+![アーキテクチャ図](docs/architecture.svg)
+
 ## 概要
 
 このモジュールは以下のリソースを作成します：
