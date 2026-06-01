@@ -17,9 +17,9 @@
 
 各番号付きディレクトリには、特定のインフラストラクチャ構成が含まれています：
 
-* **001-041**: 各種インフラストラクチャのサンプル構成
+* **001-043**: 各種インフラストラクチャのサンプル構成
   * **AWS Terraform構成**:
-    - **001.ec2-ec2,ec2**: EC2踏み台サーバーとプライベートサーバー構成
+    - **001.ec2-ec2-ec2**: EC2踏み台サーバーとプライベートサーバー構成
     - **002.ec2windows**: Windows EC2インスタンス構成
     - **003.minikube-opensearch,prometheus**: Minikube + OpenSearch + Prometheus構成
     - **004.RDS_instance**: RDSインスタンス構成
@@ -45,6 +45,8 @@
     - **040.network-connectivity-checker**: マルチクラウド（AWS/Azure/GCP）ネットワーク到達性確認ツール
   * **Google Cloud Terraform構成**:
     - **041.gcp-billing-alert**: Google Cloud 課金アラート（Billing Budget + 通知チャンネル）
+  * **Azure Terraform構成**:
+    - **043.azure-billing-alert**: Azure 課金アラート（Budget + Action Group）
   * **OCI Terraform構成**:
     - **028.oci-bucket-tfstate**: Object Storage（Terraformステート管理用）
     - **029.oci-cost-alert**: Budget（コストアラート）
@@ -67,6 +69,7 @@
     - **034.redmine-mcp-server**: Redmine MCP サーバー
     - **037.kubectl-proxy**: kubectl proxy設定
 
+    - **042.aws-credits-apply**: AWS クレジット適用スクリプト
 ## アーキテクチャ図について
 
 各インフラストラクチャディレクトリには、対応するアーキテクチャ図が含まれています：
@@ -91,7 +94,7 @@
 * **001-010**: 基本的なEC2、RDS構成
 * **011-020**: CloudFormation、特殊構成
 * **021-030**: Lambda、API Gateway、高度な構成
-* **031-041**: 特殊用途、テスト構成
+* **031-043**: 特殊用途、マルチクラウド構成
 
 ### 各ディレクトリの共通構造
 
@@ -139,7 +142,7 @@ output = json
 * PowerShellの場合の例(defaultプロファイルを使用)
 
 ```
-# cd mystudy-handson\001.ec2-ec2,ec2
+# cd mystudy-handson\001.ec2-ec2-ec2
 # PowerShell -ExecutionPolicy RemoteSigned '..\scripts\aws-cli-source.ps1 default'
 # terraform init
 # terraform plan
@@ -300,7 +303,7 @@ scripts\setup-repository-for-github-actions.ps1
 2. 「Run workflow」をクリックし、以下の情報を入力します：
    * `Directory number`: 実行するTerraformディレクトリの番号
      * 例: `001` (001.ec2-ec2,ec2ディレクトリを指定する場合)
-
+     * 例: `001` (001.ec2-ec2-ec2ディレクトリを指定する場合)
 注: ワークフローは実行時に選択されているブランチ上で実行されます。
 
 3. 「Run workflow」をクリックして実行を開始します。
