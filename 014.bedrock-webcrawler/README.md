@@ -9,6 +9,7 @@
 ```mermaid
 graph TB
     Bedrock[Amazon Bedrock<br/>Titan Embed Text v2] --> OpenSearch[OpenSearch<br/>ベクトルDB]
+
     EventBridge[EventBridge<br/>スケジューラー] --> Lambda[AWS Lambda<br/>クローラー]
     Lambda --> Bedrock
 ```
