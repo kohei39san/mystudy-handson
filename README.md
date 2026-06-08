@@ -17,7 +17,7 @@
 
 各番号付きディレクトリには、特定のインフラストラクチャ構成が含まれています：
 
-* **001-041**: 各種インフラストラクチャのサンプル構成
+* **001-043**: 各種インフラストラクチャのサンプル構成
   * **AWS Terraform構成**:
     - **001.ec2-ec2,ec2**: EC2踏み台サーバーとプライベートサーバー構成
     - **002.ec2windows**: Windows EC2インスタンス構成
@@ -45,6 +45,8 @@
     - **040.network-connectivity-checker**: マルチクラウド（AWS/Azure/GCP）ネットワーク到達性確認ツール
   * **Google Cloud Terraform構成**:
     - **041.gcp-billing-alert**: Google Cloud 課金アラート（Billing Budget + 通知チャンネル）
+  * **Azure Terraform構成**:
+    - **043.azure-billing-alert**: Azure Cost Management 予算アラート（Actual/Forecasted 通知）
   * **OCI Terraform構成**:
     - **028.oci-bucket-tfstate**: Object Storage（Terraformステート管理用）
     - **029.oci-cost-alert**: Budget（コストアラート）
@@ -66,6 +68,7 @@
     - **027.test-drawio**: Draw.io テスト用ディレクトリ
     - **034.redmine-mcp-server**: Redmine MCP サーバー
     - **037.kubectl-proxy**: kubectl proxy設定
+    - **042.aws-credits-apply**: AWS プロモーションクレジット一括適用スクリプト
 
 ## アーキテクチャ図について
 
@@ -91,7 +94,7 @@
 * **001-010**: 基本的なEC2、RDS構成
 * **011-020**: CloudFormation、特殊構成
 * **021-030**: Lambda、API Gateway、高度な構成
-* **031-041**: 特殊用途、テスト構成
+* **031-043**: 特殊用途、テスト構成
 
 ### 各ディレクトリの共通構造
 
