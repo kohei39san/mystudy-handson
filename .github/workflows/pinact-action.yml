@@ -20,8 +20,9 @@ jobs:
           persist-credentials: false
 
       - name: Check GitHub Actions are pinned
-        uses: suzuki-shunsuke/pinact-action@896d595f299e71d65b9d28349d6956abe144390a # v3.0.0
+        uses: suzuki-shunsuke/pinact-action@fd95c7317488e35c8e642cb7bf51edbf5dbb5ce4 # v3.10.0
         with:
           skip_push: "false"
           app_id: ${{secrets.APP_ID}}
           app_private_key: ${{secrets.APP_PRIVATE_KEY}}
+          branch_to_tags: "^main$"
