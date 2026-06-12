@@ -25,4 +25,3 @@ jobs:
           skip_push: "false"
           app_id: ${{secrets.APP_ID}}
           app_private_key: ${{secrets.APP_PRIVATE_KEY}}
-          branch_to_tags: "^main$"
