@@ -9,8 +9,8 @@
     "test:integration": "jest --passWithNoTests --testPathPatterns=integration --testPathPatterns=\\.integration\\."
   },
   "dependencies": {
-    "@aws-sdk/client-sns": "^3.1053.0",
-    "@aws-sdk/client-ssm": "^3.1053.0",
+    "@aws-sdk/client-sns": "^3.1057.0",
+    "@aws-sdk/client-ssm": "^3.1057.0",
     "@google-cloud/config": "^0.12.1",
     "@google-cloud/storage": "^7.19.0",
     "@slack/bolt": "^4.7.3",
@@ -22,8 +22,8 @@
   "devDependencies": {
     "@types/archiver": "^7.0.0",
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.9.1",
-    "aws-cdk": "^2.1124.1",
+    "@types/node": "^25.9.2",
+    "aws-cdk": "^2.1125.0",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
