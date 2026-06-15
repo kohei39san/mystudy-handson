@@ -12,6 +12,7 @@
 ## アーキテクチャ
 
 
+![Architecture Diagram](src/architecture.svg)
 ### 主要コンポーネント
 
 1. **Amazon Cognito User Pool**

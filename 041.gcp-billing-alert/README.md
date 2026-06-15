@@ -4,6 +4,8 @@
 
 ## 概要
 
+![Architecture Diagram](src/architecture.svg)
+
 このモジュールは以下のリソースを作成します：
 
 - **予算 (Billing Budget)**: 指定した金額と通貨での予算設定

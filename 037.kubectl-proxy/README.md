@@ -4,6 +4,8 @@ Kubernetes APIサーバーへのローカルプロキシを作成するDocker Co
 
 ## 概要
 
+![Architecture Diagram](src/architecture.svg)
+
 `kubectl proxy`をDockerコンテナで実行し、ローカルマシンからKubernetes APIにアクセスできるプロキシサーバーを提供します。
 
 ## 前提条件

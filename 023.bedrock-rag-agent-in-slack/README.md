@@ -6,6 +6,8 @@
 
 ## アーキテクチャ
 
+![Architecture Diagram](src/architecture.svg)
+
 ```mermaid
 graph TD
     User[ユーザー] -->|質問| SlackChannel[Slack チャンネル]

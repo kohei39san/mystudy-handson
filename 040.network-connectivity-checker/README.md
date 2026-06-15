@@ -5,6 +5,8 @@
 
 ## 概要
 
+![Architecture Diagram](src/architecture.svg)
+
 | プロバイダ | リソース種別 | `--resource-type` |
 |-----------|------------|-----------------|
 | AWS       | EC2        | `ec2`            |

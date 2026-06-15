@@ -4,6 +4,8 @@
 
 ## 概要
 
+![Architecture Diagram](src/architecture.svg)
+
 このSCPは、以下のリソースを作成する際に`Owner`タグが指定されていない場合、そのアクションを拒否します：
 
 **一般的なリソース**:

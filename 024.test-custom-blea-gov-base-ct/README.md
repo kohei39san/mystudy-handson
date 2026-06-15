@@ -1,5 +1,7 @@
 # BLEA Governance Base Control Tower
 
+![Architecture Diagram](src/architecture.svg)
+
 ## パラメータストアの設定
 
 AWS CLIを使用してパラメータストアを設定するには、以下のコマンドを実行します。
