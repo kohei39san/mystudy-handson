@@ -19,19 +19,19 @@
 
 * **001-043**: 各種インフラストラクチャのサンプル構成
   * **AWS Terraform構成**:
-    - **001.ec2-ec2,ec2**: EC2踏み台サーバーとプライベートサーバー構成
-    - **002.ec2windows**: Windows EC2インスタンス構成
-    - **003.minikube-opensearch,prometheus**: Minikube + OpenSearch + Prometheus構成
-    - **004.RDS_instance**: RDSインスタンス構成
-    - **005.RDS_cluster**: RDSクラスター構成
-    - **006.windows_managed_instance**: Windows Systems Manager管理インスタンス
+    - **001.ec2-ec2-ec2**: EC2踏み台サーバーとプライベートサーバー構成
+    - **002.ec2-windows**: Windows EC2インスタンス構成
+    - **003.minikube-opensearch-prometheus**: Minikube + OpenSearch + Prometheus構成
+    - **004.rds-instance**: RDSインスタンス構成
+    - **005.rds-cluster**: RDSクラスター構成
+    - **006.windows-managed-instance**: Windows Systems Manager管理インスタンス
     - **007.managed-node-linux**: Linux Systems Manager管理インスタンス
-    - **008.ami,ec2**: AMI作成とEC2インスタンス構成
-    - **009.ami,windows_managed_instance**: Windows AMI作成と管理インスタンス
+    - **008.ami-ec2**: AMI作成とEC2インスタンス構成
+    - **009.ami-windows-managed-instance**: Windows AMI作成と管理インスタンス
     - **010.ec2-linux-latest-eice**: EC2 Instance Connect Endpoint構成
     - **012.openhands-test**: OpenHands テスト用EC2構成
     - **014.bedrock-webcrawler**: Bedrock Webクローラー構成
-    - **015.eks**: EKS（Kubernetes）クラスター構成
+    - **015.eks-project**: EKS（Kubernetes）クラスター構成
     - **017.redmine-test**: Redmine テスト環境構成
     - **018.send-game-info-to-discord**: ゲーム情報Discord通知Lambda
     - **019.lambda-rss-summary**: RSS要約Lambda関数
@@ -142,7 +142,7 @@ output = json
 * PowerShellの場合の例(defaultプロファイルを使用)
 
 ```
-# cd mystudy-handson\001.ec2-ec2,ec2
+# cd mystudy-handson\001.ec2-ec2-ec2
 # PowerShell -ExecutionPolicy RemoteSigned '..\scripts\aws-cli-source.ps1 default'
 # terraform init
 # terraform plan
@@ -302,7 +302,7 @@ scripts\setup-repository-for-github-actions.ps1
 
 2. 「Run workflow」をクリックし、以下の情報を入力します：
    * `Directory number`: 実行するTerraformディレクトリの番号
-     * 例: `001` (001.ec2-ec2,ec2ディレクトリを指定する場合)
+     * 例: `001` (001.ec2-ec2-ec2ディレクトリを指定する場合)
 
 注: ワークフローは実行時に選択されているブランチ上で実行されます。
 
