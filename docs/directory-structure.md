@@ -22,7 +22,7 @@
 
 - `README.md`: リポジトリ全体の概要と利用手順
 - `package.json`, `package-lock.json`: Node.js依存関係とスクリプト定義
-- `requirements.txt`: Python依存関係定義
+- `requirements.txt`: Python依存関係定義（リポジトリ直下に配置し、pip依存関係更新の単一ソースとして扱う）
 - `tsconfig.base.json`: TypeScript共通設定
 - `ansible.cfg`: Ansible実行設定
 - `coverage.xml`: テストカバレッジ出力
