@@ -37,7 +37,7 @@
     - **019.lambda-rss-summary**: RSS要約Lambda関数
     - **020.aws-readonly-oidc**: AWS読み取り専用OIDC認証
     - **021.slack-lambda-mcp-server**: Slack Lambda MCP サーバー
-    - **022.amazon_q_developer_in_chat_applications_by_slack**: Amazon Q Developer Slack連携
+    - **022.amazon-q-developer-in-chat-applications-by-slack**: Amazon Q Developer Slack連携
     - **023.bedrock-rag-agent-in-slack**: Bedrock RAGエージェント Slack連携
     - **030.apigateway-cognito-lambda-payload**: API Gateway + Cognito + Lambda構成
     - **035.aurora-mock-testing**: Aurora モックテスト環境
@@ -51,7 +51,7 @@
     - **028.oci-bucket-tfstate**: Object Storage（Terraformステート管理用）
     - **029.oci-cost-alert**: Budget（コストアラート）
   * **CloudFormationテンプレート**:
-    - **011.cfn**: EC2基本構成
+    - **011.cfn-project**: EC2基本構成
     - **013.aws-github-oidc**: GitHub Actions OIDC認証
     - **031.rds-postgresql-ec2**: RDS PostgreSQL + EC2構成
     - **032.scp-ec2-tagging**: SCP（Service Control Policy）EC2タグ強制
