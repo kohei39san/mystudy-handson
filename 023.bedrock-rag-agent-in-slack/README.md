@@ -6,26 +6,7 @@
 
 ## アーキテクチャ
 
-```mermaid
-graph TD
-    User[ユーザー] -->|質問| SlackChannel[Slack チャンネル]
-    SlackChannel -->|メッセージ| SlackConfig[SlackChannelConfiguration]
-    SlackConfig -->|リクエスト| IAMRole[IAM ロール]
-    IAMRole -->|アクセス権限| BedrockAgent[Bedrock Agent]
-    BedrockAgent -->|クエリ| BedrockKB[Bedrock ナレッジベース]
-    BedrockKB -->|検索| OpenSearch[OpenSearch クラスター]
-    OpenSearch -->|ベクトル検索| S3[S3 バケット]
-    S3 -->|ドキュメント格納| Lambda[Lambda 関数]
-    Lambda -->|ドキュメント同期| GitHub[GitHub リポジトリ]
-    EventBridge[EventBridge スケジューラー] -->|定期実行| Lambda
-    BedrockAgent -->|回答| SlackChannel
-    
-    classDef aws fill:#FF9900,stroke:#232F3E,color:#232F3E;
-    classDef external fill:#1DB954,stroke:#0A8043,color:#fff;
-    
-    class BedrockAgent,BedrockKB,OpenSearch,S3,Lambda,IAMRole,SlackConfig,EventBridge aws;
-    class User,SlackChannel,GitHub external;
-```
+![アーキテクチャ図](src/architecture.svg)
 
 このシステムは以下のコンポーネントで構成されています：
 
