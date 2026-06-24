@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS User Notifications configuration for Service Quotas Automatic Management (no Trusted Advisor, no SNS, no CloudWatch alarms)'
+
+Parameters:
+  ServiceQuotaNotificationName:
+    Type: String
+    Default: service-quota-auto-management
+    Description: 'AWS User Notifications configuration name'
+
+  ServiceQuotaNotificationDescription:
+    Type: String
+    Default: 'Notifications for Service Quotas Automatic Management'
+    Description: 'AWS User Notifications configuration description'
+
+  ServiceQuotaAggregationDuration:
+    Type: String
+    Default: SHORT
+    AllowedValues:
+      - SHORT
+      - LONG
+    Description: 'Aggregation window for AWS User Notifications'
+
+  ServiceQuotaSlackChannelArn:
+    Type: String
+    Default: ''
+    Description: 'Optional Slack channel configuration ARN for AWS User Notifications (for example arn:aws:chatbot:us-east-1:123456789012:chat-configuration/slack-channel/my-channel)'
+
+Conditions:
+  HasServiceQuotaSlackChannelArn: !Not [!Equals [!Ref ServiceQuotaSlackChannelArn, '']]
+
+Resources:
+  ServiceQuotaNotificationConfiguration:
+    Type: AWS::Notifications::NotificationConfiguration
+    Properties:
+      Name: !Ref ServiceQuotaNotificationName
+      Description: !Ref ServiceQuotaNotificationDescription
+      AggregationDuration: !Ref ServiceQuotaAggregationDuration
+
+  ServiceQuotaSlackChannelAssociation:
+    Type: AWS::Notifications::ChannelAssociation
+    Condition: HasServiceQuotaSlackChannelArn
+    Properties:
+      Arn: !Ref ServiceQuotaSlackChannelArn
+      NotificationConfigurationArn: !Ref ServiceQuotaNotificationConfiguration
+
+Outputs:
+  ServiceQuotaNotificationConfigurationArn:
+    Description: 'AWS User Notifications configuration ARN for Service Quotas Automatic Management (--notification-arn)'
+    Value: !Ref ServiceQuotaNotificationConfiguration
+
+  ServiceQuotaSlackChannelAssociationArn:
+    Condition: HasServiceQuotaSlackChannelArn
+    Description: 'AWS User Notifications channel association ARN'
+    Value: !Ref ServiceQuotaSlackChannelAssociation
