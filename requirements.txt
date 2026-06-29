@@ -2,8 +2,8 @@
 # This file is the single source of truth for pip dependency updates.
 
 # AWS
-boto3==1.43.29
-botocore==1.43.29
+boto3==1.43.34
+botocore==1.43.34
 
 # Azure
 azure-identity==1.25.3
@@ -12,7 +12,7 @@ azure-mgmt-network==30.2.0
 
 # GCP
 google-api-python-client==2.197.0
-google-auth==2.53.0
+google-auth==2.54.0
 google-auth-httplib2==0.4.0
 
 # Shared runtime dependencies
@@ -35,7 +35,7 @@ black==26.5.1
 flake8==7.3.0
 moto==5.2.2
 mypy==2.1.0
-pytest==9.0.3
+pytest==9.1.0
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
 pytest-mock==3.15.1
