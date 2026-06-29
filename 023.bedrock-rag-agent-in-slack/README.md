@@ -54,8 +54,7 @@
 1. Lambda 関数のソースコードディレクトリを作成します
    ```bash
    mkdir -p lambda_source/github_to_s3_sync
-   cp scripts/023.bedrock-rag-agent-in-slack/github_to_s3_sync.py lambda_source/github_to_s3_sync/
-   cp scripts/023.bedrock-rag-agent-in-slack/requirements.txt lambda_source/github_to_s3_sync/
+   cp scripts/github_to_s3_sync.py lambda_source/github_to_s3_sync/
    ```
 
 #### Terraform を使用したデプロイ
@@ -97,7 +96,7 @@
 2. CloudFormation スタックのデプロイ
    ```bash
    aws cloudformation deploy \
-     --template-file template.yaml \
+     --template-file src/cfn/template.yaml \
      --stack-name bedrock-slack-chat \
      --parameter-overrides \
        SlackWorkspaceId=YOUR_WORKSPACE_ID \
@@ -112,7 +111,7 @@
 3. Bedrock スタックのデプロイ
    ```bash
    aws cloudformation deploy \
-     --template-file bedrock-template.yaml \
+     --template-file src/cfn/bedrock-template.yaml \
      --stack-name bedrock-agent-stack \
      --parameter-overrides \
        MainStackName=bedrock-slack-chat \
@@ -122,7 +121,7 @@
 4. Lambda スタックのデプロイ
    ```bash
    aws cloudformation deploy \
-     --template-file lambda-template.yaml \
+     --template-file src/cfn/lambda-template.yaml \
      --stack-name bedrock-lambda-stack \
      --parameter-overrides \
        MainStackName=bedrock-slack-chat \

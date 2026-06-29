@@ -47,8 +47,7 @@ Test Results:
 ```
 
 ## 📁 現在の構成
-- `requirements.txt` - 固定ライブラリバージョン
-- `create_layer_docker.ps1` - レイヤー作成スクリプト  
-- `cloudformation-template.yaml` - AWSリソース定義
-- `lambda_function.py` - テスト用Lambda関数
-- `deploy-complete.ps1` - **完全自動化スクリプト** ⭐
+- `scripts/create_layer_docker.ps1` - レイヤー作成スクリプト
+- `scripts/lambda_function.py` - テスト用Lambda関数
+- `scripts/deploy-complete.ps1` - **完全自動化スクリプト** ⭐
+- `cfn/cloudformation-template.yaml` - AWSリソース定義
