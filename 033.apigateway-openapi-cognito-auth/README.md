@@ -51,27 +51,36 @@
 │   │   └── schemas.yml          # スキーマ定義
 │   └── paths/
 │       ├── admin.yml            # 管理者エンドポイント
-│       ├── user.yml             # ユーザーエンドポイント
-│       ├── public.yml           # 公開エンドポイント
+│       ├── auth.yml             # 認証エンドポイント
 │       ├── health.yml           # ヘルスチェック
 │       ├── login.yml            # ログインエンドポイント
+│       ├── public.yml           # 公開エンドポイント
 │       ├── refresh.yml          # トークンリフレッシュエンドポイント
-│       └── revoke.yml           # トークン無効化エンドポイント
+│       ├── revoke.yml           # トークン無効化エンドポイント
+│       ├── update.yml           # 更新エンドポイント
+│       └── user.yml             # ユーザーエンドポイント
 ├── src/
+│   ├── architecture.drawio      # アーキテクチャ図（Draw.io形式）
+│   ├── architecture.svg         # アーキテクチャ図（SVG形式、自動生成）
+│   ├── avp-policies/            # Amazon Verified Permissionsポリシー（Cedarフォーマット）
 │   ├── openapi-spec.yaml        # OpenAPI仕様（レガシー）
 │   ├── openapi-merged.yaml      # マージ済みOpenAPI仕様（自動生成）
-│   └── users.csv                # ユーザーインポート用CSV
+│   ├── openapi-current.yaml     # 現在デプロイ中のOpenAPI仕様
+│   ├── openapi-deployed.yaml    # デプロイ済みOpenAPI仕様
+│   ├── schema.json              # スキーマ定義
+│   ├── users.csv                # ユーザーインポート用CSV
+│   └── users-with-role.csv      # ロール付きユーザーインポート用CSV
 ├── scripts/
 │   ├── lambda/
+│   │   ├── authorizer.py               # Lambda Authorizer関数
+│   │   ├── backend.py                  # バックエンドLambda関数
 │   │   ├── login.py                    # ログインLambda関数
 │   │   ├── refresh.py                  # リフレッシュLambda関数
-│   │   ├── test_parallel_api.py        # 並列アクセス性能比較Lambda関数（sequential/multi_session/multi_process）
+│   │   ├── revoke.py                   # トークン無効化Lambda関数
+│   │   └── test_parallel_api.py        # 並列アクセス性能比較Lambda関数（sequential/multi_session/multi_process）
 │   ├── deploy.ps1               # デプロイスクリプト（PowerShell）
 │   ├── invoke-test-lambda.sh    # テスト用Lambda関数実行スクリプト（Bash）
-│   ├── merge-openapi.py         # OpenAPIマージスクリプト
-│   ├── requirements.txt         # Python依存関係
-│   ├── test-api-simple.py       # 簡易APIテスト
-│   └── test-cognito-auth.py     # Cognito認証テスト
+│   └── merge-openapi.py         # OpenAPIマージスクリプト
 ├── tests/
 │   ├── test-api.py              # APIテストスクリプト（スタンドアロン）
 │   ├── test-login.py            # ログインテストスクリプト（スタンドアロン）
