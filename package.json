@@ -23,7 +23,7 @@
     "@types/archiver": "^7.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.4",
-    "aws-cdk": "^2.1128.0",
+    "aws-cdk": "^2.1128.1",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
