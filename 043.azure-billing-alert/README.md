@@ -23,7 +23,7 @@
 ## ファイル構成
 
 ```
-042.azure-billing-alert/
+043.azure-billing-alert/
 ├── README.md                    # このファイル
 ├── terraform.tf                 # Terraformプロバイダー設定
 ├── variables.tf                 # 変数定義
@@ -32,6 +32,9 @@
 ├── terraform.tfvars.example     # 設定例ファイル
 ├── arm/
 │   └── budget.json              # ARMテンプレート (Microsoft.Consumption/budgets)
+├── docs/
+│   ├── architecture.drawio      # アーキテクチャ図（Draw.io形式）
+│   └── architecture.svg         # アーキテクチャ図（SVG形式）
 └── scripts/
     └── deploy.sh                # ARMテンプレートデプロイスクリプト
 ```
@@ -54,7 +57,7 @@
 #### 2. 設定ファイルの準備
 
 ```bash
-cd 042.azure-billing-alert
+cd 043.azure-billing-alert
 
 # 設定ファイルのコピー
 cp terraform.tfvars.example terraform.tfvars
@@ -89,7 +92,7 @@ terraform destroy
 #### 2. deploy.sh を使用したデプロイ
 
 ```bash
-cd 042.azure-billing-alert
+cd 043.azure-billing-alert
 
 # 実行権限の付与（初回のみ）
 chmod +x scripts/deploy.sh

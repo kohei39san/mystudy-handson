@@ -22,7 +22,6 @@
 040.network-connectivity-checker/
 ├── README.md
 ├── pytest.ini
-├── requirements.txt
 ├── terraform.tf          ← Terraform プロバイダ設定
 ├── variables.tf          ← Terraform 変数定義
 ├── aws.tf                ← AWS リソース (VPC / Subnet / SG / EC2 / RDS)
