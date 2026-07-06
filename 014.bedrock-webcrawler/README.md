@@ -6,6 +6,8 @@
 
 ## アーキテクチャ
 
+![アーキテクチャ図](src/architecture.svg)
+
 ```mermaid
 graph TB
     Bedrock[Amazon Bedrock<br/>Titan Embed Text v2] --> OpenSearch[OpenSearch<br/>ベクトルDB]
