@@ -20,7 +20,7 @@
     "dotenv": "^17.4.1"
   },
   "devDependencies": {
-    "@types/archiver": "^7.0.0",
+    "@types/archiver": "^8.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.4",
     "aws-cdk": "^2.1128.0",
