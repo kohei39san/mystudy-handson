@@ -1,0 +1,88 @@
+<mxfile host="Electron" modified="2024-01-15T10:00:00.000Z" agent="Mozilla/5.0" version="22.1.0" etag="GCP-Template-v1" type="device">
+  <diagram name="GCP Architecture" id="gcp-architecture-template">
+    <mxGraphModel dx="1422" dy="820" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- GCP Project Container -->
+        <mxCell id="gcp-project" value="GCP Project" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1080" height="740" as="geometry" />
+        </mxCell>
+        
+        <!-- VPC Network -->
+        <mxCell id="vpc-network" value="VPC Network" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#2196F3;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontStyle=1;dashed=1;dashPattern=5 5;" vertex="1" parent="1">
+          <mxGeometry x="80" y="100" width="1000" height="640" as="geometry" />
+        </mxCell>
+        
+        <!-- Subnet 1 -->
+        <mxCell id="subnet-1" value="Subnet 1 (us-central1)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#FBC02D;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;dashed=1;dashPattern=3 3;" vertex="1" parent="1">
+          <mxGeometry x="120" y="150" width="440" height="260" as="geometry" />
+        </mxCell>
+        
+        <!-- Subnet 2 -->
+        <mxCell id="subnet-2" value="Subnet 2 (us-east1)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF9C4;strokeColor=#FBC02D;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;dashed=1;dashPattern=3 3;" vertex="1" parent="1">
+          <mxGeometry x="600" y="150" width="440" height="260" as="geometry" />
+        </mxCell>
+        
+        <!-- Compute Engine VM -->
+        <mxCell id="compute-vm-1" value="Compute Engine&#xa;VM Instance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1976D2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="200" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Compute Engine VM 2 -->
+        <mxCell id="compute-vm-2" value="Compute Engine&#xa;VM Instance" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#BBDEFB;strokeColor=#1976D2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="200" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- GKE Cluster -->
+        <mxCell id="gke-cluster" value="GKE Cluster" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#C5E1A5;strokeColor=#689F38;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="310" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Cloud Functions -->
+        <mxCell id="cloud-functions" value="Cloud Functions" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE082;strokeColor=#F57C00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="310" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Cloud Load Balancer -->
+        <mxCell id="load-balancer" value="Cloud Load&#xa;Balancer" style="ellipse;whiteSpace=wrap;html=1;fillColor=#90CAF9;strokeColor=#1565C0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="220" width="100" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Cloud Storage -->
+        <mxCell id="cloud-storage" value="Cloud Storage&#xa;Bucket" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#FFE0B2;strokeColor=#EF6C00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="160" y="500" width="120" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Cloud SQL -->
+        <mxCell id="cloud-sql" value="Cloud SQL" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#B39DDB;strokeColor=#512DA8;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="500" width="120" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- BigQuery -->
+        <mxCell id="bigquery" value="BigQuery" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#80DEEA;strokeColor=#00838F;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="500" width="120" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Pub/Sub -->
+        <mxCell id="pubsub" value="Pub/Sub&#xa;Topic" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#F48FB1;strokeColor=#C2185B;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="640" y="500" width="120" height="100" as="geometry" />
+        </mxCell>
+        
+        <!-- Cloud Monitoring -->
+        <mxCell id="cloud-monitoring" value="Cloud Monitoring" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CE93D8;strokeColor=#7B1FA2;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="500" width="120" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Connection Lines (examples) -->
+        <mxCell id="conn-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;" edge="1" parent="1" source="load-balancer" target="compute-vm-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="conn-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#424242;strokeWidth=2;" edge="1" parent="1" source="load-balancer" target="compute-vm-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
