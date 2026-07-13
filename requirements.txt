@@ -2,8 +2,8 @@
 # This file is the single source of truth for pip dependency updates.
 
 # AWS
-boto3==1.43.36
-botocore==1.43.36
+boto3==1.43.40
+botocore==1.43.40
 
 # Azure
 azure-identity==1.25.3
@@ -11,7 +11,7 @@ azure-mgmt-compute==38.1.0
 azure-mgmt-network==30.2.0
 
 # GCP
-google-api-python-client==2.197.0
+google-api-python-client==2.198.0
 google-auth==2.55.1
 google-auth-httplib2==0.4.0
 
