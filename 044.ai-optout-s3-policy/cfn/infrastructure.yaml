@@ -1,0 +1,198 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  AI services opt-out policy (AWS Organizations) and S3 bucket TLS-enforcement
+  policy for security governance.
+
+Parameters:
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: 'Deployment environment'
+
+  Owner:
+    Type: String
+    Default: platform-team
+    Description: 'Owner of this resource'
+
+  Project:
+    Type: String
+    Default: security-governance
+    Description: 'Project name'
+
+  CostCenter:
+    Type: String
+    Default: ''
+    Description: 'Cost center code (optional)'
+
+  # -------------------------------------------------------------------
+  # AI opt-out policy parameters
+  # -------------------------------------------------------------------
+  AiOptOutPolicyName:
+    Type: String
+    Default: ai-optout-policy
+    Description: 'Base name for the AI opt-out Organizations policy (Env suffix is appended automatically)'
+
+  TargetIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: >-
+      Comma-separated list of Organization Unit IDs (ou-xxxx-yyyyyyyy) or
+      Account IDs to attach the AI opt-out policy to.
+      Leave empty to create the policy without attaching it.
+
+  AiOptOutPolicyDocument:
+    Type: String
+    Description: >-
+      AI services opt-out policy JSON document.
+      The default opts out of ALL AI services for the target.
+      Refer to https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html
+    Default: >-
+      {"services":{"@@operators_allowed_for_child_policies":["@@none"],"default":{"opt_out_policy":{"@@assign":"optOut"}}}}
+
+  # -------------------------------------------------------------------
+  # S3 bucket policy parameters
+  # -------------------------------------------------------------------
+  TargetBucketName:
+    Type: String
+    Default: ''
+    Description: 'Primary S3 bucket name to apply the TLS-enforcement bucket policy'
+
+  TargetBucketName2:
+    Type: String
+    Default: ''
+    Description: 'Secondary S3 bucket name (optional)'
+
+  TargetBucketName3:
+    Type: String
+    Default: ''
+    Description: 'Tertiary S3 bucket name (optional)'
+
+  EnforceTlsOnly:
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
+    Description: >-
+      When true, a bucket policy that denies all s3:* actions over non-TLS
+      connections (aws:SecureTransport = false) is applied to each target bucket.
+
+Conditions:
+  HasTargets: !Not [!Equals [!Join ['', !Ref TargetIds], '']]
+  EnforceTls: !Equals [!Ref EnforceTlsOnly, 'true']
+  HasBucket1: !And
+    - !Not [!Equals [!Ref TargetBucketName, '']]
+    - !Condition EnforceTls
+  HasBucket2: !And
+    - !Not [!Equals [!Ref TargetBucketName2, '']]
+    - !Condition EnforceTls
+  HasBucket3: !And
+    - !Not [!Equals [!Ref TargetBucketName3, '']]
+    - !Condition EnforceTls
+
+Resources:
+  # ------------------------------------------------------------------
+  # AI services opt-out policy
+  # Creates an Organizations policy of type AI_SERVICES_OPT_OUT_POLICY
+  # and optionally attaches it to the specified OU / account targets.
+  # Must be deployed from the Organizations management account.
+  # ------------------------------------------------------------------
+  AIOptOutPolicy:
+    Type: AWS::Organizations::Policy
+    Properties:
+      Name: !Sub '${AiOptOutPolicyName}-${Env}'
+      Description: >-
+        Opts out of AWS AI services content storage and model-improvement use.
+      Type: AISERVICES_OPT_OUT_POLICY
+      Content: !Ref AiOptOutPolicyDocument
+      TargetIds: !If [HasTargets, !Ref TargetIds, !Ref 'AWS::NoValue']
+      Tags:
+        - Key: Name
+          Value: ai-optout-and-s3-policy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: Project
+          Value: !Ref Project
+        - Key: CostCenter
+          Value: !Ref CostCenter
+
+  # ------------------------------------------------------------------
+  # S3 bucket policies – TLS enforcement
+  # Denies all s3:* actions unless the request is over TLS (HTTPS).
+  # Applied individually to each target bucket.
+  # ------------------------------------------------------------------
+  S3BucketPolicy1:
+    Type: AWS::S3::BucketPolicy
+    Condition: HasBucket1
+    Properties:
+      Bucket: !Ref TargetBucketName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyNonTLS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !Sub 'arn:aws:s3:::${TargetBucketName}'
+              - !Sub 'arn:aws:s3:::${TargetBucketName}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
+
+  S3BucketPolicy2:
+    Type: AWS::S3::BucketPolicy
+    Condition: HasBucket2
+    Properties:
+      Bucket: !Ref TargetBucketName2
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyNonTLS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !Sub 'arn:aws:s3:::${TargetBucketName2}'
+              - !Sub 'arn:aws:s3:::${TargetBucketName2}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
+
+  S3BucketPolicy3:
+    Type: AWS::S3::BucketPolicy
+    Condition: HasBucket3
+    Properties:
+      Bucket: !Ref TargetBucketName3
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyNonTLS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !Sub 'arn:aws:s3:::${TargetBucketName3}'
+              - !Sub 'arn:aws:s3:::${TargetBucketName3}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
+
+Outputs:
+  AIOptOutPolicyId:
+    Description: 'Unique identifier of the AI opt-out policy'
+    Value: !Ref AIOptOutPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-AIOptOutPolicyId'
+
+  AIOptOutPolicyArn:
+    Description: 'ARN of the AI opt-out policy'
+    Value: !GetAtt AIOptOutPolicy.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AIOptOutPolicyArn'
