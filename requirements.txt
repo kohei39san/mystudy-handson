@@ -2,8 +2,8 @@
 # This file is the single source of truth for pip dependency updates.
 
 # AWS
-boto3==1.43.46
-botocore==1.43.46
+boto3==1.43.51
+botocore==1.43.51
 
 # Azure
 azure-identity==1.25.3
@@ -26,7 +26,7 @@ PyYAML>=6.0.3
 python-dotenv==1.2.2
 python-jose[cryptography]==3.5.0
 requests==2.34.2
-selenium==4.45.0
+selenium==4.46.0
 typing-extensions==4.16.0
 webdriver-manager==4.1.2
 
@@ -34,7 +34,7 @@ webdriver-manager==4.1.2
 black==26.5.1
 flake8==7.3.0
 moto==5.2.2
-mypy==2.1.0
+mypy==2.2.0
 pytest==9.1.1
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
