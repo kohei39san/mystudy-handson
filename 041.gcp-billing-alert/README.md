@@ -61,7 +61,6 @@
 ├── outputs.tf                   # 出力値の定義
 ├── terraform.tfvars.example     # 設定例ファイル
 ├── deploy.ts                    # Infrastructure Manager API実行スクリプト
-├── package.json                 # npm設定
 ├── tsconfig.json                # TypeScript設定
 └── .env.example                 # 環境変数テンプレート
 ```
