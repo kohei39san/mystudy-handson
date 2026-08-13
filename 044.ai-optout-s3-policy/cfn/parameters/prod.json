@@ -28,19 +28,11 @@
     "ParameterValue": "{\"services\":{\"@@operators_allowed_for_child_policies\":[\"@@none\"],\"default\":{\"opt_out_policy\":{\"@@assign\":\"optOut\"}}}}"
   },
   {
-    "ParameterKey": "TargetBucketName",
-    "ParameterValue": "REPLACE_WITH_BUCKET_NAME"
+    "ParameterKey": "S3PolicyName",
+    "ParameterValue": "s3-tls-enforcement-policy"
   },
   {
-    "ParameterKey": "TargetBucketName2",
-    "ParameterValue": ""
-  },
-  {
-    "ParameterKey": "TargetBucketName3",
-    "ParameterValue": ""
-  },
-  {
-    "ParameterKey": "EnforceTlsOnly",
-    "ParameterValue": "true"
+    "ParameterKey": "S3OrgPolicyDocument",
+    "ParameterValue": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"DenyNonTLS\",\"Effect\":\"Deny\",\"Principal\":\"*\",\"Action\":\"s3:*\",\"Resource\":\"*\",\"Condition\":{\"Bool\":{\"aws:SecureTransport\":\"false\"}}}]}"
   }
 ]

@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
-  AI services opt-out policy (AWS Organizations) and S3 bucket TLS-enforcement
-  policy for security governance.
+  AI services opt-out policy and Organizations S3 policy (TLS enforcement)
+  for security governance. Both policies are managed via AWS Organizations.
 
 Parameters:
   Env:
@@ -41,8 +41,8 @@ Parameters:
     Default: ''
     Description: >-
       Comma-separated list of Organization Unit IDs (ou-xxxx-yyyyyyyy) or
-      Account IDs to attach the AI opt-out policy to.
-      Leave empty to create the policy without attaching it.
+      Account IDs to attach both policies to.
+      Leave empty to create the policies without attaching them.
 
   AiOptOutPolicyDocument:
     Type: String
@@ -54,50 +54,30 @@ Parameters:
       {"services":{"@@operators_allowed_for_child_policies":["@@none"],"default":{"opt_out_policy":{"@@assign":"optOut"}}}}
 
   # -------------------------------------------------------------------
-  # S3 bucket policy parameters
+  # Organizations S3 policy parameters
   # -------------------------------------------------------------------
-  TargetBucketName:
+  S3PolicyName:
     Type: String
-    Default: ''
-    Description: 'Primary S3 bucket name to apply the TLS-enforcement bucket policy'
+    Default: s3-tls-enforcement-policy
+    Description: 'Base name for the Organizations S3 policy (Env suffix is appended automatically)'
 
-  TargetBucketName2:
+  S3OrgPolicyDocument:
     Type: String
-    Default: ''
-    Description: 'Secondary S3 bucket name (optional)'
-
-  TargetBucketName3:
-    Type: String
-    Default: ''
-    Description: 'Tertiary S3 bucket name (optional)'
-
-  EnforceTlsOnly:
-    Type: String
-    AllowedValues:
-      - 'true'
-      - 'false'
-    Default: 'true'
     Description: >-
-      When true, a bucket policy that denies all s3:* actions over non-TLS
-      connections (aws:SecureTransport = false) is applied to each target bucket.
+      Organizations S3 policy JSON document applied as a guardrail across the
+      organization / OU / account. The default denies all S3 actions over
+      non-TLS connections (aws:SecureTransport = false).
+      Refer to https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3.html
+    Default: >-
+      {"Version":"2012-10-17","Statement":[{"Sid":"DenyNonTLS","Effect":"Deny","Principal":"*","Action":"s3:*","Resource":"*","Condition":{"Bool":{"aws:SecureTransport":"false"}}}]}
 
 Conditions:
   HasTargets: !Not [!Equals [!Join ['', !Ref TargetIds], '']]
-  EnforceTls: !Equals [!Ref EnforceTlsOnly, 'true']
-  HasBucket1: !And
-    - !Not [!Equals [!Ref TargetBucketName, '']]
-    - !Condition EnforceTls
-  HasBucket2: !And
-    - !Not [!Equals [!Ref TargetBucketName2, '']]
-    - !Condition EnforceTls
-  HasBucket3: !And
-    - !Not [!Equals [!Ref TargetBucketName3, '']]
-    - !Condition EnforceTls
 
 Resources:
   # ------------------------------------------------------------------
   # AI services opt-out policy
-  # Creates an Organizations policy of type AI_SERVICES_OPT_OUT_POLICY
+  # Creates an Organizations policy of type AISERVICES_OPT_OUT_POLICY
   # and optionally attaches it to the specified OU / account targets.
   # Must be deployed from the Organizations management account.
   # ------------------------------------------------------------------
@@ -123,66 +103,33 @@ Resources:
           Value: !Ref CostCenter
 
   # ------------------------------------------------------------------
-  # S3 bucket policies – TLS enforcement
+  # Organizations S3 policy – TLS enforcement
+  # Applies as a guardrail across the organization / OU / account.
   # Denies all s3:* actions unless the request is over TLS (HTTPS).
-  # Applied individually to each target bucket.
+  # Does not require individual bucket specification.
+  # Must be deployed from the Organizations management account.
   # ------------------------------------------------------------------
-  S3BucketPolicy1:
-    Type: AWS::S3::BucketPolicy
-    Condition: HasBucket1
+  S3OrgPolicy:
+    Type: AWS::Organizations::Policy
     Properties:
-      Bucket: !Ref TargetBucketName
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: DenyNonTLS
-            Effect: Deny
-            Principal: '*'
-            Action: 's3:*'
-            Resource:
-              - !Sub 'arn:aws:s3:::${TargetBucketName}'
-              - !Sub 'arn:aws:s3:::${TargetBucketName}/*'
-            Condition:
-              Bool:
-                'aws:SecureTransport': 'false'
-
-  S3BucketPolicy2:
-    Type: AWS::S3::BucketPolicy
-    Condition: HasBucket2
-    Properties:
-      Bucket: !Ref TargetBucketName2
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: DenyNonTLS
-            Effect: Deny
-            Principal: '*'
-            Action: 's3:*'
-            Resource:
-              - !Sub 'arn:aws:s3:::${TargetBucketName2}'
-              - !Sub 'arn:aws:s3:::${TargetBucketName2}/*'
-            Condition:
-              Bool:
-                'aws:SecureTransport': 'false'
-
-  S3BucketPolicy3:
-    Type: AWS::S3::BucketPolicy
-    Condition: HasBucket3
-    Properties:
-      Bucket: !Ref TargetBucketName3
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: DenyNonTLS
-            Effect: Deny
-            Principal: '*'
-            Action: 's3:*'
-            Resource:
-              - !Sub 'arn:aws:s3:::${TargetBucketName3}'
-              - !Sub 'arn:aws:s3:::${TargetBucketName3}/*'
-            Condition:
-              Bool:
-                'aws:SecureTransport': 'false'
+      Name: !Sub '${S3PolicyName}-${Env}'
+      Description: >-
+        Organizations S3 policy that denies all S3 actions over non-TLS
+        connections (aws:SecureTransport = false) as an organization-wide guardrail.
+      Type: S3_POLICY
+      Content: !Ref S3OrgPolicyDocument
+      TargetIds: !If [HasTargets, !Ref TargetIds, !Ref 'AWS::NoValue']
+      Tags:
+        - Key: Name
+          Value: ai-optout-and-s3-policy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: Project
+          Value: !Ref Project
+        - Key: CostCenter
+          Value: !Ref CostCenter
 
 Outputs:
   AIOptOutPolicyId:
@@ -196,3 +143,15 @@ Outputs:
     Value: !GetAtt AIOptOutPolicy.Arn
     Export:
       Name: !Sub '${AWS::StackName}-AIOptOutPolicyArn'
+
+  S3OrgPolicyId:
+    Description: 'Unique identifier of the Organizations S3 TLS-enforcement policy'
+    Value: !Ref S3OrgPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-S3OrgPolicyId'
+
+  S3OrgPolicyArn:
+    Description: 'ARN of the Organizations S3 TLS-enforcement policy'
+    Value: !GetAtt S3OrgPolicy.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-S3OrgPolicyArn'

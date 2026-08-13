@@ -1,13 +1,15 @@
-# AI opt-out policy + S3 TLS enforcement
+# AI opt-out policy + S3 TLS enforcement (Organizations S3 Policy)
 
 ## 概要
 
-本ディレクトリは、AWS Organizations の **AIオプトアウトポリシー** および Amazon S3 の **TLS強制バケットポリシー** を、単一の CloudFormation スタックで管理するハンズオン構成です。
+本ディレクトリは、AWS Organizations の **AIオプトアウトポリシー** および **Organizations S3 ポリシー（TLS強制）** を、単一の CloudFormation スタックで管理するハンズオン構成です。
+
+S3 ポリシーは個別バケットへの `AWS::S3::BucketPolicy` ではなく、**Organizations S3 Policy**（`Type: S3_POLICY`）として組織・OU・アカウント単位のガードレールとして適用します。バケット名の指定は不要で、アタッチ先配下のすべての S3 バケットに一括適用されます。
 
 | リソース | 用途 |
 |---|---|
 | `AWS::Organizations::Policy` (AISERVICES_OPT_OUT_POLICY) | 生成AI関連サービスへのデータ利用オプトアウトポリシーを作成・アタッチ |
-| `AWS::S3::BucketPolicy` | 対象バケットに TLS 強制 Deny ポリシーを適用 |
+| `AWS::Organizations::Policy` (S3_POLICY) | 組織・OU・アカウント配下の全バケットに TLS 強制 Deny ポリシーをガードレールとして適用 |
 
 ## ファイル構成
 
@@ -30,32 +32,35 @@
 | `Owner` | ✅ | `platform-team` | リソースの所有者 |
 | `Project` | ✅ | `security-governance` | プロジェクト名 |
 | `CostCenter` | ❌ | `""` | コスト配賦コード |
-| `AiOptOutPolicyName` | ✅ | `ai-optout-policy` | Organizations ポリシーのベース名（末尾に `-{Env}` が付与される） |
-| `TargetIds` | ❌ | `""` | AI ポリシーのアタッチ先（OU ID または アカウント ID、カンマ区切り）。空の場合はポリシー作成のみ |
+| `AiOptOutPolicyName` | ✅ | `ai-optout-policy` | AI オプトアウト Organizations ポリシーのベース名（末尾に `-{Env}` が付与される） |
+| `TargetIds` | ❌ | `""` | 両ポリシーのアタッチ先（OU ID または アカウント ID、カンマ区切り）。空の場合はポリシー作成のみ |
 | `AiOptOutPolicyDocument` | ✅ | 全サービスオプトアウト JSON | Organizations AI opt-out ポリシー JSON 文字列 |
-| `TargetBucketName` | ❌ | `""` | TLS 強制を適用するバケット名 (1つ目) |
-| `TargetBucketName2` | ❌ | `""` | TLS 強制を適用するバケット名 (2つ目) |
-| `TargetBucketName3` | ❌ | `""` | TLS 強制を適用するバケット名 (3つ目) |
-| `EnforceTlsOnly` | ✅ | `true` | `true` の場合、各バケットに TLS 強制 Deny ステートメントを適用 |
+| `S3PolicyName` | ✅ | `s3-tls-enforcement-policy` | Organizations S3 ポリシーのベース名（末尾に `-{Env}` が付与される） |
+| `S3OrgPolicyDocument` | ✅ | TLS 強制 Deny JSON | Organizations S3 ポリシー JSON 文字列（デフォルトで `aws:SecureTransport = false` を Deny） |
 
-> **注意**: `TargetIds`・`TargetBucketName*` は内部情報です。パラメータファイル (`parameters/*.json`) への平文コミットを避け、必要に応じて SSM Parameter Store / Secrets Manager から注入してください。
+> **注意**: `TargetIds` は内部情報です。パラメータファイル (`parameters/*.json`) への平文コミットを避け、必要に応じて SSM Parameter Store / Secrets Manager から注入してください。
 
 ## 前提条件
 
-- **デプロイアカウント**: AWS Organizations の**管理アカウント**（AIオプトアウトポリシーの作成に必要）
+- **デプロイアカウント**: AWS Organizations の**管理アカウント**
 - **IAM 権限** (CloudFormation 実行ロールに付与すること):
 
   | サービス | 必要な権限 |
   |---|---|
   | Organizations | `organizations:CreatePolicy`, `organizations:UpdatePolicy`, `organizations:AttachPolicy`, `organizations:List*`, `organizations:Describe*` |
-  | S3 | `s3:GetBucketPolicy`, `s3:PutBucketPolicy` |
   | CloudFormation | `cloudformation:CreateStack`, `cloudformation:UpdateStack`, `cloudformation:DescribeStacks` など |
 
-- **Organizations ポリシータイプの有効化**: 管理アカウントで AISERVICES_OPT_OUT_POLICY が有効になっていること
+- **Organizations ポリシータイプの有効化**: 管理アカウントで両ポリシータイプが有効になっていること
   ```bash
+  ROOT_ID=$(aws organizations list-roots --query 'Roots[0].Id' --output text)
+
   aws organizations enable-policy-type \
-    --root-id $(aws organizations list-roots --query 'Roots[0].Id' --output text) \
+    --root-id "$ROOT_ID" \
     --policy-type AISERVICES_OPT_OUT_POLICY
+
+  aws organizations enable-policy-type \
+    --root-id "$ROOT_ID" \
+    --policy-type S3_POLICY
   ```
 
 ## デプロイ手順
@@ -68,9 +73,6 @@
 # 例: OU ID の確認
 aws organizations list-organizational-units-for-parent \
   --parent-id $(aws organizations list-roots --query 'Roots[0].Id' --output text)
-
-# 例: バケット名の確認
-aws s3 ls
 ```
 
 ### 2. テンプレートを静的検証する
@@ -132,35 +134,30 @@ aws organizations describe-policy --policy-id "$POLICY_ID"
 # 対象 OU/アカウントへのアタッチ確認
 aws organizations list-policies-for-target \
   --target-id <ou-or-account-id> \
-  --filter AI_SERVICES_OPT_OUT_POLICY
+  --filter AISERVICES_OPT_OUT_POLICY
 ```
 
 期待結果: `target-id` に対して意図したポリシー ID が返ること。
 
-### S3 バケットポリシーの確認
+### Organizations S3 ポリシー（TLS強制）の確認
 
 ```bash
-# バケットポリシーの確認
-aws s3api get-bucket-policy \
-  --bucket <bucket-name> \
-  --query Policy \
-  --output text | python3 -m json.tool
+# スタック出力からポリシー ID を取得
+S3_POLICY_ID=$(aws cloudformation describe-stacks \
+  --stack-name ai-optout-s3-policy-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`S3OrgPolicyId`].OutputValue' \
+  --output text)
 
-# TLS 強制 Deny ステートメントが含まれることを確認
-aws s3api get-bucket-policy \
-  --bucket <bucket-name> \
-  --query Policy \
-  --output text | python3 -c "
-import json, sys
-policy = json.load(sys.stdin)
-for stmt in policy['Statement']:
-    cond = stmt.get('Condition', {}).get('Bool', {})
-    if cond.get('aws:SecureTransport') == 'false' and stmt['Effect'] == 'Deny':
-        print('TLS enforcement found:', stmt['Sid'])
-"
+# ポリシー詳細の確認
+aws organizations describe-policy --policy-id "$S3_POLICY_ID"
+
+# 対象 OU/アカウントへのアタッチ確認
+aws organizations list-policies-for-target \
+  --target-id <ou-or-account-id> \
+  --filter S3_POLICY
 ```
 
-期待結果: `TLS enforcement found: DenyNonTLS` が出力されること。
+期待結果: `target-id` に対して意図したポリシー ID が返り、`DenyNonTLS` ステートメントを含むポリシー内容が確認できること。
 
 ## ロールバック手順
 
@@ -179,7 +176,7 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
-### AI ポリシーのデタッチ（手動）
+### ポリシーのデタッチ（手動）
 
 ```bash
 aws organizations detach-policy \
@@ -187,20 +184,14 @@ aws organizations detach-policy \
   --target-id <ou-or-account-id>
 ```
 
-### S3 バケットポリシーの削除（手動）
-
-```bash
-aws s3api delete-bucket-policy --bucket <bucket-name>
-```
-
 ## セキュリティ設計
 
 | 観点 | 内容 |
 |---|---|
-| TLS 強制 | `aws:SecureTransport = false` のリクエストをすべて Deny |
+| TLS 強制 | Organizations S3 ポリシーで `aws:SecureTransport = false` のリクエストをすべて Deny（組織・OU・アカウント単位のガードレール） |
 | AIデータ利用オプトアウト | Organizations AIオプトアウトポリシーで全 AI サービスをデフォルトオプトアウト |
-| シークレット管理 | アカウント ID・OU ID・バケット名は SSM Parameter Store / Secrets Manager から注入推奨 |
-| 最小権限 | CloudFormation 実行ロールは Organizations と S3 の最小権限に絞ること |
+| シークレット管理 | アカウント ID・OU ID は SSM Parameter Store / Secrets Manager から注入推奨 |
+| 最小権限 | CloudFormation 実行ロールは Organizations の最小権限に絞ること |
 
 ## タグ設計
 
@@ -215,6 +206,7 @@ aws s3api delete-bucket-policy --bucket <bucket-name>
 ## 参考資料
 
 - [AWS Organizations AI services opt-out policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html)
+- [AWS Organizations S3 policy – classmethod 解説](https://dev.classmethod.jp/articles/update-aws-organizations-s3-policy/)
+- [AWS Organizations S3 policy 公式ドキュメント](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3.html)
 - [AWS::Organizations::Policy CloudFormation リファレンス](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-organizations-policy.html)
-- [AWS::S3::BucketPolicy CloudFormation リファレンス](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-s3-bucketpolicy.html)
-- [Amazon S3 バケットポリシー例 – aws:SecureTransport](https://docs.aws.amazon.com/AmazonS3/latest/userguide/amazon-s3-policy-keys.html)
+
