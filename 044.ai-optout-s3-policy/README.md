@@ -1,15 +1,15 @@
-# AI opt-out policy + S3 TLS enforcement (Organizations S3 Policy)
+# AI opt-out policy + S3 パブリックアクセスブロック (Organizations S3 Policy)
 
 ## 概要
 
-本ディレクトリは、AWS Organizations の **AIオプトアウトポリシー** および **Organizations S3 ポリシー（TLS強制）** を、単一の CloudFormation スタックで管理するハンズオン構成です。
+本ディレクトリは、AWS Organizations の **AIオプトアウトポリシー** および **Organizations S3 ポリシー（パブリックアクセスブロック）** を、単一の CloudFormation スタックで管理するハンズオン構成です。
 
 S3 ポリシーは個別バケットへの `AWS::S3::BucketPolicy` ではなく、**Organizations S3 Policy**（`Type: S3_POLICY`）として組織・OU・アカウント単位のガードレールとして適用します。バケット名の指定は不要で、アタッチ先配下のすべての S3 バケットに一括適用されます。
 
 | リソース | 用途 |
 |---|---|
 | `AWS::Organizations::Policy` (AISERVICES_OPT_OUT_POLICY) | 生成AI関連サービスへのデータ利用オプトアウトポリシーを作成・アタッチ |
-| `AWS::Organizations::Policy` (S3_POLICY) | 組織・OU・アカウント配下の全バケットに TLS 強制 Deny ポリシーをガードレールとして適用 |
+| `AWS::Organizations::Policy` (S3_POLICY) | 組織・OU・アカウント配下の全バケットに対してパブリックアクセスブロック（4設定すべて有効）をガードレールとして適用 |
 
 ## ファイル構成
 
@@ -35,8 +35,8 @@ S3 ポリシーは個別バケットへの `AWS::S3::BucketPolicy` ではなく�
 | `AiOptOutPolicyName` | ✅ | `ai-optout-policy` | AI オプトアウト Organizations ポリシーのベース名（末尾に `-{Env}` が付与される） |
 | `TargetIds` | ❌ | `""` | 両ポリシーのアタッチ先（OU ID または アカウント ID、カンマ区切り）。空の場合はポリシー作成のみ |
 | `AiOptOutPolicyDocument` | ✅ | 全サービスオプトアウト JSON | Organizations AI opt-out ポリシー JSON 文字列 |
-| `S3PolicyName` | ✅ | `s3-tls-enforcement-policy` | Organizations S3 ポリシーのベース名（末尾に `-{Env}` が付与される） |
-| `S3OrgPolicyDocument` | ✅ | TLS 強制 Deny JSON | Organizations S3 ポリシー JSON 文字列（デフォルトで `aws:SecureTransport = false` を Deny） |
+| `S3PolicyName` | ✅ | `s3-public-access-block-policy` | Organizations S3 ポリシーのベース名（末尾に `-{Env}` が付与される） |
+| `S3OrgPolicyDocument` | ✅ | パブリックアクセスブロック全有効 JSON | Organizations S3 ポリシー JSON 文字列（デフォルトで4つのパブリックアクセスブロック設定をすべて有効化） |
 
 > **注意**: `TargetIds` は内部情報です。パラメータファイル (`parameters/*.json`) への平文コミットを避け、必要に応じて SSM Parameter Store / Secrets Manager から注入してください。
 
@@ -139,7 +139,7 @@ aws organizations list-policies-for-target \
 
 期待結果: `target-id` に対して意図したポリシー ID が返ること。
 
-### Organizations S3 ポリシー（TLS強制）の確認
+### Organizations S3 ポリシー（パブリックアクセスブロック）の確認
 
 ```bash
 # スタック出力からポリシー ID を取得
@@ -157,7 +157,7 @@ aws organizations list-policies-for-target \
   --filter S3_POLICY
 ```
 
-期待結果: `target-id` に対して意図したポリシー ID が返り、`DenyNonTLS` ステートメントを含むポリシー内容が確認できること。
+期待結果: `target-id` に対して意図したポリシー ID が返り、`public_access_block_configuration` の設定がすべて有効になっていることが確認できること。
 
 ## ロールバック手順
 
@@ -188,7 +188,7 @@ aws organizations detach-policy \
 
 | 観点 | 内容 |
 |---|---|
-| TLS 強制 | Organizations S3 ポリシーで `aws:SecureTransport = false` のリクエストをすべて Deny（組織・OU・アカウント単位のガードレール） |
+| パブリックアクセスブロック | Organizations S3 ポリシーで4つのパブリックアクセスブロック設定（BlockPublicAcls, BlockPublicPolicy, IgnorePublicAcls, RestrictPublicBuckets）を組織・OU・アカウント単位のガードレールとして有効化 |
 | AIデータ利用オプトアウト | Organizations AIオプトアウトポリシーで全 AI サービスをデフォルトオプトアウト |
 | シークレット管理 | アカウント ID・OU ID は SSM Parameter Store / Secrets Manager から注入推奨 |
 | 最小権限 | CloudFormation 実行ロールは Organizations の最小権限に絞ること |
@@ -206,7 +206,7 @@ aws organizations detach-policy \
 ## 参考資料
 
 - [AWS Organizations AI services opt-out policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html)
-- [AWS Organizations S3 policy – classmethod 解説](https://dev.classmethod.jp/articles/update-aws-organizations-s3-policy/)
+- [AWS Organizations S3 policy syntax and examples](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3_syntax.html)
 - [AWS Organizations S3 policy 公式ドキュメント](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3.html)
 - [AWS::Organizations::Policy CloudFormation リファレンス](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-organizations-policy.html)
 

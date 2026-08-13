@@ -58,18 +58,19 @@ Parameters:
   # -------------------------------------------------------------------
   S3PolicyName:
     Type: String
-    Default: s3-tls-enforcement-policy
+    Default: s3-public-access-block-policy
     Description: 'Base name for the Organizations S3 policy (Env suffix is appended automatically)'
 
   S3OrgPolicyDocument:
     Type: String
     Description: >-
       Organizations S3 policy JSON document applied as a guardrail across the
-      organization / OU / account. The default denies all S3 actions over
-      non-TLS connections (aws:SecureTransport = false).
-      Refer to https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3.html
+      organization / OU / account. The default enables all four Block Public
+      Access settings (BlockPublicAcls, BlockPublicPolicy, IgnorePublicAcls,
+      RestrictPublicBuckets) organization-wide.
+      Refer to https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3_syntax.html
     Default: >-
-      {"Version":"2012-10-17","Statement":[{"Sid":"DenyNonTLS","Effect":"Deny","Principal":"*","Action":"s3:*","Resource":"*","Condition":{"Bool":{"aws:SecureTransport":"false"}}}]}
+      {"s3_attributes":{"public_access_block_configuration":{"@@assign":"all"}}}
 
 Conditions:
   HasTargets: !Not [!Equals [!Join ['', !Ref TargetIds], '']]
@@ -103,9 +104,9 @@ Resources:
           Value: !Ref CostCenter
 
   # ------------------------------------------------------------------
-  # Organizations S3 policy – TLS enforcement
+  # Organizations S3 policy – Public Access Block enforcement
   # Applies as a guardrail across the organization / OU / account.
-  # Denies all s3:* actions unless the request is over TLS (HTTPS).
+  # Enables all four Block Public Access settings for all S3 buckets.
   # Does not require individual bucket specification.
   # Must be deployed from the Organizations management account.
   # ------------------------------------------------------------------
@@ -114,8 +115,9 @@ Resources:
     Properties:
       Name: !Sub '${S3PolicyName}-${Env}'
       Description: >-
-        Organizations S3 policy that denies all S3 actions over non-TLS
-        connections (aws:SecureTransport = false) as an organization-wide guardrail.
+        Organizations S3 policy that enables all four Block Public Access
+        settings (BlockPublicAcls, BlockPublicPolicy, IgnorePublicAcls,
+        RestrictPublicBuckets) as an organization-wide guardrail.
       Type: S3_POLICY
       Content: !Ref S3OrgPolicyDocument
       TargetIds: !If [HasTargets, !Ref TargetIds, !Ref 'AWS::NoValue']
@@ -145,13 +147,13 @@ Outputs:
       Name: !Sub '${AWS::StackName}-AIOptOutPolicyArn'
 
   S3OrgPolicyId:
-    Description: 'Unique identifier of the Organizations S3 TLS-enforcement policy'
+    Description: 'Unique identifier of the Organizations S3 public-access-block policy'
     Value: !Ref S3OrgPolicy
     Export:
       Name: !Sub '${AWS::StackName}-S3OrgPolicyId'
 
   S3OrgPolicyArn:
-    Description: 'ARN of the Organizations S3 TLS-enforcement policy'
+    Description: 'ARN of the Organizations S3 public-access-block policy'
     Value: !GetAtt S3OrgPolicy.Arn
     Export:
       Name: !Sub '${AWS::StackName}-S3OrgPolicyArn'
