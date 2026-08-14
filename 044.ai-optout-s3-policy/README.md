@@ -65,14 +65,15 @@ S3 ポリシーは個別バケットへの `AWS::S3::BucketPolicy` ではなく�
 
 ## デプロイ手順
 
-### 1. パラメータを設定する
-
-`cfn/parameters/dev.json` を編集し、`REPLACE_WITH_*` プレースホルダを実際の値に置き換えます。
+### 1. TargetIds を確認する
 
 ```bash
-# 例: OU ID の確認
+# OU ID の確認
 aws organizations list-organizational-units-for-parent \
   --parent-id $(aws organizations list-roots --query 'Roots[0].Id' --output text)
+
+# アカウント ID の確認
+aws sts get-caller-identity --query Account --output text
 ```
 
 ### 2. テンプレートを静的検証する
@@ -89,6 +90,7 @@ aws cloudformation create-change-set \
   --stack-name ai-optout-s3-policy-dev \
   --template-body file://cfn/infrastructure.yaml \
   --parameters file://cfn/parameters/dev.json \
+  --parameter-overrides "TargetIds=<OU_ID_OR_ACCOUNT_ID>" \
   --change-set-name review-$(date +%Y%m%d%H%M%S) \
   --capabilities CAPABILITY_NAMED_IAM
 
@@ -97,15 +99,20 @@ aws cloudformation describe-change-set \
   --change-set-name review-<TIMESTAMP>
 ```
 
-### 4. デプロイする
+### 4. デプロイする（dev 環境）
 
 ```bash
 aws cloudformation deploy \
   --stack-name ai-optout-s3-policy-dev \
   --template-file cfn/infrastructure.yaml \
-  --parameter-overrides file://cfn/parameters/dev.json \
+  --parameter-overrides file://cfn/parameters/dev.json "TargetIds=<OU_ID_OR_ACCOUNT_ID>" \
   --capabilities CAPABILITY_NAMED_IAM
 ```
+
+> 複数の OU / アカウントを指定する場合はカンマ区切りにします:
+> ```
+> "TargetIds=ou-xxxx-yyyyyyyy,123456789012"
+> ```
 
 ### 5. prod 環境へ展開する（dev 検証完了後）
 
@@ -113,7 +120,7 @@ aws cloudformation deploy \
 aws cloudformation deploy \
   --stack-name ai-optout-s3-policy-prod \
   --template-file cfn/infrastructure.yaml \
-  --parameter-overrides file://cfn/parameters/prod.json \
+  --parameter-overrides file://cfn/parameters/prod.json "TargetIds=<OU_ID_OR_ACCOUNT_ID>" \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
