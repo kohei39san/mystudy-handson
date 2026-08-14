@@ -21,7 +21,7 @@
   },
   {
     "ParameterKey": "TargetIds",
-    "ParameterValue": "REPLACE_WITH_OU_ID_OR_ACCOUNT_ID"
+    "ParameterValue": ""
   },
   {
     "ParameterKey": "AiOptOutPolicyDocument",
