@@ -16,10 +16,7 @@ S3 ポリシーは個別バケットへの `AWS::S3::BucketPolicy` ではなく�
 ```
 044.ai-optout-s3-policy/
 ├── cfn/
-│   ├── infrastructure.yaml        # CloudFormation テンプレート（単一スタック）
-│   └── parameters/
-│       ├── dev.json               # dev 環境向けパラメータ
-│       └── prod.json              # prod 環境向けパラメータ
+│   └── infrastructure.yaml        # CloudFormation テンプレート（単一スタック）
 ├── src/                           # アーキテクチャ図など
 └── README.md                      # このファイル
 ```
@@ -199,7 +196,14 @@ git checkout <stable-commit-hash> -- 044.ai-optout-s3-policy/cfn/infrastructure.
 aws cloudformation deploy \
   --stack-name ai-optout-s3-policy-dev \
   --template-file cfn/infrastructure.yaml \
-  --parameter-overrides file://cfn/parameters/dev.json \
+  --parameter-overrides \
+    Env=dev \
+    Owner=platform-team \
+    Project=security-governance \
+    CostCenter="" \
+    AiOptOutPolicyName=ai-optout-policy \
+    "TargetIds=<OU_ID_OR_ACCOUNT_ID>" \
+    S3PolicyName=s3-public-access-block-policy \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
