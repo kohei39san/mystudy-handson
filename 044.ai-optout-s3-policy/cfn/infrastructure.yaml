@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  AI services opt-out policy and Organizations S3 policy (TLS enforcement)
+  for security governance. Both policies are managed via AWS Organizations.
+
+Parameters:
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: 'Deployment environment'
+
+  Owner:
+    Type: String
+    Default: platform-team
+    Description: 'Owner of this resource'
+
+  Project:
+    Type: String
+    Default: security-governance
+    Description: 'Project name'
+
+  CostCenter:
+    Type: String
+    Default: ''
+    Description: 'Cost center code (optional)'
+
+  # -------------------------------------------------------------------
+  # AI opt-out policy parameters
+  # -------------------------------------------------------------------
+  AiOptOutPolicyName:
+    Type: String
+    Default: ai-optout-policy
+    Description: 'Base name for the AI opt-out Organizations policy (Env suffix is appended automatically)'
+
+  TargetIds:
+    Type: CommaDelimitedList
+    Default: ''
+    Description: >-
+      Comma-separated list of Organization Unit IDs (ou-xxxx-yyyyyyyy) or
+      Account IDs to attach both policies to.
+      Leave empty to create the policies without attaching them.
+
+  AiOptOutPolicyDocument:
+    Type: String
+    Description: >-
+      AI services opt-out policy JSON document.
+      The default opts out of ALL AI services for the target.
+      Refer to https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ai-opt-out.html
+    Default: >-
+      {"services":{"@@operators_allowed_for_child_policies":["@@none"],"default":{"opt_out_policy":{"@@assign":"optOut"}}}}
+
+  # -------------------------------------------------------------------
+  # Organizations S3 policy parameters
+  # -------------------------------------------------------------------
+  S3PolicyName:
+    Type: String
+    Default: s3-public-access-block-policy
+    Description: 'Base name for the Organizations S3 policy (Env suffix is appended automatically)'
+
+  S3OrgPolicyDocument:
+    Type: String
+    Description: >-
+      Organizations S3 policy JSON document applied as a guardrail across the
+      organization / OU / account. The default enables all four Block Public
+      Access settings (BlockPublicAcls, BlockPublicPolicy, IgnorePublicAcls,
+      RestrictPublicBuckets) organization-wide.
+      Refer to https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_s3_syntax.html
+    Default: >-
+      {"s3_attributes":{"public_access_block_configuration":{"@@assign":"all"}}}
+
+Conditions:
+  HasTargets: !Not [!Equals [!Join ['', !Ref TargetIds], '']]
+
+Resources:
+  # ------------------------------------------------------------------
+  # AI services opt-out policy
+  # Creates an Organizations policy of type AISERVICES_OPT_OUT_POLICY
+  # and optionally attaches it to the specified OU / account targets.
+  # Must be deployed from the Organizations management account.
+  # ------------------------------------------------------------------
+  AIOptOutPolicy:
+    Type: AWS::Organizations::Policy
+    Properties:
+      Name: !Sub '${AiOptOutPolicyName}-${Env}'
+      Description: >-
+        Opts out of AWS AI services content storage and model-improvement use.
+      Type: AISERVICES_OPT_OUT_POLICY
+      Content: !Ref AiOptOutPolicyDocument
+      TargetIds: !If [HasTargets, !Ref TargetIds, !Ref 'AWS::NoValue']
+      Tags:
+        - Key: Name
+          Value: ai-optout-and-s3-policy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: Project
+          Value: !Ref Project
+        - Key: CostCenter
+          Value: !Ref CostCenter
+
+  # ------------------------------------------------------------------
+  # Organizations S3 policy - Public Access Block enforcement
+  # Applies as a guardrail across the organization / OU / account.
+  # Enables all four Block Public Access settings for all S3 buckets.
+  # Does not require individual bucket specification.
+  # Must be deployed from the Organizations management account.
+  # ------------------------------------------------------------------
+  S3OrgPolicy:
+    Type: AWS::Organizations::Policy
+    Properties:
+      Name: !Sub '${S3PolicyName}-${Env}'
+      Description: >-
+        Organizations S3 policy that enables all four Block Public Access
+        settings (BlockPublicAcls, BlockPublicPolicy, IgnorePublicAcls,
+        RestrictPublicBuckets) as an organization-wide guardrail.
+      Type: S3_POLICY
+      Content: !Ref S3OrgPolicyDocument
+      TargetIds: !If [HasTargets, !Ref TargetIds, !Ref 'AWS::NoValue']
+      Tags:
+        - Key: Name
+          Value: ai-optout-and-s3-policy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: Project
+          Value: !Ref Project
+        - Key: CostCenter
+          Value: !Ref CostCenter
+
+Outputs:
+  AIOptOutPolicyId:
+    Description: 'Unique identifier of the AI opt-out policy'
+    Value: !Ref AIOptOutPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-AIOptOutPolicyId'
+
+  AIOptOutPolicyArn:
+    Description: 'ARN of the AI opt-out policy'
+    Value: !GetAtt AIOptOutPolicy.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AIOptOutPolicyArn'
+
+  S3OrgPolicyId:
+    Description: 'Unique identifier of the Organizations S3 public-access-block policy'
+    Value: !Ref S3OrgPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-S3OrgPolicyId'
+
+  S3OrgPolicyArn:
+    Description: 'ARN of the Organizations S3 public-access-block policy'
+    Value: !GetAtt S3OrgPolicy.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-S3OrgPolicyArn'
