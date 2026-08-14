@@ -104,7 +104,7 @@ Resources:
           Value: !Ref CostCenter
 
   # ------------------------------------------------------------------
-  # Organizations S3 policy – Public Access Block enforcement
+  # Organizations S3 policy - Public Access Block enforcement
   # Applies as a guardrail across the organization / OU / account.
   # Enables all four Block Public Access settings for all S3 buckets.
   # Does not require individual bucket specification.
