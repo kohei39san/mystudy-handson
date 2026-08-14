@@ -89,8 +89,14 @@ cfn-lint cfn/infrastructure.yaml
 aws cloudformation create-change-set \
   --stack-name ai-optout-s3-policy-dev \
   --template-body file://cfn/infrastructure.yaml \
-  --parameters file://cfn/parameters/dev.json \
-  --parameter-overrides "TargetIds=<OU_ID_OR_ACCOUNT_ID>" \
+  --parameters \
+    ParameterKey=Env,ParameterValue=dev \
+    ParameterKey=Owner,ParameterValue=platform-team \
+    ParameterKey=Project,ParameterValue=security-governance \
+    ParameterKey=CostCenter,ParameterValue="" \
+    ParameterKey=AiOptOutPolicyName,ParameterValue=ai-optout-policy \
+    "ParameterKey=TargetIds,ParameterValue=<OU_ID_OR_ACCOUNT_ID>" \
+    ParameterKey=S3PolicyName,ParameterValue=s3-public-access-block-policy \
   --change-set-name review-$(date +%Y%m%d%H%M%S) \
   --capabilities CAPABILITY_NAMED_IAM
 
@@ -105,7 +111,14 @@ aws cloudformation describe-change-set \
 aws cloudformation deploy \
   --stack-name ai-optout-s3-policy-dev \
   --template-file cfn/infrastructure.yaml \
-  --parameter-overrides file://cfn/parameters/dev.json "TargetIds=<OU_ID_OR_ACCOUNT_ID>" \
+  --parameter-overrides \
+    Env=dev \
+    Owner=platform-team \
+    Project=security-governance \
+    CostCenter="" \
+    AiOptOutPolicyName=ai-optout-policy \
+    "TargetIds=<OU_ID_OR_ACCOUNT_ID>" \
+    S3PolicyName=s3-public-access-block-policy \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
@@ -120,7 +133,14 @@ aws cloudformation deploy \
 aws cloudformation deploy \
   --stack-name ai-optout-s3-policy-prod \
   --template-file cfn/infrastructure.yaml \
-  --parameter-overrides file://cfn/parameters/prod.json "TargetIds=<OU_ID_OR_ACCOUNT_ID>" \
+  --parameter-overrides \
+    Env=prod \
+    Owner=platform-team \
+    Project=security-governance \
+    CostCenter="" \
+    AiOptOutPolicyName=ai-optout-policy \
+    "TargetIds=<OU_ID_OR_ACCOUNT_ID>" \
+    S3PolicyName=s3-public-access-block-policy \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
