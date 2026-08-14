@@ -29,10 +29,10 @@
   },
   {
     "ParameterKey": "S3PolicyName",
-    "ParameterValue": "s3-tls-enforcement-policy"
+    "ParameterValue": "s3-public-access-block-policy"
   },
   {
     "ParameterKey": "S3OrgPolicyDocument",
-    "ParameterValue": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"DenyNonTLS\",\"Effect\":\"Deny\",\"Principal\":\"*\",\"Action\":\"s3:*\",\"Resource\":\"*\",\"Condition\":{\"Bool\":{\"aws:SecureTransport\":\"false\"}}}]}"
+    "ParameterValue": "{\"s3_attributes\":{\"public_access_block_configuration\":{\"@@assign\":\"all\"}}}"
   }
 ]
