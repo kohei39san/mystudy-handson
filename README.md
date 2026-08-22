@@ -17,7 +17,7 @@
 
 各番号付きディレクトリには、特定のインフラストラクチャ構成が含まれています：
 
-* **001-043**: 各種インフラストラクチャのサンプル構成
+* **001-044**: 各種インフラストラクチャのサンプル構成
   * **AWS Terraform構成**:
     - **001.ec2-ec2-ec2**: EC2踏み台サーバーとプライベートサーバー構成
     - **002.ec2-windows**: Windows EC2インスタンス構成
@@ -58,6 +58,7 @@
     - **033.apigateway-openapi-cognito-auth**: API Gateway + OpenAPI + Cognito認証
     - **036.scp-owner-tag-enforcement**: SCP所有者タグ強制
     - **038.lambda-layer-test**: Lambda Layer テスト
+    - **044.ai-optout-s3-policy**: Organizations AIオプトアウトポリシー + S3パブリックアクセスブロック（Organizations S3 Policy）
   * **Ansible Playbook**:
     - **025.ansible-vpc-test**: VPC作成
     - **026.ansible-aws-ec2**: EC2インスタンス管理
@@ -94,7 +95,7 @@
 * **001-010**: 基本的なEC2、RDS構成
 * **011-020**: CloudFormation、特殊構成
 * **021-030**: Lambda、API Gateway、高度な構成
-* **031-043**: 特殊用途、テスト構成
+* **031-044**: 特殊用途、テスト構成
 
 ### 各ディレクトリの共通構造
 
