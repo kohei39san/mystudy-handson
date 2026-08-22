@@ -58,7 +58,7 @@
     - **033.apigateway-openapi-cognito-auth**: API Gateway + OpenAPI + Cognito認証
     - **036.scp-owner-tag-enforcement**: SCP所有者タグ強制
     - **038.lambda-layer-test**: Lambda Layer テスト
-    - **044.ai-optout-s3-policy**: Organizations AIオプトアウトポリシー + S3パブリックアクセスブロック（Organizations S3 Policy）
+    - **044.ai-optout-s3-policy**: AIオプトアウト + S3パブリックアクセスブロック (Organizations Policy)
   * **Ansible Playbook**:
     - **025.ansible-vpc-test**: VPC作成
     - **026.ansible-aws-ec2**: EC2インスタンス管理

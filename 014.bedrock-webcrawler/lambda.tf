@@ -3,7 +3,7 @@ resource "aws_lambda_function" "crawler" {
   function_name = "${var.project_name}-crawler"
   role          = aws_iam_role.crawler_lambda.arn
   handler       = "crawl_handler.handler"
-  runtime       = "python3.11"
+  runtime       = "python3.14"
 
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 

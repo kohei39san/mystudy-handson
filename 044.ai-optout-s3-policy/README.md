@@ -1,5 +1,9 @@
 # AI opt-out policy + S3 パブリックアクセスブロック (Organizations S3 Policy)
 
+## アーキテクチャ図
+
+![Architecture Diagram](src/architecture.svg)
+
 ## 概要
 
 本ディレクトリは、AWS Organizations の **AIオプトアウトポリシー** および **Organizations S3 ポリシー（パブリックアクセスブロック）** を、単一の CloudFormation スタックで管理するハンズオン構成です。
