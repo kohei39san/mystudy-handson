@@ -4,7 +4,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.61.0"
+      version = "~> 6.62.0"
     }
     archive = {
       source  = "hashicorp/archive"
@@ -12,7 +12,7 @@ terraform {
     }
     opensearch = {
       source  = "opensearch-project/opensearch"
-      version = "~> 2.4.0"
+      version = "~> 2.6.0"
     }
   }
 }
