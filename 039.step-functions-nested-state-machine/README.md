@@ -8,7 +8,7 @@
 
 ## アーキテクチャ
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ```
 [実行開始]

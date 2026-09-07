@@ -4,7 +4,7 @@
 
 ## アーキテクチャ図
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## リソース構成
 

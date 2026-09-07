@@ -2,7 +2,7 @@
 
 このTerraform構成は、AWS Systems Managerで管理されるLinux EC2インスタンスを監視機能付きで作成します。以下のリソースが含まれています：
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## Resource Configuration
 

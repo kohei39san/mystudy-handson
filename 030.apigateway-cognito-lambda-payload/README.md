@@ -4,7 +4,7 @@
 
 このプロジェクトは、AWS API Gateway、Cognito ユーザプール、Lambda を使用してペイロード検証システムを構築します。Cognito による認証を通じて、Lambda 関数のイベントペイロードをログ出力するシステムに加えて、Cognito認証時にユーザーグループに基づいてカスタム属性を自動設定する機能を提供します。
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## アーキテクチャ
 

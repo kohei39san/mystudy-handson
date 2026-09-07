@@ -2,7 +2,7 @@
 
 このプロジェクトは、AWS CloudFormationを使用してRDS PostgreSQLインスタンスとpsqlクライアントがインストールされたEC2インスタンスを構築します。EC2インスタンスはAWS Systems Managerを通じてSSH接続が可能で、RDSインスタンスにはIAMデータベース認証でアクセスできます。
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## 構成概要
 

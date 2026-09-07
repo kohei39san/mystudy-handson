@@ -4,7 +4,7 @@
 
 ## 概要
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 このモジュールは以下のリソースを作成します：
 

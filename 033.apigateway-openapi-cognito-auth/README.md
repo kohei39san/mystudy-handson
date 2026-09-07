@@ -11,7 +11,7 @@
 
 ## アーキテクチャ
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 
 ### 主要コンポーネント

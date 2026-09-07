@@ -6,7 +6,7 @@
 
 ## アーキテクチャ
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 このシステムは以下のコンポーネントで構成されています：
 

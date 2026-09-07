@@ -2,7 +2,7 @@
 
 このプロジェクトは、指定したRSSフィードの内容をダウンロードし、OpenRouterを使用して要約し、その結果をSlackに送信するLambda関数を提供します。
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## 機能概要
 
