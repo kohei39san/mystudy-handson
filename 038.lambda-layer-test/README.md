@@ -1,6 +1,6 @@
 # Lambda Layer 実行手順
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## 📋 必要な準備
 1. Docker Desktop を起動

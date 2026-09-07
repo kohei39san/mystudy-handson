@@ -4,7 +4,7 @@
 
 このテンプレートは、AWS Organizations Service Control Policy (SCP) を使用してEC2インスタンスの作成時にタグ付与を強制するCloudFormationテンプレートです。
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## 構成
 

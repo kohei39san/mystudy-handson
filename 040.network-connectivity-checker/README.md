@@ -5,7 +5,7 @@
 
 ## 概要
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 | プロバイダ | リソース種別 | `--resource-type` |
 |-----------|------------|-----------------|

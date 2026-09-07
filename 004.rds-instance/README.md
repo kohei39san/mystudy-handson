@@ -2,7 +2,7 @@
 
 このTerraform構成は、AWSにMySQL RDSインスタンスを作成します。以下のリソースが含まれています：
 
-![構成図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## リソース構成
 

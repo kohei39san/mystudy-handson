@@ -9,7 +9,7 @@
 
 システムは、期限切れ2週間前のコードを自動的に検出し、Discordウェブフックを通じて通知します。各通知にはコードの自動入力リンクが含まれます。
 
-![構成図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## リソース構成
 

@@ -6,7 +6,7 @@
 
 ## アーキテクチャ
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ```mermaid
 graph TB

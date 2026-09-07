@@ -2,7 +2,7 @@
 
 このTerraformコードは、AWSのEC2インスタンス上にRedmineをデプロイするためのものです。
 
-![アーキテクチャ図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## 前提条件
 

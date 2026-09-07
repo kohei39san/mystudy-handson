@@ -2,7 +2,7 @@
 
 このTerraform構成は、AWSにEKSクラスターとワーカーノード、管理用のkubectlインスタンスを作成します。
 
-![構成図](src/architecture.svg)
+![Architecture Diagram](src/architecture.svg)
 
 ## リソース構成
 
