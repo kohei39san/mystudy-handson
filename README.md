@@ -84,7 +84,7 @@
 新しいアーキテクチャ図を作成する際は、以下のテンプレートを参考にしてください：
 
 * **AWS構成**: `src/aws-template.drawio`
-* **OCI構成**: `src/oci-template.drawio`
+* **OCI構成**: `src/oci-template.svg`
 
 これらのテンプレートには、各クラウドプロバイダーの標準的なアイコンとレイアウトが含まれています。
 
@@ -116,7 +116,7 @@ XXX.directory-name/
 * **scripts**: 検証で使用したスクリプトを格納しています
 * **src**: テンプレートファイルやその他の共通リソースを格納しています
   * `aws-template.drawio`: AWSアーキテクチャ図のテンプレート
-  * `oci-template.drawio`: OCIアーキテクチャ図のテンプレート
+  * `oci-template.svg`: OCIアーキテクチャ図のテンプレート
 * **wsl-old**: 過去WSL環境で使用したソースファイルを格納しています
 
 各インフラストラクチャディレクトリには、対応するアーキテクチャ図（`src/architecture.drawio`）とREADME.mdファイルが含まれています。
