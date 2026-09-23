@@ -1,0 +1,7 @@
+.git
+.terraform
+.pytest_cache
+__pycache__
+*.pyc
+terraform.tfstate*
+*.tfvars
