@@ -9,7 +9,9 @@ concurrency:
   group: agentic-workflows
   cancel-in-progress: false
 
-engine: copilot
+engine:
+  id: copilot
+  model: auto
 
 checkout:
   ref: main
