@@ -4,7 +4,9 @@ on:
   schedule:
     - cron: "0 9 * * 1"
   skip-if-match: 'is:pr is:open in:title "docs: weekly documentation refresh"'
-engine: copilot
+engine:
+  id: copilot
+  model: auto
 permissions:
   contents: read
   pull-requests: read
