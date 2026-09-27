@@ -9,5 +9,11 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "chat.useAgentSkills": true
+    "chat.useAgentSkills": true,
+    "chat.tools.terminal.autoApprove": {
+        "/^git remote get-url origin$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }
