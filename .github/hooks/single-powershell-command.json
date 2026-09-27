@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "command": "pwsh -NoProfile -File .github/hooks/validate-single-powershell-command.ps1",
+        "bash": "pwsh -NoProfile -File .github/hooks/validate-single-powershell-command.ps1",
+        "powershell": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .github/hooks/validate-single-powershell-command.ps1",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "command": "pwsh -NoProfile -File .github/hooks/warn-if-pull-available.ps1",
+        "bash": "pwsh -NoProfile -File .github/hooks/warn-if-pull-available.ps1",
+        "powershell": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .github/hooks/warn-if-pull-available.ps1",
+        "cwd": ".",
+        "timeoutSec": 30
+      }
+    ]
+  }
+}
