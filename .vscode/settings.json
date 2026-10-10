@@ -19,6 +19,14 @@
             "approve": true,
             "matchCommandLine": true
         },
+        "/^git pr list .*/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^git pr view .*/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
         "/^gh aw compile$/": {
             "approve": true,
             "matchCommandLine": true
