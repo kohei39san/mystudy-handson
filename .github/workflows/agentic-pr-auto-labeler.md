@@ -13,6 +13,11 @@ engine:
   id: copilot
   model: auto
 
+network:
+  allowed:
+    - defaults
+    - github
+
 checkout:
   ref: main
 

@@ -7,6 +7,12 @@ on:
 engine:
   id: copilot
   model: auto
+
+network:
+  allowed:
+    - defaults
+    - github
+
 permissions:
   contents: read
   pull-requests: read
