@@ -1,6 +1,6 @@
 # Ansible VPC テスト構成
 
-このAnsibleプレイブックは、AWSでVPCリソースの作成と管理をテストするための構成です。
+このAnsibleプレイブックは、AWSでVPCリソースの作成をテストするための構成です。
 
 ![アーキテクチャ図](src/architecture.svg)
 
@@ -8,11 +8,7 @@
 
 ### Ansibleプレイブック
 - `vpc.yml`: VPC作成用のメインプレイブック
-  - VPCの作成
-  - サブネットの作成
-  - インターネットゲートウェイの設定
-  - ルートテーブルの設定
-  - セキュリティグループの設定
+  - VPCの作成（名前: `ansible-vpc-test`、CIDRブロック: `10.0.0.0/16`、リージョン: `ap-northeast-1`）
 
 ### スクリプト
 - `scripts/run-playbook.sh`: プレイブック実行用のシェルスクリプト
@@ -38,7 +34,7 @@ ansible-playbook vpc.yml
 
 - Ansible 2.9以上
 - AWS CLI設定済み
-- 適切なAWS権限（VPC、サブネット、IGW等の作成権限）
+- 適切なAWS権限（VPCの作成権限）
 
 ## 注意事項
 
