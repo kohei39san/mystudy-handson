@@ -134,14 +134,7 @@ powershell -ExecutionPolicy Bypass -File "scripts\deploy.ps1"
 ### 3. APIテスト
 
 ```powershell
-cd scripts
-python test-api-simple.py --api-endpoint <API_ENDPOINT> --user-pool-id <USER_POOL_ID> --client-id <CLIENT_ID>
-```
-
-または
-
-```powershell
-python test-cognito-auth.py
+python tests\test-api.py --api-endpoint <API_ENDPOINT> --user-pool-id <USER_POOL_ID> --client-id <CLIENT_ID>
 ```
 
 ## API エンドポイント

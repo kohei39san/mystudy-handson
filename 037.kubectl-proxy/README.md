@@ -160,7 +160,7 @@ docker compose exec kubectl-proxy ./scripts/manage-crd.sh test-api
 - **機能**: Webサイト設定の管理
 - **フィールド**: URL, レプリカ数, ポート, SSL設定, 環境設定など
 - **テンプレートファイル**: `src/crd-template.yaml`, `src/resource-template.yaml`
-- **設定ファイル**: `scripts/crd-config.sh`
+- **設定ファイル**: `.env`（`.env.example` を参照。`CRD_GROUP`, `CRD_VERSION`, `CRD_KIND`, `CRD_PLURAL`）
 - **生成されるファイル**: `src/*-generated.yaml`
 
 **注意**: `generate`コマンドでテンプレートからYAMLファイルを生成することが必須です。
