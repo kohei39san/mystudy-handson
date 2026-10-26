@@ -32,9 +32,9 @@
 ├── terraform.tfvars.example     # 設定例ファイル
 ├── arm/
 │   └── budget.json              # ARMテンプレート (Microsoft.Consumption/budgets)
-├── docs/
+├── src/
 │   ├── architecture.drawio      # アーキテクチャ図（Draw.io形式）
-│   └── architecture.svg         # アーキテクチャ図（SVG形式）
+│   └── architecture.svg         # アーキテクチャ図（SVG形式、自動生成）
 └── scripts/
     └── deploy.sh                # ARMテンプレートデプロイスクリプト
 ```

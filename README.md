@@ -55,7 +55,7 @@
     - **013.aws-github-oidc**: GitHub Actions OIDC認証
     - **031.rds-postgresql-ec2**: RDS PostgreSQL + EC2構成
     - **032.scp-ec2-tagging**: SCP（Service Control Policy）EC2タグ強制
-    - **033.apigateway-openapi-cognito-auth**: API Gateway + OpenAPI + Cognito認証
+    - **038.lambda-layer-test**: Lambda Layer テスト（pydantic + psycopg2、Python 3.13）
     - **036.scp-owner-tag-enforcement**: SCP所有者タグ強制
     - **038.lambda-layer-test**: Lambda Layer テスト
     - **044.ai-optout-s3-policy**: AIオプトアウト + S3パブリックアクセスブロック (Organizations Policy)
