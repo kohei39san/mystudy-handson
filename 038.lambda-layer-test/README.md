@@ -1,6 +1,25 @@
 # Lambda Layer 実行手順
 
+## 概要
+
+このプロジェクトは、AWS Lambda Layer を使用して pydantic と psycopg2-binary ライブラリを Python 3.13 Lambda 関数で利用できるようにするテスト環境を構築します。
+
+## リソース構成
+
 ![Architecture Diagram](src/architecture.svg)
+
+### AWSリソース
+- **S3バケット**: Lambda Layer の ZIP ファイルを格納
+- **Lambda Layer** (`pydantic-psycopg2-layer`): pydantic および psycopg2-binary を含む Python 3.13 対応レイヤー
+- **Lambda関数** (`layer-test-function`): Lambda Layer を使用してライブラリ動作を検証するテスト関数（Python 3.13、タイムアウト30秒）
+- **CloudWatch Logs**: Lambda関数のログ出力先（ログ保持期間: 7日）
+- **IAMロール**: Lambda 実行に必要な権限（`AWSLambdaBasicExecutionRole` および CloudWatch Logs 書き込み権限）
+
+### デプロイ方式
+- **CloudFormation** (`cfn/cloudformation-template.yaml`): S3バケット上の Layer ZIP を参照してリソースをデプロイ
+- **PowerShell スクリプト** (`scripts/deploy-complete.ps1`): Docker でレイヤーを作成し S3 アップロード → CloudFormation デプロイ → テスト実行まで自動化
+
+---
 
 ## 📋 必要な準備
 1. Docker Desktop を起動
