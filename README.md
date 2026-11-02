@@ -40,6 +40,7 @@
     - **022.amazon-q-developer-in-chat-applications-by-slack**: Amazon Q Developer Slack連携
     - **023.bedrock-rag-agent-in-slack**: Bedrock RAGエージェント Slack連携
     - **030.apigateway-cognito-lambda-payload**: API Gateway + Cognito + Lambda構成
+    - **033.apigateway-openapi-cognito-auth**: API Gateway + OpenAPI + Cognito + Lambda オーソライザー
     - **035.aurora-mock-testing**: Aurora モックテスト環境
     - **039.step-functions-nested-state-machine**: Step Functions ネストされたステートマシン
     - **040.network-connectivity-checker**: マルチクラウド（AWS/Azure/GCP）ネットワーク到達性確認ツール
