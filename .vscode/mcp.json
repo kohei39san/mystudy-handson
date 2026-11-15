@@ -1,20 +1,5 @@
 {
   "servers": {
-    "awslabs.aws-documentation-mcp-server": {
-      "type": "stdio",
-      "command": "uv",
-      "args": [
-        "tool",
-        "run",
-        "--from",
-        "awslabs.aws-documentation-mcp-server@latest",
-        "awslabs.aws-documentation-mcp-server.exe"
-      ],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR",
-        "AWS_DOCUMENTATION_PARTITION": "aws"
-      }
-    },
     "redmine-mcp-server": {
       "type": "stdio",
       "command": "python",
@@ -28,10 +13,6 @@
         "MAX_RETRIES": "3",
         "RETRY_DELAY": "1.0"
       }
-    },
-    "drawio-mcp-app": {
-      "type": "http",
-      "url": "https://mcp.draw.io/mcp"
     }
   }
 }
