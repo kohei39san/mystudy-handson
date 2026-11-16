@@ -26,6 +26,7 @@
 - `tsconfig.base.json`: TypeScript共通設定
 - `ansible.cfg`: Ansible実行設定
 - `coverage.xml`: テストカバレッジ出力
+- `.mcp.json`: MCPサーバー設定（`.vscode/mcp.json`と分離して管理）
 - `.gitignore`: Git管理除外設定
 - `.gitattributes`: Git属性設定
 - `.gitmodules`: Gitサブモジュール設定
