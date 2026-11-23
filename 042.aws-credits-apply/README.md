@@ -4,6 +4,10 @@ AWS プロモーションクレジットコードを一括適用するスクリ�
 新規に起動した Chrome / Microsoft Edge で手動ログインを待機し、`config/credits.csv` に記載されたコードを順番に適用します。  
 Management Account で適用すれば、Organization の Credit Sharing 設定によりメンバーアカウントにも自動で適用されます。
 
+## アーキテクチャ図
+
+![Architecture Diagram](src/architecture.svg)
+
 ## ディレクトリ構成
 
 ```
