@@ -1,0 +1,9 @@
+aws_region                  = "us-east-1"
+environment                 = "dev"
+project_name               = "bedrock-mcp"
+agent_image_tag            = "latest"
+github_mcp_endpoint        = "https://api.githubcopilot.com/mcp/"
+github_oauth_client_id     = "replace-with-github-oauth-client-id"
+# Set TF_VAR_github_oauth_client_secret outside this file.
+api_authorizer_type        = "AWS_IAM"
+log_retention_days         = 14
